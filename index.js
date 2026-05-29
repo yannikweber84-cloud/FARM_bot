@@ -152,7 +152,8 @@ if (selected === "allgemeiner_support") {
             let ticketName = "";
             let ticketTitle = "";
 
-            if (selected === "clan_bewerbung") {
+            .addOptions([
+    if (selected === "clan_bewerbung") 
                 ticketName = `clan-${interaction.user.username}`;
                 ticketTitle = "🛡 Clan Bewerbung";
             }
