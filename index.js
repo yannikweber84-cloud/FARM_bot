@@ -264,7 +264,7 @@ Dann wähle unten die passende Kategorie aus.
         if (interaction.customId === 'close_ticket') {
 
             await interaction.reply({
-                content: "🔒 Ticket wird geschlossen..."
+                content: "🔒 Ticket wird geschlossen in 3 Sekunden..."
             });
 
             setTimeout(() => {
