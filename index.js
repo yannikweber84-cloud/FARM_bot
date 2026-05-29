@@ -20,7 +20,7 @@ const {
 // BOT DATEN
 // =======================
 
-const TOKEN = process.env.TOKEN; // ✅ FIX
+const TOKEN = client.login(TOKEN);;
 const CLIENT_ID = "1509566143051071578";
 const STAFF_ROLE_ID = "1508899899222134835";
 
@@ -42,6 +42,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
     try {
+
         await rest.put(
             Routes.applicationCommands(CLIENT_ID),
             { body: commands }
@@ -68,7 +69,10 @@ client.once(Events.ClientReady, () => {
 
 client.on(Events.InteractionCreate, async interaction => {
 
+    // ====================================
     // /ticketpanel
+    // ====================================
+
     if (interaction.isChatInputCommand()) {
 
         if (interaction.commandName === 'ticketpanel') {
@@ -76,27 +80,56 @@ client.on(Events.InteractionCreate, async interaction => {
             const embed = new EmbedBuilder()
                 .setColor('#2B2D31')
                 .setTitle('🎫 Allgemeiner Support')
-                .setDescription(`Wähle eine Kategorie aus.`)
-                .setThumbnail(client.user.displayAvatarURL());
+                .setDescription(`
+Du hast ein Problem, eine Frage oder benötigst Hilfe auf dem Server? Dann bist du hier genau richtig!
+
+Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich, damit wir dir schnell und effektiv helfen können.
+
+━━━━━━━━━━━━━━━━━━
+
+📌 **Wobei wir dir helfen können:**
+
+• Fragen zum Server  
+• Probleme / Bugs  
+• Spieler melden  
+• Allgemeine Hilfe  
+• Sonstige Anliegen
+
+━━━━━━━━━━━━━━━━━━
+
+👥 **Bewerbungen & Allgemeiner Support**
+
+Du möchtest dich bewerben oder um allgemeinen Support bitten?  
+Dann wähle unten die passende Kategorie aus.
+
+━━━━━━━━━━━━━━━━━━
+                `)
+                .setThumbnail(client.user.displayAvatarURL())
+                .setFooter({
+                    text: 'FARMMC.de Support System'
+                });
 
             const menu = new StringSelectMenuBuilder()
                 .setCustomId('ticket_menu')
-                .setPlaceholder('Kategorie wählen')
+                .setPlaceholder('Wähle eine Kategorie aus um ein Ticket zu öffnen')
                 .addOptions([
                     {
                         label: 'Clan Bewerbung',
-                        value: 'clan_bewerbung',
-                        emoji: '🛡'
+                        description: 'Bewirb dich mit deinem Clan',
+                        emoji: '🛡',
+                        value: 'clan_bewerbung'
                     },
                     {
                         label: 'Team Bewerbung',
-                        value: 'team_bewerbung',
-                        emoji: '👥'
+                        description: 'Bewirb dich für das Team',
+                        emoji: '👥',
+                        value: 'team_bewerbung'
                     },
                     {
                         label: 'Allgemeiner Support',
-                        value: 'allgemein_support', // ✅ FIX
-                        emoji: '🏗'
+                        description: 'Hilfe und Support',
+                        emoji: '🏗',
+                        value: 'allgemein'
                     }
                 ]);
 
@@ -109,7 +142,10 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     }
 
-    // DROPDOWN
+    // ====================================
+    // DROPDOWN MENÜ
+    // ====================================
+
     if (interaction.isStringSelectMenu()) {
 
         if (interaction.customId === 'ticket_menu') {
@@ -119,35 +155,25 @@ client.on(Events.InteractionCreate, async interaction => {
             let ticketName = "";
             let ticketTitle = "";
 
-            const safeUser = interaction.user.username
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, "-");
-
             if (selected === "clan_bewerbung") {
-                ticketName = `clan-${safeUser}`;
+                ticketName = `clan-${interaction.user.username}`;
                 ticketTitle = "🛡 Clan Bewerbung";
             }
 
             if (selected === "team_bewerbung") {
-                ticketName = `team-${safeUser}`;
+                ticketName = `team-${interaction.user.username}`;
                 ticketTitle = "👥 Team Bewerbung";
             }
 
-            if (selected === "allgemein_support") { // ✅ FIX
-                ticketName = `support-${safeUser}`;
+            if (selected === "Allgemeiner Support") {
+                ticketName = `Allg-${interaction.user.username}`;
                 ticketTitle = "🏗 Allgemeiner Support";
             }
 
-            // ❗ Schutz gegen leere Namen
-            if (!ticketName) {
-                return interaction.reply({
-                    content: "❌ Fehler: Ticket konnte nicht erstellt werden.",
-                    ephemeral: true
-                });
-            }
+            // Prüfen ob Ticket schon existiert
 
             const existing = interaction.guild.channels.cache.find(
-                c => c.name === ticketName
+                c => c.name === ticketName.toLowerCase()
             );
 
             if (existing) {
@@ -157,9 +183,12 @@ client.on(Events.InteractionCreate, async interaction => {
                 });
             }
 
+            // Ticket erstellen
+
             const channel = await interaction.guild.channels.create({
                 name: ticketName,
                 type: ChannelType.GuildText,
+
                 permissionOverwrites: [
                     {
                         id: interaction.guild.id,
@@ -184,6 +213,10 @@ client.on(Events.InteractionCreate, async interaction => {
                 ]
             });
 
+            // =======================
+            // BUTTONS
+            // =======================
+
             const claimButton = new ButtonBuilder()
                 .setCustomId('claim_ticket')
                 .setLabel('Ticket übernehmen')
@@ -196,32 +229,54 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setEmoji('🔒')
                 .setStyle(ButtonStyle.Danger);
 
-            const rowButtons = new ActionRowBuilder()
+            const buttonRow = new ActionRowBuilder()
                 .addComponents(claimButton, closeButton);
+
+            // =======================
+            // TICKET EMBED
+            // =======================
 
             const ticketEmbed = new EmbedBuilder()
                 .setColor('#57F287')
                 .setTitle(ticketTitle)
-                .setDescription(`Hallo ${interaction.user} 👋`)
+                .setDescription(`
+Hallo ${interaction.user} 👋
+
+Dein Ticket wurde erfolgreich erstellt.
+
+📌 Bitte beschreibe dein Anliegen möglichst genau, damit das Team dir schnell helfen kann.
+                `)
+                .setFooter({
+                    text: 'FARM Clan Ticket System'
+                })
                 .setTimestamp();
 
             await channel.send({
                 content: `<@&${STAFF_ROLE_ID}>`,
                 embeds: [ticketEmbed],
-                components: [rowButtons]
+                components: [buttonRow]
             });
 
             await interaction.reply({
-                content: `✅ Ticket erstellt: ${channel}`,
+                content: `✅ Dein Ticket wurde erstellt: ${channel}`,
                 ephemeral: true
             });
         }
     }
 
+    // ====================================
     // BUTTONS
+    // ====================================
+
     if (interaction.isButton()) {
 
+        // ====================================
+        // TICKET ÜBERNEHMEN
+        // ====================================
+
         if (interaction.customId === 'claim_ticket') {
+
+            // Prüfen ob Staff
 
             if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
                 return interaction.reply({
@@ -230,9 +285,12 @@ client.on(Events.InteractionCreate, async interaction => {
                 });
             }
 
+            // Neue Buttons
+
             const claimedButton = new ButtonBuilder()
                 .setCustomId('claimed_ticket')
-                .setLabel(`Übernommen`)
+                .setLabel(`Übernommen von ${interaction.user.username}`)
+                .setEmoji('✅')
                 .setStyle(ButtonStyle.Success)
                 .setDisabled(true);
 
@@ -242,27 +300,44 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setEmoji('🔒')
                 .setStyle(ButtonStyle.Danger);
 
+            const newRow = new ActionRowBuilder()
+                .addComponents(claimedButton, closeButton);
+
+            // Nachricht bearbeiten
+
             await interaction.message.edit({
-                components: [
-                    new ActionRowBuilder().addComponents(claimedButton, closeButton)
-                ]
+                components: [newRow]
             });
 
+            // Claim Nachricht
+
+            const claimEmbed = new EmbedBuilder()
+                .setColor('#5865F2')
+                .setDescription(`
+📌 Der Teamler ${interaction.user} hat das Ticket übernommen.
+
+Er wird sich zeitnah um dich kümmern!
+                `)
+                .setTimestamp();
+
             await interaction.reply({
-                content: `📌 Ticket übernommen von ${interaction.user}`,
-                ephemeral: false
+                embeds: [claimEmbed]
             });
         }
+
+        // ====================================
+        // TICKET SCHLIESSEN
+        // ====================================
 
         if (interaction.customId === 'close_ticket') {
 
             await interaction.reply({
-                content: '🔒 Ticket wird geschlossen...',
+                content: '🔒 Ticket wird in 3 Sekunden geschlossen...',
                 ephemeral: false
             });
 
             setTimeout(() => {
-                interaction.channel.delete().catch(() => {});
+                interaction.channel.delete().catch(console.error);
             }, 3000);
         }
     }
