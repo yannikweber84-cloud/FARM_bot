@@ -113,7 +113,8 @@ Dann wähle unten die passende Kategorie aus.
                 .setCustomId('ticket_menu')
                 .setPlaceholder('Wähle eine Kategorie aus um ein Ticket zu öffnen')
                 .addOptions([
-                   if (selected === "clan_bewerbung") {
+                 
+                    if (selected === "clan_bewerbung") {
     ticketName = `clan-${interaction.user.username}`;
     ticketTitle = "🛡 Clan Bewerbung";
 }
