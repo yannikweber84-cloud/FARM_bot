@@ -73,7 +73,7 @@ client.on(Events.InteractionCreate, async interaction => {
     // /ticketpanel
     // ====================================
 
-     (interaction.isChatInputCommand()) {
+     if (interaction.isChatInputCommand()) {
 
          (interaction.commandName === 'ticketpanel') {
 
