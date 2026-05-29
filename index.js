@@ -73,9 +73,43 @@ client.on(Events.InteractionCreate, async interaction => {
     // /ticketpanel
     // ====================================
 
-     if (interaction.isChatInputCommand()) {
+    if (interaction.isChatInputCommand()) {
 
-         (interaction.commandName === 'ticketpanel') {
+    if (interaction.commandName === 'ticketpanel') {
+
+        const embed = new EmbedBuilder()
+            .setColor('#2B2D31')
+            .setTitle('🎫 Ticket System');
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId('ticket_menu')
+            .setPlaceholder('Kategorie auswählen')
+            .addOptions([
+                {
+                    label: 'Clan Bewerbung',
+                    value: 'clan_bewerbung',
+                    emoji: '🛡'
+                },
+                {
+                    label: 'Team Bewerbung',
+                    value: 'team_bewerbung',
+                    emoji: '👥'
+                },
+                {
+                    label: 'Support',
+                    value: 'allgemeiner_support',
+                    emoji: '🏗'
+                }
+            ]);
+
+        const row = new ActionRowBuilder().addComponents(menu);
+
+        await interaction.reply({
+            embeds: [embed],
+            components: [row]
+        });
+    }
+}
 
             const embed = new EmbedBuilder()
                 .setColor('#2B2D31')
