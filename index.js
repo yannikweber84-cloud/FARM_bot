@@ -4,6 +4,12 @@ const app = express();
 app.get("/", (req, res) => res.send("Bot läuft"));
 
 app.listen(3000);
+const express = require("express");
+const app = express();
+
+app.get("/", (req, res) => res.send("Bot läuft"));
+
+app.listen(3000);
 require("dotenv").config();
 
 const {
