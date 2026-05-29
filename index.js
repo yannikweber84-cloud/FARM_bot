@@ -20,7 +20,7 @@ const {
 // BOT DATEN
 // =======================
 
-const TOKEN = client.login(TOKEN);;
+const TOKEN = process.env.TOKEN;
 const CLIENT_ID = "1509566143051071578";
 const STAFF_ROLE_ID = "1508899899222134835";
 
