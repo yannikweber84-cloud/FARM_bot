@@ -73,9 +73,9 @@ client.on(Events.InteractionCreate, async interaction => {
     // /ticketpanel
     // ====================================
 
-    if (interaction.isChatInputCommand()) {
+     (interaction.isChatInputCommand()) {
 
-        if (interaction.commandName === 'ticketpanel') {
+         (interaction.commandName === 'ticketpanel') {
 
             const embed = new EmbedBuilder()
                 .setColor('#2B2D31')
@@ -114,17 +114,18 @@ Dann wähle unten die passende Kategorie aus.
                 .setPlaceholder('Wähle eine Kategorie aus um ein Ticket zu öffnen')
                 .addOptions([
                  
-                    if (selected === "clan_bewerbung") {
+                    
+                     (selected === "clan_bewerbung") {
     ticketName = `clan-${interaction.user.username}`;
     ticketTitle = "🛡 Clan Bewerbung";
 }
 
-if (selected === "team_bewerbung") {
+ (selected === "team_bewerbung") {
     ticketName = `team-${interaction.user.username}`;
     ticketTitle = "👥 Team Bewerbung";
 }
 
-if (selected === "allgemeiner_support") {
+ (selected === "allgemeiner_support") {
     ticketName = `support-${interaction.user.username}`;
     ticketTitle = "🏗 Allgemeiner Support";
 }
@@ -143,9 +144,9 @@ if (selected === "allgemeiner_support") {
     // DROPDOWN MENÜ
     // ====================================
 
-    if (interaction.isStringSelectMenu()) {
+     (interaction.isStringSelectMenu()) {
 
-        if (interaction.customId === 'ticket_menu') {
+         (interaction.customId === 'ticket_menu') {
 
             const selected = interaction.values[0];
 
@@ -153,17 +154,17 @@ if (selected === "allgemeiner_support") {
             let ticketTitle = "";
 
             .addOptions([
-    if (selected === "clan_bewerbung") 
+     (selected === "clan_bewerbung") 
                 ticketName = `clan-${interaction.user.username}`;
                 ticketTitle = "🛡 Clan Bewerbung";
             }
 
-            if (selected === "team_bewerbung") {
+             (selected === "team_bewerbung") {
                 ticketName = `team-${interaction.user.username}`;
                 ticketTitle = "👥 Team Bewerbung";
             }
 
-          if (selected === "allgemeiner_support") {
+           (selected === "allgemeiner_support") {
     ticketName = `support-${interaction.user.username}`;
     ticketTitle = "🏗 Allgemeiner Support";
 }
@@ -175,7 +176,7 @@ if (selected === "allgemeiner_support") {
                 c => c.name === ticketName.toLowerCase()
             );
 
-            if (existing) {
+             (existing) {
                 return interaction.reply({
                     content: `❌ Du hast bereits ein Ticket offen: ${existing}`,
                     ephemeral: true
@@ -267,17 +268,17 @@ Dein Ticket wurde erfolgreich erstellt.
     // BUTTONS
     // ====================================
 
-    if (interaction.isButton()) {
+     (interaction.isButton()) {
 
         // ====================================
         // TICKET ÜBERNEHMEN
         // ====================================
 
-        if (interaction.customId === 'claim_ticket') {
+         (interaction.customId === 'claim_ticket') {
 
             // Prüfen ob Staff
 
-            if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
+             (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
                 return interaction.reply({
                     content: '❌ Nur Teammitglieder können Tickets übernehmen.',
                     ephemeral: true
@@ -328,7 +329,7 @@ Er wird sich zeitnah um dich kümmern!
         // TICKET SCHLIESSEN
         // ====================================
 
-        if (interaction.customId === 'close_ticket') {
+         (interaction.customId === 'close_ticket') {
 
             await interaction.reply({
                 content: '🔒 Ticket wird in 3 Sekunden geschlossen...',
