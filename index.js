@@ -171,7 +171,7 @@ Dann wähle unten die passende Kategorie aus.
                 ticketTitle = "👥 Team Bewerbung";
             }
 
-            if (selected === "Allgemeiner Support") {
+            if (selected === "allgemein")
                 ticketName = `Allg-${interaction.user.username}`;
                 ticketTitle = "🏗 Allgemeiner Support";
             }
