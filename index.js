@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const express = require("express"); // ✅ NEU
+
 const {
     Client,
     GatewayIntentBits,
@@ -13,11 +15,30 @@ const {
     REST,
     Routes,
     SlashCommandBuilder,
-    EmbedBuilder
+    EmbedBuilder,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } = require('discord.js');
 
 // =======================
-// BOT DATEN
+// EXPRESS (RENDER FIX)
+// =======================
+
+const app = express();
+
+app.get("/", (req, res) => {
+    res.send("Bot ist online");
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`🌐 Webserver läuft auf Port ${PORT}`);
+});
+
+// =======================
+// CONFIG
 // =======================
 
 const TOKEN = process.env.TOKEN;
@@ -36,22 +57,19 @@ const commands = [
     new SlashCommandBuilder()
         .setName('ticketpanel')
         .setDescription('Erstellt das Ticket Panel')
-].map(command => command.toJSON());
+].map(c => c.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
     try {
-
         await rest.put(
             Routes.applicationCommands(CLIENT_ID),
             { body: commands }
         );
-
-        console.log("✅ Slash Commands registriert.");
-
-    } catch (error) {
-        console.error(error);
+        console.log("✅ Slash Command registriert");
+    } catch (err) {
+        console.error(err);
     }
 })();
 
@@ -60,7 +78,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 // =======================
 
 client.once(Events.ClientReady, () => {
-    console.log(`✅ ${client.user.tag} ist online.`);
+    console.log(`✅ Bot online: ${client.user.tag}`);
 });
 
 // =======================
@@ -69,47 +87,10 @@ client.once(Events.ClientReady, () => {
 
 client.on(Events.InteractionCreate, async interaction => {
 
-    // ====================================
-    // /ticketpanel
-    // ====================================
-
+    // PANEL
     if (interaction.isChatInputCommand()) {
 
-    if (interaction.commandName === 'ticketpanel') {
-
-        const embed = new EmbedBuilder()
-            .setColor('#2B2D31')
-            .setTitle('🎫 Ticket System');
-
-        const menu = new StringSelectMenuBuilder()
-            .setCustomId('ticket_menu')
-            .setPlaceholder('Kategorie auswählen')
-            .addOptions([
-                {
-                    label: 'Clan Bewerbung',
-                    value: 'clan_bewerbung',
-                    emoji: '🛡'
-                },
-                {
-                    label: 'Team Bewerbung',
-                    value: 'team_bewerbung',
-                    emoji: '👥'
-                },
-                {
-                    label: 'Support',
-                    value: 'allgemeiner_support',
-                    emoji: '🏗'
-                }
-            ]);
-
-        const row = new ActionRowBuilder().addComponents(menu);
-
-        await interaction.reply({
-            embeds: [embed],
-            components: [row]
-        });
-    }
-}
+        if (interaction.commandName === 'ticketpanel') {
 
             const embed = new EmbedBuilder()
                 .setColor('#2B2D31')
@@ -139,239 +120,137 @@ Dann wähle unten die passende Kategorie aus.
 ━━━━━━━━━━━━━━━━━━
                 `)
                 .setThumbnail(client.user.displayAvatarURL())
-                .setFooter({
-                    text: 'FARMMC.de Support System'
-                });
+                .setFooter({ text: 'FARMMC.de Support System' });
 
             const menu = new StringSelectMenuBuilder()
                 .setCustomId('ticket_menu')
-                .setPlaceholder('Wähle eine Kategorie aus um ein Ticket zu öffnen')
+                .setPlaceholder('Kategorie auswählen')
                 .addOptions([
-                 
-                    
-                     (selected === "clan_bewerbung") {
-    ticketName = `clan-${interaction.user.username}`;
-    ticketTitle = "🛡 Clan Bewerbung";
-}
-
- (selected === "team_bewerbung") {
-    ticketName = `team-${interaction.user.username}`;
-    ticketTitle = "👥 Team Bewerbung";
-}
-
- (selected === "allgemeiner_support") {
-    ticketName = `support-${interaction.user.username}`;
-    ticketTitle = "🏗 Allgemeiner Support";
-}
+                    {
+                        label: 'Clan Bewerbung',
+                        value: 'clan_bewerbung',
+                        emoji: '🛡'
+                    },
+                    {
+                        label: 'Team Bewerbung',
+                        value: 'team_bewerbung',
+                        emoji: '👥'
+                    },
+                    {
+                        label: 'Allgemeiner Support',
+                        value: 'allgemeiner_support',
+                        emoji: '🏗'
+                    }
                 ]);
 
-            const row = new ActionRowBuilder().addComponents(menu);
-
-            await interaction.reply({
+            return interaction.reply({
                 embeds: [embed],
-                components: [row]
+                components: [new ActionRowBuilder().addComponents(menu)]
             });
         }
     }
 
-    // ====================================
-    // DROPDOWN MENÜ
-    // ====================================
+    // SELECT MENU
+    if (interaction.isStringSelectMenu()) {
 
-     (interaction.isStringSelectMenu()) {
+        const selected = interaction.values[0];
 
-         (interaction.customId === 'ticket_menu') {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket_modal_${selected}`)
+            .setTitle('Ticket Infos');
 
-            const selected = interaction.values[0];
+        const input1 = new TextInputBuilder()
+            .setCustomId('mc_name')
+            .setLabel('Minecraft Name')
+            .setStyle(TextInputStyle.Short);
 
-            let ticketName = "";
-            let ticketTitle = "";
+        const input2 = new TextInputBuilder()
+            .setCustomId('problem')
+            .setLabel('Anliegen')
+            .setStyle(TextInputStyle.Paragraph);
 
-            .addOptions([
-     (selected === "clan_bewerbung") 
-                ticketName = `clan-${interaction.user.username}`;
-                ticketTitle = "🛡 Clan Bewerbung";
-            }
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(input1),
+            new ActionRowBuilder().addComponents(input2)
+        );
 
-             (selected === "team_bewerbung") {
-                ticketName = `team-${interaction.user.username}`;
-                ticketTitle = "👥 Team Bewerbung";
-            }
-
-           (selected === "allgemeiner_support") {
-    ticketName = `support-${interaction.user.username}`;
-    ticketTitle = "🏗 Allgemeiner Support";
-}
-            }
-
-            // Prüfen ob Ticket schon existiert
-
-            const existing = interaction.guild.channels.cache.find(
-                c => c.name === ticketName.toLowerCase()
-            );
-
-             (existing) {
-                return interaction.reply({
-                    content: `❌ Du hast bereits ein Ticket offen: ${existing}`,
-                    ephemeral: true
-                });
-            }
-
-            // Ticket erstellen
-
-            const channel = await interaction.guild.channels.create({
-                name: ticketName,
-                type: ChannelType.GuildText,
-
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.id,
-                        deny: [PermissionsBitField.Flags.ViewChannel]
-                    },
-                    {
-                        id: interaction.user.id,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages,
-                            PermissionsBitField.Flags.ReadMessageHistory
-                        ]
-                    },
-                    {
-                        id: STAFF_ROLE_ID,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages,
-                            PermissionsBitField.Flags.ReadMessageHistory
-                        ]
-                    }
-                ]
-            });
-
-            // =======================
-            // BUTTONS
-            // =======================
-
-            const claimButton = new ButtonBuilder()
-                .setCustomId('claim_ticket')
-                .setLabel('Ticket übernehmen')
-                .setEmoji('📌')
-                .setStyle(ButtonStyle.Primary);
-
-            const closeButton = new ButtonBuilder()
-                .setCustomId('close_ticket')
-                .setLabel('Ticket schließen')
-                .setEmoji('🔒')
-                .setStyle(ButtonStyle.Danger);
-
-            const buttonRow = new ActionRowBuilder()
-                .addComponents(claimButton, closeButton);
-
-            // =======================
-            // TICKET EMBED
-            // =======================
-
-            const ticketEmbed = new EmbedBuilder()
-                .setColor('#57F287')
-                .setTitle(ticketTitle)
-                .setDescription(`
-Hallo ${interaction.user} 👋
-
-Dein Ticket wurde erfolgreich erstellt.
-
-📌 Bitte beschreibe dein Anliegen möglichst genau, damit das Team dir schnell helfen kann.
-                `)
-                .setFooter({
-                    text: 'FARM Clan Ticket System'
-                })
-                .setTimestamp();
-
-            await channel.send({
-                content: `<@&${STAFF_ROLE_ID}>`,
-                embeds: [ticketEmbed],
-                components: [buttonRow]
-            });
-
-            await interaction.reply({
-                content: `✅ Dein Ticket wurde erstellt: ${channel}`,
-                ephemeral: true
-            });
-        }
+        await interaction.showModal(modal);
     }
 
-    // ====================================
-    // BUTTONS
-    // ====================================
+    // MODAL
+    if (interaction.isModalSubmit()) {
 
-     (interaction.isButton()) {
+        const selected = interaction.customId.replace('ticket_modal_', '');
 
-        // ====================================
-        // TICKET ÜBERNEHMEN
-        // ====================================
+        let name = "";
+        let title = "";
 
-         (interaction.customId === 'claim_ticket') {
-
-            // Prüfen ob Staff
-
-             (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
-                return interaction.reply({
-                    content: '❌ Nur Teammitglieder können Tickets übernehmen.',
-                    ephemeral: true
-                });
-            }
-
-            // Neue Buttons
-
-            const claimedButton = new ButtonBuilder()
-                .setCustomId('claimed_ticket')
-                .setLabel(`Übernommen von ${interaction.user.username}`)
-                .setEmoji('✅')
-                .setStyle(ButtonStyle.Success)
-                .setDisabled(true);
-
-            const closeButton = new ButtonBuilder()
-                .setCustomId('close_ticket')
-                .setLabel('Ticket schließen')
-                .setEmoji('🔒')
-                .setStyle(ButtonStyle.Danger);
-
-            const newRow = new ActionRowBuilder()
-                .addComponents(claimedButton, closeButton);
-
-            // Nachricht bearbeiten
-
-            await interaction.message.edit({
-                components: [newRow]
-            });
-
-            // Claim Nachricht
-
-            const claimEmbed = new EmbedBuilder()
-                .setColor('#5865F2')
-                .setDescription(`
-📌 Der Teamler ${interaction.user} hat das Ticket übernommen.
-
-Er wird sich zeitnah um dich kümmern!
-                `)
-                .setTimestamp();
-
-            await interaction.reply({
-                embeds: [claimEmbed]
-            });
+        if (selected === "clan_bewerbung") {
+            name = `clan-${interaction.user.username}`;
+            title = "Clan Bewerbung";
         }
 
-        // ====================================
-        // TICKET SCHLIESSEN
-        // ====================================
+        if (selected === "team_bewerbung") {
+            name = `team-${interaction.user.username}`;
+            title = "Team Bewerbung";
+        }
 
-         (interaction.customId === 'close_ticket') {
+        if (selected === "allgemeiner_support") {
+            name = `support-${interaction.user.username}`;
+            title = "Support";
+        }
 
-            await interaction.reply({
-                content: '🔒 Ticket wird in 3 Sekunden geschlossen...',
-                ephemeral: false
-            });
+        const channel = await interaction.guild.channels.create({
+            name: name.toLowerCase(),
+            type: ChannelType.GuildText,
+            permissionOverwrites: [
+                {
+                    id: interaction.guild.id,
+                    deny: [PermissionsBitField.Flags.ViewChannel]
+                },
+                {
+                    id: interaction.user.id,
+                    allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+                },
+                {
+                    id: STAFF_ROLE_ID,
+                    allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+                }
+            ]
+        });
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('close_ticket')
+                .setLabel('Close')
+                .setStyle(ButtonStyle.Danger)
+        );
+
+        await channel.send({
+            content: `<@&${STAFF_ROLE_ID}>`,
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle(title)
+                    .setDescription(`Ticket von ${interaction.user}`)
+                    .setColor('#57F287')
+            ],
+            components: [row]
+        });
+
+        await interaction.reply({
+            content: `Ticket erstellt: ${channel}`,
+            ephemeral: true
+        });
+    }
+
+    // BUTTON
+    if (interaction.isButton()) {
+
+        if (interaction.customId === 'close_ticket') {
+            await interaction.reply({ content: 'Ticket wird geschlossen...' });
 
             setTimeout(() => {
-                interaction.channel.delete().catch(console.error);
+                interaction.channel.delete().catch(() => {});
             }, 3000);
         }
     }
