@@ -113,24 +113,20 @@ Dann wähle unten die passende Kategorie aus.
                 .setCustomId('ticket_menu')
                 .setPlaceholder('Wähle eine Kategorie aus um ein Ticket zu öffnen')
                 .addOptions([
-                    {
-                        label: 'Clan Bewerbung',
-                        description: 'Bewirb dich mit deinem Clan',
-                        emoji: '🛡',
-                        value: 'clan_bewerbung'
-                    },
-                    {
-                        label: 'Team Bewerbung',
-                        description: 'Bewirb dich für das Team',
-                        emoji: '👥',
-                        value: 'team_bewerbung'
-                    },
-                    {
-                        label: 'Allgemeiner Support',
-                        description: 'Hilfe und Support',
-                        emoji: '🏗',
-                        value: 'allgemein'
-                    }
+                   if (selected === "clan_bewerbung") {
+    ticketName = `clan-${interaction.user.username}`;
+    ticketTitle = "🛡 Clan Bewerbung";
+}
+
+if (selected === "team_bewerbung") {
+    ticketName = `team-${interaction.user.username}`;
+    ticketTitle = "👥 Team Bewerbung";
+}
+
+if (selected === "allgemeiner_support") {
+    ticketName = `support-${interaction.user.username}`;
+    ticketTitle = "🏗 Allgemeiner Support";
+}
                 ]);
 
             const row = new ActionRowBuilder().addComponents(menu);
