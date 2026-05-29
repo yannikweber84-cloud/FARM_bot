@@ -1,15 +1,3 @@
-const express = require("express");
-const app = express();
-
-app.get("/", (req, res) => res.send("Bot läuft"));
-
-app.listen(3000);
-const express = require("express");
-const app = express();
-
-app.get("/", (req, res) => res.send("Bot läuft"));
-
-app.listen(3000);
 require("dotenv").config();
 
 const {
@@ -25,7 +13,10 @@ const {
     REST,
     Routes,
     SlashCommandBuilder,
-    EmbedBuilder
+    EmbedBuilder,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } = require('discord.js');
 
 // =======================
@@ -37,8 +28,13 @@ const CLIENT_ID = "1509566143051071578";
 const STAFF_ROLE_ID = "1508899899222134835";
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers
+    ]
 });
+
+const claimedTickets = new Map();
 
 // =======================
 // SLASH COMMAND
@@ -101,17 +97,17 @@ Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich, damit wi
 
 📌 **Wobei wir dir helfen können:**
 
-• Fragen zum Server  
-• Probleme / Bugs  
-• Spieler melden  
-• Allgemeine Hilfe  
+• Fragen zum Server
+• Probleme / Bugs
+• Spieler melden
+• Allgemeine Hilfe
 • Sonstige Anliegen
 
 ━━━━━━━━━━━━━━━━━━
 
 👥 **Bewerbungen & Allgemeiner Support**
 
-Du möchtest dich bewerben oder um allgemeinen Support bitten?  
+Du möchtest dich bewerben oder Allgemeinen Support erhalten?
 Dann wähle unten die passende Kategorie aus.
 
 ━━━━━━━━━━━━━━━━━━
@@ -127,7 +123,7 @@ Dann wähle unten die passende Kategorie aus.
                 .addOptions([
                     {
                         label: 'Clan Bewerbung',
-                        description: 'Bewirb dich mit deinem Clan',
+                        description: 'Bewirb dich für unseren Clan',
                         emoji: '🛡',
                         value: 'clan_bewerbung'
                     },
@@ -139,9 +135,9 @@ Dann wähle unten die passende Kategorie aus.
                     },
                     {
                         label: 'Allgemeiner Support',
-                        description: 'Hilfe und Support',
+                        description: 'Bug / Report / usw.',
                         emoji: '🏗',
-                        value: 'allgemein'
+                        value: 'allgemeiner_support'
                     }
                 ]);
 
@@ -164,6 +160,59 @@ Dann wähle unten die passende Kategorie aus.
 
             const selected = interaction.values[0];
 
+            const modal = new ModalBuilder()
+                .setCustomId(`ticket_modal_${selected}`)
+                .setTitle('Ticket Informationen');
+
+            const mcName = new TextInputBuilder()
+                .setCustomId('mc_name')
+                .setLabel('Minecraft Name')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            const problem = new TextInputBuilder()
+                .setCustomId('problem')
+                .setLabel('Anliegen / Problem')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true);
+
+            const when = new TextInputBuilder()
+                .setCustomId('when')
+                .setLabel('Wann ist das Problem aufgetreten?')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            const extra = new TextInputBuilder()
+                .setCustomId('extra')
+                .setLabel('Zusätzliche Informationen')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(false);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(mcName),
+                new ActionRowBuilder().addComponents(problem),
+                new ActionRowBuilder().addComponents(when),
+                new ActionRowBuilder().addComponents(extra)
+            );
+
+            await interaction.showModal(modal);
+        }
+    }
+
+    // ====================================
+    // MODAL SUBMIT
+    // ====================================
+
+    if (interaction.isModalSubmit()) {
+
+        // ====================================
+        // TICKET ERSTELLEN
+        // ====================================
+
+        if (interaction.customId.startsWith('ticket_modal_')) {
+
+            const selected = interaction.customId.replace('ticket_modal_', '');
+
             let ticketName = "";
             let ticketTitle = "";
 
@@ -177,12 +226,10 @@ Dann wähle unten die passende Kategorie aus.
                 ticketTitle = "👥 Team Bewerbung";
             }
 
-            if (selected === "allgemein")
-                ticketName = `Allg-${interaction.user.username}`;
-                ticketTitle = "🏗 Allgemeiner Support";
+            if (selected === "bau_firma") {
+                ticketName = `bau-${interaction.user.username}`;
+                ticketTitle = "🏗 Bau Firma";
             }
-
-            // Prüfen ob Ticket schon existiert
 
             const existing = interaction.guild.channels.cache.find(
                 c => c.name === ticketName.toLowerCase()
@@ -195,7 +242,10 @@ Dann wähle unten die passende Kategorie aus.
                 });
             }
 
-            // Ticket erstellen
+            const mcName = interaction.fields.getTextInputValue('mc_name');
+            const problem = interaction.fields.getTextInputValue('problem');
+            const when = interaction.fields.getTextInputValue('when');
+            const extra = interaction.fields.getTextInputValue('extra') || '...';
 
             const channel = await interaction.guild.channels.create({
                 name: ticketName,
@@ -235,6 +285,12 @@ Dann wähle unten die passende Kategorie aus.
                 .setEmoji('📌')
                 .setStyle(ButtonStyle.Primary);
 
+            const addUserButton = new ButtonBuilder()
+                .setCustomId('add_user')
+                .setLabel('Spieler hinzufügen')
+                .setEmoji('➕')
+                .setStyle(ButtonStyle.Secondary);
+
             const closeButton = new ButtonBuilder()
                 .setCustomId('close_ticket')
                 .setLabel('Ticket schließen')
@@ -242,24 +298,34 @@ Dann wähle unten die passende Kategorie aus.
                 .setStyle(ButtonStyle.Danger);
 
             const buttonRow = new ActionRowBuilder()
-                .addComponents(claimButton, closeButton);
+                .addComponents(claimButton, addUserButton, closeButton);
 
             // =======================
             // TICKET EMBED
             // =======================
 
             const ticketEmbed = new EmbedBuilder()
-                .setColor('#57F287')
+                .setColor('#2B2D31')
                 .setTitle(ticketTitle)
                 .setDescription(`
-Hallo ${interaction.user} 👋
+👤 Erstellt von: ${interaction.user}
 
-Dein Ticket wurde erfolgreich erstellt.
+━━━━━━━━━━━━━━━━━━
 
-📌 Bitte beschreibe dein Anliegen möglichst genau, damit das Team dir schnell helfen kann.
+🎮 Minecraft Name:
+\`${mcName}\`
+
+❓ Anliegen / Problem:
+${problem}
+
+📅 Wann ist das Problem aufgetreten?
+${when}
+
+📎 Zusätzliche Informationen:
+${extra}
                 `)
                 .setFooter({
-                    text: 'FARM Clan Ticket System'
+                    text: 'FARMMC.de Ticket System'
                 })
                 .setTimestamp();
 
@@ -273,6 +339,38 @@ Dein Ticket wurde erfolgreich erstellt.
                 content: `✅ Dein Ticket wurde erstellt: ${channel}`,
                 ephemeral: true
             });
+        }
+
+        // ====================================
+        // USER HINZUFÜGEN
+        // ====================================
+
+        if (interaction.customId === 'add_user_modal') {
+
+            const userId = interaction.fields.getTextInputValue('user_id');
+
+            try {
+
+                const member = await interaction.guild.members.fetch(userId);
+
+                await interaction.channel.permissionOverwrites.edit(member.id, {
+                    ViewChannel: true,
+                    SendMessages: true,
+                    ReadMessageHistory: true
+                });
+
+                await interaction.reply({
+                    content: `✅ ${member} wurde hinzugefügt.`,
+                    ephemeral: false
+                });
+
+            } catch {
+
+                await interaction.reply({
+                    content: '❌ User nicht gefunden.',
+                    ephemeral: true
+                });
+            }
         }
     }
 
@@ -288,14 +386,26 @@ Dein Ticket wurde erfolgreich erstellt.
 
         if (interaction.customId === 'claim_ticket') {
 
-            // Prüfen ob Staff
-
             if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
                 return interaction.reply({
                     content: '❌ Nur Teammitglieder können Tickets übernehmen.',
                     ephemeral: true
                 });
             }
+
+            claimedTickets.set(interaction.channel.id, interaction.user.id);
+
+            await interaction.channel.permissionOverwrites.edit(STAFF_ROLE_ID, {
+                ViewChannel: true,
+                SendMessages: false,
+                ReadMessageHistory: true
+            });
+
+            await interaction.channel.permissionOverwrites.edit(interaction.user.id, {
+                ViewChannel: true,
+                SendMessages: true,
+                ReadMessageHistory: true
+            });
 
             // Neue Buttons
 
@@ -306,6 +416,12 @@ Dein Ticket wurde erfolgreich erstellt.
                 .setStyle(ButtonStyle.Success)
                 .setDisabled(true);
 
+            const addUserButton = new ButtonBuilder()
+                .setCustomId('add_user')
+                .setLabel('Spieler hinzufügen')
+                .setEmoji('➕')
+                .setStyle(ButtonStyle.Secondary);
+
             const closeButton = new ButtonBuilder()
                 .setCustomId('close_ticket')
                 .setLabel('Ticket schließen')
@@ -313,15 +429,11 @@ Dein Ticket wurde erfolgreich erstellt.
                 .setStyle(ButtonStyle.Danger);
 
             const newRow = new ActionRowBuilder()
-                .addComponents(claimedButton, closeButton);
-
-            // Nachricht bearbeiten
+                .addComponents(claimedButton, addUserButton, closeButton);
 
             await interaction.message.edit({
                 components: [newRow]
             });
-
-            // Claim Nachricht
 
             const claimEmbed = new EmbedBuilder()
                 .setColor('#5865F2')
@@ -335,6 +447,29 @@ Er wird sich zeitnah um dich kümmern!
             await interaction.reply({
                 embeds: [claimEmbed]
             });
+        }
+
+        // ====================================
+        // SPIELER HINZUFÜGEN
+        // ====================================
+
+        if (interaction.customId === 'add_user') {
+
+            const modal = new ModalBuilder()
+                .setCustomId('add_user_modal')
+                .setTitle('Spieler hinzufügen');
+
+            const userInput = new TextInputBuilder()
+                .setCustomId('user_id')
+                .setLabel('Discord User ID')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(userInput)
+            );
+
+            await interaction.showModal(modal);
         }
 
         // ====================================
