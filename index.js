@@ -167,26 +167,25 @@ Dann wähle unten die passende Kategorie aus.
             let ticketName = "";
             let ticketTitle = "";
 
-      let categoryId = "";
+     let categoryId = "";
 
 if (selected === "clan_bewerbung") {
     ticketName = `clan-${interaction.user.username}`;
     ticketTitle = "🛡 Clan Bewerbung";
-    categoryId = 1510194105529925642;
+    categoryId = "1510194105529925642";
 }
 
 if (selected === "team_bewerbung") {
     ticketName = `team-${interaction.user.username}`;
     ticketTitle = "👥 Team Bewerbung";
-    categoryId = 1510194178196373574;
+    categoryId = "1510194178196373574";
 }
 
 if (selected === "allgemein") {
     ticketName = `support-${interaction.user.username}`;
     ticketTitle = "🏗 Allgemeiner Support";
-    categoryId = 1510194225424240700;
+    categoryId = "1510194225424240700";
 }
-
             // Prüfen ob Ticket schon existiert
 
             const existing = interaction.guild.channels.cache.find(
@@ -202,33 +201,33 @@ if (selected === "allgemein") {
 
             // Ticket erstellen
 
-            const channel = await interaction.guild.channels.create({
-                name: ticketName,
-                type: ChannelType.GuildText,
-
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.id,
-                        deny: [PermissionsBitField.Flags.ViewChannel]
-                    },
-                    {
-                        id: interaction.user.id,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages,
-                            PermissionsBitField.Flags.ReadMessageHistory
-                        ]
-                    },
-                    {
-                        id: STAFF_ROLE_ID,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages,
-                            PermissionsBitField.Flags.ReadMessageHistory
-                        ]
-                    }
-                ]
-            });
+       const channel = await interaction.guild.channels.create({
+    name: ticketName,
+    type: ChannelType.GuildText,
+    parent: categoryId,
+    permissionOverwrites: [
+        {
+            id: interaction.guild.id,
+            deny: [PermissionsBitField.Flags.ViewChannel]
+        },
+        {
+            id: interaction.user.id,
+            allow: [
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages,
+                PermissionsBitField.Flags.ReadMessageHistory
+            ]
+        },
+        {
+            id: STAFF_ROLE_ID,
+            allow: [
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages,
+                PermissionsBitField.Flags.ReadMessageHistory
+            ]
+        }
+    ]
+});
 
             // =======================
             // BUTTONS
