@@ -167,22 +167,24 @@ Dann wähle unten die passende Kategorie aus.
             let ticketName = "";
             let ticketTitle = "";
 
-            if (selected === "clan_bewerbung") {
-                ticketName = `🎫clan-${interaction.user.username}`;
-                ticketTitle = "🛡 Clan Bewerbung";
-                categoryId = 1510194105529925642;
-            }
+      let categoryId = "";
 
-            if (selected === "team_bewerbung") {
-                ticketName = `🔒team-${interaction.user.username}`;
-                ticketTitle = "👥 Team Bewerbung";
-                categoryId = 1510194178196373574;
-            }
+if (selected === "clan_bewerbung") {
+    ticketName = `clan-${interaction.user.username}`;
+    ticketTitle = "🛡 Clan Bewerbung";
+    categoryId = 1510194105529925642;
+}
 
-            if (selected === "allgemein") {
-    ticketName = `💬support-${interaction.user.username}`;
+if (selected === "team_bewerbung") {
+    ticketName = `team-${interaction.user.username}`;
+    ticketTitle = "👥 Team Bewerbung";
+    categoryId = 1510194178196373574;
+}
+
+if (selected === "allgemein") {
+    ticketName = `support-${interaction.user.username}`;
     ticketTitle = "🏗 Allgemeiner Support";
-                categoryId = 1510194225424240700;
+    categoryId = 1510194225424240700;
 }
 
             // Prüfen ob Ticket schon existiert
