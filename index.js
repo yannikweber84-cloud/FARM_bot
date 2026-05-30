@@ -168,17 +168,17 @@ Dann wähle unten die passende Kategorie aus.
             let ticketTitle = "";
 
             if (selected === "clan_bewerbung") {
-                ticketName = `clan-${interaction.user.username}`;
+                ticketName = `🎫clan-${interaction.user.username}`;
                 ticketTitle = "🛡 Clan Bewerbung";
             }
 
             if (selected === "team_bewerbung") {
-                ticketName = `team-${interaction.user.username}`;
+                ticketName = `🔒team-${interaction.user.username}`;
                 ticketTitle = "👥 Team Bewerbung";
             }
 
             if (selected === "allgemein") {
-    ticketName = `support-${interaction.user.username}`;
+    ticketName = `💬support-${interaction.user.username}`;
     ticketTitle = "🏗 Allgemeiner Support";
 }
 
