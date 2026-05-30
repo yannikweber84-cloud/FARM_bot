@@ -118,7 +118,7 @@ Dann wähle unten die passende Kategorie aus.
                 `)
                 .setThumbnail(client.user.displayAvatarURL())
                 .setFooter({
-                    text: 'FARMMC.de Support System'
+                    text: 'powered by FARM Support System'
                 });
 
             const menu = new StringSelectMenuBuilder()
