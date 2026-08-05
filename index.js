@@ -38,7 +38,11 @@ const {
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = "1534286416945614889";
 const STAFF_ROLE_ID = "1488904093970858115";
+const SUPPORT_WARTE_RAUM_ID = "1488584492628185293";
 
+const SUPPORT_LOG_CHANNEL_ID = "1488584310385803416";
+
+const SUPPORT_ROLE_ID = "1488904093970858115";
 
 // =======================
 // TICKET KATEGORIEN
@@ -509,7 +513,94 @@ Er wird sich zeitnah um dich kümmern!
     }
 
 
+});client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+
+
+    try {
+
+
+        if (
+
+            newState.channelId === SUPPORT_WARTE_RAUM_ID &&
+
+            oldState.channelId !== SUPPORT_WARTE_RAUM_ID
+
+        ) {
+
+
+
+            const logChannel = newState.guild.channels.cache.get(
+
+                SUPPORT_LOG_CHANNEL_ID
+
+            );
+
+
+
+            if (!logChannel) return;
+
+
+
+            const embed = new EmbedBuilder()
+
+
+                .setColor("Yellow")
+
+
+                .setTitle("🎧 Voice-Support benötigt!")
+
+
+                .setDescription(
+
+`👤 Spieler:
+
+${newState.member}
+
+
+📞 Kanal:
+
+${newState.channel}
+
+
+⏰ Zeit:
+
+<t:${Math.floor(Date.now() / 1000)}:R>`
+
+                )
+
+
+                .setTimestamp();
+
+
+
+            await logChannel.send({
+
+
+                content:`<@&${SUPPORT_ROLE_ID}>`,
+
+
+                embeds:[embed]
+
+
+            });
+
+
+
+        }
+
+
+
+    } catch(err) {
+
+
+        console.error("Voice Fehler:",err);
+
+
+    }
+
+
 });
+
 
 
 
