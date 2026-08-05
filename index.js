@@ -128,6 +128,7 @@ Dann wähle unten die passende Kategorie aus.
                 .setPlaceholder('Wähle eine Kategorie aus um ein Ticket zu öffnen')
                 .addOptions([
                     {
+
                         label: 'Clan Bewerbung',
                         description: 'Bewirb dich mit deinem Clan',
                         emoji: '🛡',
