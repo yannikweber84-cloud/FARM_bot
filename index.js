@@ -523,7 +523,7 @@ Er wird sich zeitnah um dich kümmern!
 // VOICE SUPPORT WARTERAUM
 // =======================
 
-client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => });
 
     try {
 
@@ -624,7 +624,14 @@ Bitte kümmert euch schnellstmöglich um den Spieler.
 
 
 });
-    // =======================
+
+
+              }
+
+});
+
+
+// =======================
 // LOGIN
 // =======================
 
