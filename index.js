@@ -79,16 +79,16 @@ const commands = [
         .setName("countingstart")
         .setDescription("Startet das Counting")
         .toJSON()
-
 ];
 
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
+
 (async () => {
     try {
 
-        // Alte globale Commands löschen
+        // ALTE GLOBALE COMMANDS LÖSCHEN
         await rest.put(
             Routes.applicationCommands(CLIENT_ID),
             { body: [] }
@@ -97,7 +97,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
         console.log("🗑 Globale Commands gelöscht");
 
 
-        // Neue Server Commands registrieren
+        // NUR SERVER COMMANDS
         await rest.put(
             Routes.applicationGuildCommands(
                 CLIENT_ID,
@@ -106,7 +106,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
             { body: commands }
         );
 
-        console.log("✅ Server Commands registriert.");
+        console.log("✅ Commands registriert");
 
     } catch (error) {
         console.error(error);
