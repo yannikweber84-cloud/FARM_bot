@@ -66,47 +66,28 @@ const client = new Client({
 
 
 // =======================
-// SLASH COMMAND
+// SLASH COMMAND LÖSCHEN
 // =======================
 
-const commands = [
-    new SlashCommandBuilder()
-        .setName('ticketpanel')
-        .setDescription('Erstellt das Ticket Panel')
-        .toJSON(),
-
-    new SlashCommandBuilder()
-        .setName("countingstart")
-        .setDescription("Startet das Counting")
-        .toJSON()
-];
-
-
 const rest = new REST({ version: '10' }).setToken(TOKEN);
-
 
 (async () => {
     try {
 
-        // ALTE GLOBALE COMMANDS LÖSCHEN
         await rest.put(
             Routes.applicationCommands(CLIENT_ID),
             { body: [] }
         );
 
-        console.log("🗑 Globale Commands gelöscht");
-
-
-        // NUR SERVER COMMANDS
         await rest.put(
             Routes.applicationGuildCommands(
                 CLIENT_ID,
-                "1488581484565500157"
+                GUILD_ID
             ),
-            { body: commands }
+            { body: [] }
         );
 
-        console.log("✅ Commands registriert");
+        console.log("🗑 Alle Commands gelöscht");
 
     } catch (error) {
         console.error(error);
