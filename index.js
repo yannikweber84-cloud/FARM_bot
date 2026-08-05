@@ -4,7 +4,7 @@ const express = require("express");
 const app = express();
 
 app.get("/", (req, res) => {
-    res.send("FARM Bot läuft!");
+    res.send("Bot läuft!");
 });
 
 const PORT = process.env.PORT || 3000;
@@ -13,10 +13,6 @@ app.listen(PORT, () => {
     console.log(`🌐 Server läuft auf Port ${PORT}`);
 });
 
-
-// =======================
-// DISCORD IMPORTS
-// =======================
 
 const {
     Client,
@@ -32,7 +28,7 @@ const {
     Routes,
     SlashCommandBuilder,
     EmbedBuilder
-} = require("discord.js");
+} = require('discord.js');
 
 
 // =======================
@@ -40,150 +36,52 @@ const {
 // =======================
 
 const TOKEN = process.env.TOKEN;
-
 const CLIENT_ID = "1534286416945614889";
-
-
-// =======================
-// WELCOME SYSTEM
-// =======================
-
-const WELCOME_CHANNEL_ID = "1507456889615810642";
-
-const ROLE_1_ID = "1508899625258717355";
-const ROLE_2_ID = "1507456888843800596";
-
-
-// =======================
-// VOICE SUPPORT
-// =======================
-
-const SUPPORT_WARTE_RAUM_ID = "1507456890253349029";
-
-const SUPPORT_LOG_CHANNEL_ID = "1507456890576306401";
-
-const SUPPORT_ROLE_ID = "1508899899222134835";
-
-
-// =======================
-// TICKET SYSTEM
-// =======================
-
 const STAFF_ROLE_ID = "1488904093970858115";
 
 
+// =======================
+// TICKET KATEGORIEN
+// =======================
+
 const CLAN_CATEGORY_ID = "1534287236407759040";
-
 const TEAM_CATEGORY_ID = "1534287314464018655";
-
 const BAU_CATEGORY_ID = "1534287374819917896";
 
 
-// =======================
-// COUNTING SYSTEM
-// =======================
-
-let countingActive = false;
-
-let currentNumber = 1;
-
-let lastUserId = null;
-
-
-// =======================
-// CLIENT
-// =======================
-
 const client = new Client({
-
-    intents: [
-
-        GatewayIntentBits.Guilds,
-
-        GatewayIntentBits.GuildMembers,
-
-        GatewayIntentBits.GuildVoiceStates,
-
-        GatewayIntentBits.GuildMessages,
-
-        GatewayIntentBits.MessageContent
-
-    ]
-
+    intents: [GatewayIntentBits.Guilds]
 });
 
 
 // =======================
-// SLASH COMMANDS
+// SLASH COMMAND
 // =======================
 
 const commands = [
-
     new SlashCommandBuilder()
-
-        .setName("countingstart")
-
-        .setDescription("Startet das Counting")
-
-        .toJSON(),
+        .setName('ticketpanel')
+        .setDescription('Erstellt das Ticket Panel')
+].map(command => command.toJSON());
 
 
-
-    new SlashCommandBuilder()
-
-        .setName("ticketpanel")
-
-        .setDescription("Erstellt das Ticket Panel")
-
-        .toJSON()
-
-];
-
-
-// =======================
-// COMMAND REGISTRIERUNG
-// =======================
-
-const rest = new REST({
-
-    version: "10"
-
-}).setToken(TOKEN);
-
+const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 
 (async () => {
-
     try {
 
-
         await rest.put(
-
             Routes.applicationCommands(CLIENT_ID),
-
-            {
-
-                body: commands
-
-            }
-
+            { body: commands }
         );
 
-
-        console.log("✅ Slash Commands registriert");
-
+        console.log("✅ Slash Commands registriert.");
 
     } catch (error) {
-
-
         console.error(error);
-
-
     }
-
-
 })();
-
 
 
 // =======================
@@ -191,775 +89,290 @@ const rest = new REST({
 // =======================
 
 client.once(Events.ClientReady, () => {
-
-
-    console.log(`✅ ${client.user.tag} ist online!`);
-
-
+    console.log(`✅ ${client.user.tag} ist online.`);
 });
 
 
 // =======================
-// JOIN SYSTEM
+// INTERACTIONS
 // =======================
-
-client.on(Events.GuildMemberAdd, async (member) => {
-
-
-    try {
-
-
-        await member.roles.add(ROLE_1_ID);
-
-
-        await member.roles.add(ROLE_2_ID);
-
-
-
-        const channel = member.guild.channels.cache.get(
-
-            WELCOME_CHANNEL_ID
-
-        );
-
-
-
-        if (!channel) return;
-
-
-
-        const embed = new EmbedBuilder()
-
-
-            .setColor("Yellow")
-
-
-            .setTitle("⚡️ Logging ⚡️")
-
-
-            .setDescription(
-
-`${member} ist gejoined!
-
-
-UserId:
-
-${member.id}
-
-
-Aktuelle Memberanzahl:
-
-${member.guild.memberCount}`
-
-            )
-
-
-            .setThumbnail(
-
-                member.user.displayAvatarURL({
-
-                    dynamic:true
-
-                })
-
-            )
-
-
-            .setTimestamp();
-
-
-
-        await channel.send({
-
-            embeds:[embed]
-
-        });
-
-
-
-    } catch(err) {
-
-
-        console.error("Join Fehler:",err);
-
-
-    }
-
-
-});// =======================
-// VOICE SUPPORT SYSTEM
-// =======================
-
-client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
-
-
-    try {
-
-
-        if (
-
-            newState.channelId === SUPPORT_WARTE_RAUM_ID &&
-
-            oldState.channelId !== SUPPORT_WARTE_RAUM_ID
-
-        ) {
-
-
-
-            const logChannel = newState.guild.channels.cache.get(
-
-                SUPPORT_LOG_CHANNEL_ID
-
-            );
-
-
-
-            if (!logChannel) return;
-
-
-
-            const embed = new EmbedBuilder()
-
-
-                .setColor("Yellow")
-
-
-                .setTitle("🎧 Voice-Support benötigt!")
-
-
-                .setDescription(
-
-`👤 Spieler:
-
-${newState.member}
-
-
-📞 Kanal:
-
-${newState.channel}
-
-
-⏰ Zeit:
-
-<t:${Math.floor(Date.now() / 1000)}:R>`
-
-                )
-
-
-                .setTimestamp();
-
-
-
-            await logChannel.send({
-
-
-                content:`<@&${SUPPORT_ROLE_ID}>`,
-
-
-                embeds:[embed]
-
-
-            });
-
-
-
-        }
-
-
-
-    } catch(err) {
-
-
-        console.error("Voice Fehler:",err);
-
-
-    }
-
-
-});
-
-
-
-
-// =======================
-// INTERACTION SYSTEM
-// =======================
-
 
 client.on(Events.InteractionCreate, async interaction => {
 
 
+    if (interaction.isChatInputCommand()) {
 
-    if (!interaction.isChatInputCommand()) return;
 
-
-
-
-    // =======================
-    // COUNTING START
-    // =======================
-
-
-    if(interaction.commandName === "countingstart"){
-
-
-
-        countingActive = true;
-
-
-        currentNumber = 1;
-
-
-        lastUserId = null;
-
-
-
-        await interaction.reply(
-
-            "🎉 Counting gestartet bei **1**!"
-
-        );
-
-
-    }
-
-
-
-
-});
-
-
-
-
-// =======================
-// COUNTING SYSTEM
-// =======================
-
-
-client.on("messageCreate", async message => {
-
-
-
-    if(message.author.bot) return;
-
-
-
-    if(!countingActive) return;
-
-
-
-    if(!/^\d+$/.test(message.content)) return;
-
-
-
-    const number = parseInt(message.content);
-
-
-
-
-    // gleicher User zweimal
-
-
-    if(message.author.id === lastUserId){
-
-
-
-        await message.channel.send(
-
-            "❌ Du kannst nicht zweimal hintereinander zählen! Reset auf **1**"
-
-        );
-
-
-
-        currentNumber = 1;
-
-
-        lastUserId = null;
-
-
-
-        return;
-
-
-    }
-
-
-
-
-    // richtige Zahl
-
-
-    if(number === currentNumber){
-
-
-
-        await message.react("✅");
-
-
-
-        lastUserId = message.author.id;
-
-
-
-        currentNumber++;
-
-
-
-
-        if(currentNumber > 100000){
-
-
-
-            await message.channel.send(
-
-                "🎉 **100000 erreicht!** Counting startet wieder bei **1**."
-
-            );
-
-
-
-            currentNumber = 1;
-
-
-            lastUserId = null;
-
-
-        }
-
-
-
-
-    } else {
-
-
-
-        await message.channel.send(
-
-            `❌ Falsch! Erwartet war **${currentNumber}**. Reset auf **1**`
-
-        );
-
-
-
-        currentNumber = 1;
-
-
-        lastUserId = null;
-
-
-
-    }
-
-
-
-
-});
-
-
-
-
-// =======================
-// TICKET INTERACTION START
-// =======================
-
-
-client.on(Events.InteractionCreate, async interaction => {
-
-
-
-    // =======================
-    // TICKET PANEL COMMAND
-    // =======================
-
-
-    if(interaction.isChatInputCommand()){
-
-
-
-        if(interaction.commandName === "ticketpanel"){
-
+        if (interaction.commandName === 'ticketpanel') {
 
 
             const embed = new EmbedBuilder()
-
-
-
-                .setColor("#2B2D31")
-
-
-
-                .setTitle("🎫 Allgemeiner Support")
-
-
-
+                .setColor('#2B2D31')
+                .setTitle('🎫 Allgemeiner Support')
                 .setDescription(`
-
-Du hast ein Problem, eine Frage oder benötigst Hilfe?
-
+Du hast ein Problem, eine Frage oder benötigst Hilfe auf unserem Server?
 Dann bist du hier genau richtig!
 
+Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich, damit unser Team dir schnell und gezielt helfen kann.
 
 ━━━━━━━━━━━━━━━━━━
-
 
 📌 **Wobei wir helfen können:**
 
-
 • ❓ Fragen rund um den Server
-
 • 🐛 Probleme & Bugs
-
 • 🚨 Spieler melden
-
-• 🛠 Allgemeine Hilfe
-
-• 🏗 Bauprojekte & Aufträge
-
+• 🛠 Allgemeine Hilfe & Unterstützung
+• 🏗️ Bauprojekte & Aufträge
 
 ━━━━━━━━━━━━━━━━━━
-
 
 👥 **Bewerbungen & Bau-Firma**
 
+Du möchtest Teil unseres Teams werden oder die Bau-Firma unterstützen? 🏗️
 
-Erstelle ein Ticket und sende uns deine Bewerbung.
-
+Egal ob als Builder, Helfer oder für ein anderes Teammitglied – erstelle einfach ein Ticket und sende uns deine Bewerbung.
 
 ━━━━━━━━━━━━━━━━━━
 
-
-📋 **Hinweise:**
-
+📋 **Wichtige Hinweise:**
 
 • Beschreibe dein Anliegen genau
-
-• Bleibe freundlich
-
-• Nur ein Ticket pro Anliegen
-
+• Bleibe freundlich und respektvoll
+• Erstelle nur ein Ticket pro Anliegen
 
 ━━━━━━━━━━━━━━━━━━
 
-
-🚀 Viel Spaß auf dem Server!
+🚀 Vielen Dank und viel Spaß auf unserem Server!
 
                 `)
-
-
-
-                .setThumbnail(
-
-                    client.user.displayAvatarURL()
-
-                )
-
-
-
+                .setThumbnail(client.user.displayAvatarURL())
                 .setFooter({
-
-                    text:"VIBE Support System"
-
+                    text: 'VIBE Support System'
                 });
 
 
-
-
             const menu = new StringSelectMenuBuilder()
-
-
-
-                .setCustomId("ticket_menu")
-
-
-
-                .setPlaceholder(
-
-                    "Wähle eine Kategorie aus"
-
-                )
-
-
-
+                .setCustomId('ticket_menu')
+                .setPlaceholder('Wähle eine Kategorie aus')
                 .addOptions([
 
-
-
                     {
-
-                        label:"Allgemeiner Support",
-
-                        description:"Hilfe und Anliegen",
-
-                        emoji:"🛡",
-
-                        value:"clan_bewerbung"
-
+                        label: ' Allgemeiner Support',
+                        description: 'Hilfe und Anliegen',
+                        emoji: '🛡',
+                        value: 'clan_bewerbung'
                     },
 
-
-
                     {
-
-                        label:"Team/Clan Bewerbung",
-
-                        description:"Bewirb dich für Team oder Clan",
-
-                        emoji:"👥",
-
-                        value:"team_bewerbung"
-
+                        label: ' Team/Clan Bewerbung',
+                        description: 'Bewirb dich für Team oder Clan',
+                        emoji: '👥',
+                        value: 'team_bewerbung'
                     },
 
-
-
                     {
-
-                        label:"Bau Firma",
-
-                        description:"Firmenbewerbung und Aufträge",
-
-                        emoji:"🏗",
-
-                        value:"bau_firma"
-
+                        label: ' Bau Firma',
+                        description: 'Firmenbewerbung und Aufträge',
+                        emoji: '🏗',
+                        value: 'bau_firma'
                     }
-
-
 
                 ]);
 
 
-
-
-
             const row = new ActionRowBuilder()
-
                 .addComponents(menu);
 
 
-
-
             await interaction.reply({
-
-
-                embeds:[embed],
-
-
-                components:[row]
-
-
+                embeds: [embed],
+                components: [row]
             });
 
-
-
         }
-
-
     }
 
 
 
-});// =======================
-// TICKET AUSWAHL MENU
-// =======================
+    if (interaction.isStringSelectMenu()) {
 
-client.on(Events.InteractionCreate, async interaction => {
 
+        if (interaction.customId === 'ticket_menu') {
 
-    if(!interaction.isStringSelectMenu()) return;
 
+            const selected = interaction.values[0];
 
-    if(interaction.customId !== "ticket_menu") return;
 
+            let ticketName = "";
+            let ticketTitle = "";
+            let categoryID = null;
 
 
-    const selected = interaction.values[0];
 
+  if (selected === "clan_bewerbung") {
 
+    ticketName = `💬support-${interaction.user.username.toLowerCase()}`;
+    ticketTitle = "🛡 Allgemeiner Support";
+    categoryID = CLAN_CATEGORY_ID;
 
-    let ticketName = "";
+}
 
-    let ticketTitle = "";
 
-    let categoryID = null;
+if (selected === "team_bewerbung") {
 
+    ticketName = `📝bewerbung-${interaction.user.username.toLowerCase()}`;
+    ticketTitle = "👥 Team/Clan Bewerbung";
+    categoryID = TEAM_CATEGORY_ID;
 
+}
 
 
-    // =======================
-    // KATEGORIEN
-    // =======================
+if (selected === "bau_firma") {
 
+    ticketName = `🧱 bau-${interaction.user.username.toLowerCase()}`;
+    ticketTitle = "🏗 Bau Firma";
+    categoryID = BAU_CATEGORY_ID;
 
-    if(selected === "clan_bewerbung"){
+}
 
 
-        ticketName = `💬support-${interaction.user.username.toLowerCase()}`;
+            const existing = interaction.guild.channels.cache.find(
+                c => c.name === ticketName.toLowerCase()
+            );
 
-        ticketTitle = "🛡 Allgemeiner Support";
 
-        categoryID = CLAN_CATEGORY_ID;
+            if (existing) {
 
-
-    }
-
-
-
-
-    if(selected === "team_bewerbung"){
-
-
-        ticketName = `📝bewerbung-${interaction.user.username.toLowerCase()}`;
-
-        ticketTitle = "👥 Team/Clan Bewerbung";
-
-        categoryID = TEAM_CATEGORY_ID;
-
-
-    }
-
-
-
-
-    if(selected === "bau_firma"){
-
-
-        ticketName = `🧱bau-${interaction.user.username.toLowerCase()}`;
-
-        ticketTitle = "🏗 Bau Firma";
-
-        categoryID = BAU_CATEGORY_ID;
-
-
-    }
-
-
-
-
-    // =======================
-    // CHECK OB TICKET EXISTIERT
-    // =======================
-
-
-    const existing = interaction.guild.channels.cache.find(
-
-        c => c.name === ticketName.toLowerCase()
-
-    );
-
-
-
-    if(existing){
-
-
-        return interaction.reply({
-
-            content:`❌ Du hast bereits ein Ticket offen: ${existing}`,
-
-            ephemeral:true
-
-        });
-
-
-    }
-
-
-
-
-    // =======================
-    // TICKET ERSTELLEN
-    // =======================
-
-
-    const channel = await interaction.guild.channels.create({
-
-
-
-        name:ticketName,
-
-
-
-        type:ChannelType.GuildText,
-
-
-
-        parent:categoryID,
-
-
-
-        permissionOverwrites:[
-
-
-
-            {
-
-                id:interaction.guild.id,
-
-
-                deny:[
-
-                    PermissionsBitField.Flags.ViewChannel
-
-                ]
-
-            },
-
-
-
-            {
-
-                id:interaction.user.id,
-
-
-                allow:[
-
-
-                    PermissionsBitField.Flags.ViewChannel,
-
-
-                    PermissionsBitField.Flags.SendMessages,
-
-
-                    PermissionsBitField.Flags.ReadMessageHistory
-
-
-                ]
-
-            },
-
-
-
-            {
-
-                id:STAFF_ROLE_ID,
-
-
-                allow:[
-
-
-                    PermissionsBitField.Flags.ViewChannel,
-
-
-                    PermissionsBitField.Flags.SendMessages,
-
-
-                    PermissionsBitField.Flags.ReadMessageHistory
-
-
-                ]
+                return interaction.reply({
+                    content: `❌ Du hast bereits ein Ticket offen: ${existing}`,
+                    ephemeral: true
+                });
 
             }
 
 
 
-        ]
+            const channel = await interaction.guild.channels.create({
+
+                name: ticketName,
+
+                type: ChannelType.GuildText,
+
+                parent: categoryID,
+
+
+                permissionOverwrites: [
+                                        {
+                        id: interaction.guild.id,
+                        deny: [
+                            PermissionsBitField.Flags.ViewChannel
+                        ]
+                    },
+
+                    {
+                        id: interaction.user.id,
+                        allow: [
+                            PermissionsBitField.Flags.ViewChannel,
+                            PermissionsBitField.Flags.SendMessages,
+                            PermissionsBitField.Flags.ReadMessageHistory
+                        ]
+                    },
+
+                    {
+                        id: STAFF_ROLE_ID,
+                        allow: [
+                            PermissionsBitField.Flags.ViewChannel,
+                            PermissionsBitField.Flags.SendMessages,
+                            PermissionsBitField.Flags.ReadMessageHistory
+                        ]
+                    }
+                ]
+
+            });
 
 
 
-    });
+            // =======================
+            // BUTTONS
+            // =======================
+
+            const claimButton = new ButtonBuilder()
+                .setCustomId('claim_ticket')
+                .setLabel('Ticket übernehmen')
+                .setEmoji('📌')
+                .setStyle(ButtonStyle.Primary);
 
 
+            const closeButton = new ButtonBuilder()
+                .setCustomId('close_ticket')
+                .setLabel('Ticket schließen')
+                .setEmoji('🔒')
+                .setStyle(ButtonStyle.Danger);
+
+
+
+            const buttonRow = new ActionRowBuilder()
+                .addComponents(
+                    claimButton,
+                    closeButton
+                );
+
+
+
+            // =======================
+            // TICKET EMBED
+            // =======================
+
+            const ticketEmbed = new EmbedBuilder()
+
+                .setColor('#57F287')
+
+                .setTitle(ticketTitle)
+
+                .setDescription(`
+Hallo ${interaction.user} 👋
+
+Dein Ticket wurde erfolgreich erstellt.
+
+📌 Bitte beschreibe dein Anliegen möglichst genau, damit das Team dir schnell helfen kann.
+                `)
+
+                .setFooter({
+                    text: 'VIBE Ticket System'
+                })
+
+                .setTimestamp();
+
+
+
+            await channel.send({
+
+                content: `<@&${STAFF_ROLE_ID}>`,
+
+                embeds: [
+                    ticketEmbed
+                ],
+
+                components: [
+                    buttonRow
+                ]
+
+            });
+
+
+
+            await interaction.reply({
+
+                content: `✅ Dein Ticket wurde erstellt: ${channel}`,
+
+                ephemeral: true
+
+            });
+
+        }
+
+    }
 
 
 
@@ -968,366 +381,136 @@ client.on(Events.InteractionCreate, async interaction => {
     // =======================
 
 
-    const claimButton = new ButtonBuilder()
+    if (interaction.isButton()) {
 
 
-        .setCustomId("claim_ticket")
 
+        // Ticket übernehmen
 
-        .setLabel("Ticket übernehmen")
+        if (interaction.customId === 'claim_ticket') {
 
 
-        .setEmoji("📌")
 
+            if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
 
-        .setStyle(ButtonStyle.Primary);
+                return interaction.reply({
 
+                    content: '❌ Nur Teammitglieder können Tickets übernehmen.',
 
+                    ephemeral: true
 
+                });
 
+            }
 
-    const closeButton = new ButtonBuilder()
 
 
-        .setCustomId("close_ticket")
+            const claimedButton = new ButtonBuilder()
 
+                .setCustomId('claimed_ticket')
 
-        .setLabel("Ticket schließen")
+                .setLabel(`Übernommen von ${interaction.user.username}`)
 
+                .setEmoji('✅')
 
-        .setEmoji("🔒")
+                .setStyle(ButtonStyle.Success)
 
+                .setDisabled(true);
 
-        .setStyle(ButtonStyle.Danger);
 
 
+            const closeButton = new ButtonBuilder()
 
+                .setCustomId('close_ticket')
 
+                .setLabel('Ticket schließen')
 
-    const buttonRow = new ActionRowBuilder()
+                .setEmoji('🔒')
 
+                .setStyle(ButtonStyle.Danger);
 
-        .addComponents(
 
-            claimButton,
 
-            closeButton
+            const newRow = new ActionRowBuilder()
 
-        );
+                .addComponents(
+                    claimedButton,
+                    closeButton
+                );
 
 
 
+            await interaction.message.edit({
 
-
-    // =======================
-    // TICKET EMBED
-    // =======================
-
-
-    const ticketEmbed = new EmbedBuilder()
-
-
-
-        .setColor("#57F287")
-
-
-
-        .setTitle(ticketTitle)
-
-
-
-        .setDescription(`
-
-Hallo ${interaction.user} 👋
-
-
-Dein Ticket wurde erfolgreich erstellt.
-
-
-📌 Beschreibe dein Anliegen möglichst genau,
-
-damit das Team dir schnell helfen kann.
-
-
-
-`)
-
-
-
-        .setFooter({
-
-            text:"VIBE Ticket System"
-
-        })
-
-
-
-        .setTimestamp();
-
-
-
-
-
-    await channel.send({
-
-
-
-        content:`<@&${STAFF_ROLE_ID}>`,
-
-
-
-        embeds:[
-
-            ticketEmbed
-
-        ],
-
-
-
-        components:[
-
-            buttonRow
-
-        ]
-
-
-
-    });
-
-
-
-
-
-    await interaction.reply({
-
-
-
-        content:`✅ Dein Ticket wurde erstellt: ${channel}`,
-
-
-
-        ephemeral:true
-
-
-
-    });
-
-
-
-});
-// =======================
-// TICKET BUTTON SYSTEM
-// =======================
-
-client.on(Events.InteractionCreate, async interaction => {
-
-
-    if(!interaction.isButton()) return;
-
-
-
-    // =======================
-    // TICKET ÜBERNEHMEN
-    // =======================
-
-
-    if(interaction.customId === "claim_ticket"){
-
-
-
-        if(!interaction.member.roles.cache.has(STAFF_ROLE_ID)){
-
-
-
-            return interaction.reply({
-
-
-                content:"❌ Nur Teammitglieder können Tickets übernehmen.",
-
-
-                ephemeral:true
-
+                components: [
+                    newRow
+                ]
 
             });
 
 
 
+            const claimEmbed = new EmbedBuilder()
+
+                .setColor('#5865F2')
+
+                .setDescription(`
+
+📌 Der Teamler ${interaction.user} hat das Ticket übernommen.
+
+Er wird sich zeitnah um dich kümmern!
+
+                `)
+
+                .setTimestamp();
+
+
+
+            await interaction.reply({
+
+                embeds: [
+                    claimEmbed
+                ]
+
+            });
+
         }
 
 
 
+        // Ticket schließen
 
 
-        const claimedButton = new ButtonBuilder()
+        if (interaction.customId === 'close_ticket') {
 
 
-            .setCustomId("claimed_ticket")
 
+            await interaction.reply({
 
-            .setLabel(
+                content: '🔒 Ticket wird in 3 Sekunden geschlossen...',
 
-                `Übernommen von ${interaction.user.username}`
+                ephemeral: false
 
-            )
+            });
 
 
-            .setEmoji("✅")
 
+            setTimeout(() => {
 
-            .setStyle(ButtonStyle.Success)
+                interaction.channel.delete()
+                    .catch(console.error);
 
+            }, 3000);
 
-            .setDisabled(true);
 
-
-
-
-
-        const closeButton = new ButtonBuilder()
-
-
-            .setCustomId("close_ticket")
-
-
-            .setLabel("Ticket schließen")
-
-
-            .setEmoji("🔒")
-
-
-            .setStyle(ButtonStyle.Danger);
-
-
-
-
-
-        const newRow = new ActionRowBuilder()
-
-
-            .addComponents(
-
-
-                claimedButton,
-
-
-                closeButton
-
-
-            );
-
-
-
-
-
-        await interaction.message.edit({
-
-
-
-            components:[newRow]
-
-
-
-        });
-
-
-
-
-
-        const claimEmbed = new EmbedBuilder()
-
-
-
-            .setColor("#5865F2")
-
-
-
-            .setDescription(`
-
-📌 Der Teamler ${interaction.user} hat das Ticket übernommen.
-
-
-Er wird sich zeitnah um dich kümmern!
-
-            `)
-
-
-
-            .setTimestamp();
-
-
-
-
-
-        await interaction.reply({
-
-
-            embeds:[claimEmbed]
-
-
-        });
-
+        }
 
 
     }
-
-
-
-
-
-
-
-    // =======================
-    // TICKET SCHLIESSEN
-    // =======================
-
-
-    if(interaction.customId === "close_ticket"){
-
-
-
-        await interaction.reply({
-
-
-            content:"🔒 Ticket wird in 3 Sekunden geschlossen...",
-
-
-            ephemeral:false
-
-
-
-        });
-
-
-
-
-
-        setTimeout(() => {
-
-
-
-            interaction.channel.delete()
-
-
-                .catch(console.error);
-
-
-
-        },3000);
-
-
-
-    }
-
 
 
 });
 
 
-
-
-
-// =======================
-// LOGIN
-// =======================
 
 client.login(TOKEN);
