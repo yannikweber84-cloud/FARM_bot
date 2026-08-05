@@ -143,21 +143,21 @@ Wähle unten eine Kategorie aus.
                 .addOptions([
 
                     {
-                        label: '🎫 Allgemeiner Support',
+                        label: ' Allgemeiner Support',
                         description: 'Hilfe und Anliegen',
                         emoji: '🛡',
                         value: 'clan_bewerbung'
                     },
 
                     {
-                        label: '👥 Team/Clan Bewerbung',
+                        label: ' Team/Clan Bewerbung',
                         description: 'Bewirb dich für Team oder Clan',
                         emoji: '👥',
                         value: 'team_bewerbung'
                     },
 
                     {
-                        label: '🧱 Bau Firma',
+                        label: ' Bau Firma',
                         description: 'Firmenbewerbung und Aufträge',
                         emoji: '🏗',
                         value: 'bau_firma'
@@ -197,7 +197,7 @@ Wähle unten eine Kategorie aus.
 
   if (selected === "clan_bewerbung") {
 
-    ticketName = `support-${interaction.user.username.toLowerCase()}`;
+    ticketName = `💬support-${interaction.user.username.toLowerCase()}`;
     ticketTitle = "🛡 Allgemeiner Support";
     categoryID = CLAN_CATEGORY_ID;
 
@@ -206,7 +206,7 @@ Wähle unten eine Kategorie aus.
 
 if (selected === "team_bewerbung") {
 
-    ticketName = `bewerbung-${interaction.user.username.toLowerCase()}`;
+    ticketName = `📝bewerbung-${interaction.user.username.toLowerCase()}`;
     ticketTitle = "👥 Team/Clan Bewerbung";
     categoryID = TEAM_CATEGORY_ID;
 
@@ -215,7 +215,7 @@ if (selected === "team_bewerbung") {
 
 if (selected === "bau_firma") {
 
-    ticketName = `bau-${interaction.user.username.toLowerCase()}`;
+    ticketName = `🧱 bau-${interaction.user.username.toLowerCase()}`;
     ticketTitle = "🏗 Bau Firma";
     categoryID = BAU_CATEGORY_ID;
 
