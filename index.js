@@ -110,26 +110,51 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setColor('#2B2D31')
                 .setTitle('🎫 Allgemeiner Support')
                 .setDescription(`
-Du hast ein Problem, eine Frage oder benötigst Hilfe auf dem Server? Dann bist du hier genau richtig!
+Willkommen im Support-Bereich unseres Servers! 👋
 
-Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich.
+Du hast ein Problem, eine Frage oder benötigst Hilfe?
+Dann bist du hier genau richtig! Unser Team steht dir jederzeit zur Verfügung und hilft dir gerne bei deinen Anliegen weiter.
 
-━━━━━━━━━━━━━━━━━━
-
-📌 **Wobei wir helfen können:**
-
-• Fragen zum Server
-• Probleme / Bugs
-• Spieler melden
-• Allgemeine Hilfe
+Erstelle einfach ein Ticket und beschreibe dein Anliegen so genau wie möglich. Je mehr Informationen du uns gibst, desto schneller können wir dir helfen und eine passende Lösung finden.
 
 ━━━━━━━━━━━━━━━━━━
 
-👥 **Bewerbungen & Bau Firma**
+📌 Wobei wir dir helfen können:
 
-Wähle unten eine Kategorie aus.
+• ❓ Fragen rund um den Server
+• 🐛 Probleme, Bugs & Fehlermeldungen
+• 🚨 Spieler melden oder Regelverstöße melden
+• 🛠 Allgemeine Hilfe und Unterstützung
+• 🏗️ Fragen zu Bauprojekten und Aufträgen
+• 💬 Sonstige Anliegen rund um den Server
 
 ━━━━━━━━━━━━━━━━━━
+
+👥 Bewerbungen & Bau-Firma
+
+Du möchtest Teil unseres Teams werden oder unsere Bau-Firma unterstützen? 🏗️
+
+Egal ob als Builder, Helfer oder in einem anderen Bereich – wir freuen uns über deine Bewerbung!
+
+Erstelle ein Ticket und teile uns folgende Informationen mit:
+
+• Deinen Namen / Minecraft-Namen
+• Deine bisherigen Erfahrungen
+• Deine Stärken und Fähigkeiten
+• Warum du unserem Team beitreten möchtest
+
+━━━━━━━━━━━━━━━━━━
+
+📋 Wichtige Hinweise:
+
+• Erstelle nur ein Ticket, wenn du wirklich ein Anliegen hast.
+• Beschreibe dein Problem so genau wie möglich.
+• Bleibe freundlich und respektvoll gegenüber unserem Team.
+• Habe etwas Geduld – wir bearbeiten dein Ticket schnellstmöglich.
+
+━━━━━━━━━━━━━━━━━━
+
+Vielen Dank für deine Unterstützung und viel Spaß auf unserem Server!
                 `)
                 .setThumbnail(client.user.displayAvatarURL())
                 .setFooter({
