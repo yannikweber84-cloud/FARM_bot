@@ -515,8 +515,7 @@ Er wird sich zeitnah um dich kümmern!
 
         }
 
-
-    }
+});
 
 
 // =======================
