@@ -195,32 +195,31 @@ Wähle unten eine Kategorie aus.
 
 
 
-            if (selected === "Allgemeiner Support") {
+  if (selected === "clan_bewerbung") {
 
-    ticketName = `clan-${interaction.user.username}`;
+    ticketName = `support-${interaction.user.username.toLowerCase()}`;
     ticketTitle = "🛡 Allgemeiner Support";
-    categoryID = 1534287236407759040;
+    categoryID = CLAN_CATEGORY_ID;
 
 }
 
 
-if (selected === "Team/Clan bewerbung") {
+if (selected === "team_bewerbung") {
 
-    ticketName = `team-${interaction.user.username}`;
+    ticketName = `bewerbung-${interaction.user.username.toLowerCase()}`;
     ticketTitle = "👥 Team/Clan Bewerbung";
-    categoryID = 1534287314464018655;
+    categoryID = TEAM_CATEGORY_ID;
 
 }
 
 
 if (selected === "bau_firma") {
 
-    ticketName = `bau-${interaction.user.username}`;
+    ticketName = `bau-${interaction.user.username.toLowerCase()}`;
     ticketTitle = "🏗 Bau Firma";
-    categoryID = 1534287374819917896;
+    categoryID = BAU_CATEGORY_ID;
 
 }
-
 
 
             const existing = interaction.guild.channels.cache.find(
