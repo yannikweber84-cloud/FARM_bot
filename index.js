@@ -197,29 +197,29 @@ Wähle unten eine Kategorie aus.
 
             if (selected === "Allgemeiner Support") {
 
-                ticketName = `clan-${interaction.user.username}`;
-                ticketTitle = "🛡 Allgemeiner Support";
-                categoryID = 1534287236407759040;
+    ticketName = `clan-${interaction.user.username}`;
+    ticketTitle = "🛡 Allgemeiner Support";
+    categoryID = 1534287236407759040;
 
-            }
-
-
-            if (selected === "Team/Clan bewerbung") {
-
-                ticketName = `team-${interaction.user.username}`;
-                ticketTitle = "👥 Team/Clan Bewerbung";
-                categoryID = 1534287314464018655;
-
-            }
+}
 
 
-            if (selected === "bau_firma") {
+if (selected === "Team/Clan bewerbung") {
 
-                ticketName = `bau-${interaction.user.username}`;
-                ticketTitle = "🏗 Bau Firma";
-                categoryID = 1534287374819917896;
+    ticketName = `team-${interaction.user.username}`;
+    ticketTitle = "👥 Team/Clan Bewerbung";
+    categoryID = 1534287314464018655;
 
-            }
+}
+
+
+if (selected === "bau_firma") {
+
+    ticketName = `bau-${interaction.user.username}`;
+    ticketTitle = "🏗 Bau Firma";
+    categoryID = 1534287374819917896;
+
+}
 
 
 
