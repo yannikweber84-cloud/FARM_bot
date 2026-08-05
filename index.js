@@ -523,11 +523,10 @@ Er wird sich zeitnah um dich kümmern!
 // VOICE SUPPORT WARTERAUM
 // =======================
 
-
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 
     try {
 
-        // Spieler betritt Support-Warteraum
         if (
             newState.channelId === SUPPORT_WARTE_RAUM_ID &&
             oldState.channelId !== SUPPORT_WARTE_RAUM_ID
@@ -542,62 +541,42 @@ Er wird sich zeitnah um dich kümmern!
             if (!logChannel) return;
 
 
-
             const embed = new EmbedBuilder()
 
                 .setColor("#00A8FF")
 
-                .setAuthor({
-                    name: "VIBE Support System",
-                    iconURL: client.user.displayAvatarURL({
-                        dynamic: true
-                    })
-                })
-
                 .setTitle("🎧 Neue Support-Anfrage")
 
                 .setDescription(`
-> 🚨 **Ein Spieler benötigt Hilfe!**
-
-━━━━━━━━━━━━━━━━━━
-
 👤 **Spieler**
+
 ${newState.member}
 
-🆔 **User ID**
-\`${newState.member.id}\`
 
 📞 **Warteraum**
+
 ${newState.channel}
 
-⏱️ **Wartezeit**
-<t:${Math.floor(Date.now() / 1000)}:R>
 
-━━━━━━━━━━━━━━━━━━
+⏰ **Zeit**
 
-🛡️ **Support-Team**
-<@&${SUPPORT_ROLE_ID}> wird benötigt!
+<t:${Math.floor(Date.now()/1000)}:R>
 
-Bitte kümmert euch schnellstmöglich um den Spieler.
 
-━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-💙 Vielen Dank für euren Einsatz!
-`)
+🛡️ Support-Team wird benötigt!
+                `)
 
                 .setThumbnail(
                     newState.member.user.displayAvatarURL({
-                        dynamic: true,
-                        size: 1024
+                        dynamic:true
                     })
                 )
 
                 .setFooter({
-                    text: "VIBE Support • Premium Support System",
-                    iconURL: client.user.displayAvatarURL({
-                        dynamic: true,
-                        size: 512
-                    })
+                    text:"VIBE Support System",
+                    iconURL:client.user.displayAvatarURL()
                 })
 
                 .setTimestamp();
@@ -606,9 +585,9 @@ Bitte kümmert euch schnellstmöglich um den Spieler.
 
             await logChannel.send({
 
-                content: `<@&${SUPPORT_ROLE_ID}>`,
+                content:`<@&${SUPPORT_ROLE_ID}>`,
 
-                embeds: [embed]
+                embeds:[embed]
 
             });
 
@@ -616,23 +595,11 @@ Bitte kümmert euch schnellstmöglich um den Spieler.
         }
 
 
-    } catch (err) {
+    } catch(error) {
 
-        console.error("Voice Support Fehler:", err);
+        console.error("Voice Fehler:", error);
 
     }
 
-
 });
-
-
-              }
-
-});
-
-
-// =======================
-// LOGIN
-// =======================
-
 client.login(TOKEN);
