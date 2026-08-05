@@ -38,12 +38,17 @@ const {
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = "1534585700408889466";
 const GUILD_ID = "1488581484565500157";
+const WELCOME_CHANNEL_ID = "1488581808470757468";
 const STAFF_ROLE_ID = "1488904093970858115";
 const SUPPORT_WARTE_RAUM_ID = "1488584492628185293";
 
 const SUPPORT_LOG_CHANNEL_ID = "1488584310385803416";
 
 const SUPPORT_ROLE_ID = "1488904093970858115";
+
+let countingActive = false;
+let currentNumber = 1;
+let lastUserId = null;
 
 // =======================
 // TICKET KATEGORIEN
@@ -119,10 +124,25 @@ client.once(Events.ClientReady, () => {
 client.on(Events.InteractionCreate, async interaction => {
 
 
-    if (interaction.isChatInputCommand()) {
+ if (interaction.isChatInputCommand()) {
 
 
-        if (interaction.commandName === 'ticketpanel') {
+    if (interaction.commandName === "countingstart") {
+
+        countingActive = true;
+        currentNumber = 1;
+        lastUserId = null;
+
+        await interaction.reply(
+            "🎉 Das Counting wurde gestartet! Erste Zahl ist **1**."
+        );
+
+        return;
+    }
+
+
+
+    if (interaction.commandName === 'ticketpanel') {
 
 
             const embed = new EmbedBuilder()
@@ -231,7 +251,7 @@ Egal ob als Builder, Helfer oder für ein anderes Teammitglied – erstelle einf
 
   if (selected === "clan_bewerbung") {
 
-    ticketName = `💬support-${interaction.user.username.toLowerCase()}`;
+    ticketName = `support-${interaction.user.username.toLowerCase()}`;
     ticketTitle = "🛡 Allgemeiner Support";
     categoryID = CLAN_CATEGORY_ID;
 
@@ -240,7 +260,7 @@ Egal ob als Builder, Helfer oder für ein anderes Teammitglied – erstelle einf
 
 if (selected === "team_bewerbung") {
 
-    ticketName = `📝bewerbung-${interaction.user.username.toLowerCase()}`;
+    ticketName = `bewerbung-${interaction.user.username.toLowerCase()}`;
     ticketTitle = "👥 Team/Clan Bewerbung";
     categoryID = TEAM_CATEGORY_ID;
 
@@ -249,7 +269,7 @@ if (selected === "team_bewerbung") {
 
 if (selected === "bau_firma") {
 
-    ticketName = `🧱 bau-${interaction.user.username.toLowerCase()}`;
+    ticketName = `bau-${interaction.user.username.toLowerCase()}`;
     ticketTitle = "🏗 Bau Firma";
     categoryID = BAU_CATEGORY_ID;
 
@@ -618,23 +638,8 @@ ${newState.channel}
 // COUNTING SYSTEM
 // =========================
 
-let countingActive = false;
-let currentNumber = 1;
-let lastUserId = null;
 
-// /countingstart
-client.on(Events.InteractionCreate, async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
 
-    if (interaction.commandName === "countingstart") {
-
-        countingActive = true;
-        currentNumber = 1;
-        lastUserId = null;
-
-        await interaction.reply("🎉 Das Counting wurde gestartet! Erste Zahl ist **1**.");
-    }
-});
 
 // Counting
 client.on("messageCreate", async (message) => {
@@ -644,43 +649,136 @@ client.on("messageCreate", async (message) => {
 
     if (!/^\d+$/.test(message.content)) return;
 
+
     const number = Number(message.content);
+
 
     // Nicht zweimal hintereinander
     if (message.author.id === lastUserId) {
 
-        await message.reply("❌ Du kannst nicht zweimal hintereinander zählen! Neustart bei **1**.");
+        await message.reply(
+            "❌ Du kannst nicht zweimal hintereinander zählen! Neustart bei **1**."
+        );
 
         currentNumber = 1;
         lastUserId = null;
+
         return;
     }
+
+
 
     // Richtige Zahl
     if (number === currentNumber) {
 
+
         await message.react("✅");
+
 
         lastUserId = message.author.id;
         currentNumber++;
 
-        // Ende
+
+
+        // Ende erreicht
         if (currentNumber > 100000) {
 
-            await message.channel.send("🎉 **100000** erreicht! Das Counting startet wieder bei **1**.");
+
+            await message.channel.send(
+                "🎉 **100000 erreicht!** Das Counting startet wieder bei **1**."
+            );
+
 
             currentNumber = 1;
             lastUserId = null;
+
         }
+
+
 
     } else {
 
-        await message.reply(`❌ Falsch! Erwartet wurde **${currentNumber}**. Neustart bei **1**.`);
+
+        await message.reply(
+            `❌ Falsch! Erwartet wurde **${currentNumber}**. Neustart bei **1**.`
+        );
+
 
         currentNumber = 1;
         lastUserId = null;
+
     }
+
 });
 
+
+// =========================
+// JOIN SYSTEM
+// =========================
+
+client.on(Events.GuildMemberAdd, async (member) => {
+
+    try {
+
+
+        const channel = member.guild.channels.cache.get(
+            WELCOME_CHANNEL_ID
+        );
+
+
+        if (!channel) return;
+
+
+
+        const embed = new EmbedBuilder()
+
+            .setColor("Yellow")
+
+            .setTitle("⚡️ Willkommen ⚡️")
+
+            .setDescription(
+`${member} ist dem Server beigetreten!
+
+
+👤 **User:**
+${member.user.tag}
+
+
+🆔 **User ID:**
+${member.id}
+
+
+👥 **Mitglieder:**
+${member.guild.memberCount}`
+            )
+
+            .setThumbnail(
+                member.user.displayAvatarURL({
+                    dynamic: true
+                })
+            )
+
+            .setTimestamp();
+
+
+
+        await channel.send({
+            embeds: [embed]
+        });
+
+
+
+    } catch (err) {
+
+        console.error("Join Fehler:", err);
+
+    }
+
+});
+
+
+// =========================
+// LOGIN
+// =========================
 
 client.login(TOKEN);
