@@ -110,8 +110,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setColor('#2B2D31')
                 .setTitle('🎫 Allgemeiner Support')
                 .setDescription(`
-🎫 **Support & Bau-Firma Center**
-
 Du hast ein Problem, eine Frage oder benötigst Hilfe auf unserem Server?
 Dann bist du hier genau richtig!
 
