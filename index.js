@@ -519,20 +519,44 @@ Er wird sich zeitnah um dich kümmern!
     }
 
 
-const embed = new EmbedBuilder()
+// =======================
+// VOICE SUPPORT WARTERAUM
+// =======================
 
-    .setColor("#00A8FF")
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 
-    .setAuthor({
-        name: "VIBE Support System",
-        iconURL: client.user.displayAvatarURL({
-            dynamic: true
-        })
-    })
+    try {
 
-    .setTitle("🎧 Neue Support-Anfrage")
+        // Spieler betritt Support-Warteraum
+        if (
+            newState.channelId === SUPPORT_WARTE_RAUM_ID &&
+            oldState.channelId !== SUPPORT_WARTE_RAUM_ID
+        ) {
 
-    .setDescription(`
+
+            const logChannel = newState.guild.channels.cache.get(
+                SUPPORT_LOG_CHANNEL_ID
+            );
+
+
+            if (!logChannel) return;
+
+
+
+            const embed = new EmbedBuilder()
+
+                .setColor("#00A8FF")
+
+                .setAuthor({
+                    name: "VIBE Support System",
+                    iconURL: client.user.displayAvatarURL({
+                        dynamic: true
+                    })
+                })
+
+                .setTitle("🎧 Neue Support-Anfrage")
+
+                .setDescription(`
 > 🚨 **Ein Spieler benötigt Hilfe!**
 
 ━━━━━━━━━━━━━━━━━━
@@ -552,37 +576,51 @@ ${newState.channel}
 ━━━━━━━━━━━━━━━━━━
 
 🛡️ **Support-Team**
-Bitte kümmert euch schnellstmöglich um den Spieler.
+<@&${SUPPORT_ROLE_ID}> wird benötigt!
 
-✅ Freundlich bleiben  
-✅ Problem anhören  
-✅ Lösung finden
+Bitte kümmert euch schnellstmöglich um den Spieler.
 
 ━━━━━━━━━━━━━━━━━━
 
-> 💙 Vielen Dank für euren Einsatz!
+💙 Vielen Dank für euren Einsatz!
 `)
 
-    .setThumbnail(
-        newState.member.user.displayAvatarURL({
-            dynamic: true,
-            size: 1024
-        })
-    )
+                .setThumbnail(
+                    newState.member.user.displayAvatarURL({
+                        dynamic: true,
+                        size: 1024
+                    })
+                )
 
-    .setImage(
-        "https://media.discordapp.net/attachments/0/0/support_banner.png"
-    )
+                .setFooter({
+                    text: "VIBE Support • Premium Support System",
+                    iconURL: client.user.displayAvatarURL({
+                        dynamic: true,
+                        size: 512
+                    })
+                })
 
-    .setFooter({
-        text: "VIBE Support • Premium Support System",
-        iconURL: client.user.displayAvatarURL({
-            dynamic: true,
-            size: 512
-        })
-    })
-
-    .setTimestamp();
+                .setTimestamp();
 
 
-client.login(TOKEN);
+
+            await logChannel.send({
+
+                content: `<@&${SUPPORT_ROLE_ID}>`,
+
+                embeds: [embed]
+
+            });
+
+
+        }
+
+
+    } catch (err) {
+
+        console.error("Voice Support Fehler:", err);
+
+    }
+
+
+});
