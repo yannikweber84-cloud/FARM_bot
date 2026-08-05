@@ -681,3 +681,6 @@ client.on("messageCreate", async (message) => {
         lastUserId = null;
     }
 });
+
+
+client.login(TOKEN);
