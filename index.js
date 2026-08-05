@@ -639,6 +639,9 @@ ${newState.channel}
 // =========================
 
 
+// =========================
+// COUNTING SYSTEM
+// =========================
 
 
 // Counting
@@ -653,7 +656,6 @@ client.on("messageCreate", async (message) => {
     const number = Number(message.content);
 
 
-    // Nicht zweimal hintereinander
     if (message.author.id === lastUserId) {
 
         await message.reply(
@@ -668,7 +670,6 @@ client.on("messageCreate", async (message) => {
 
 
 
-    // Richtige Zahl
     if (number === currentNumber) {
 
 
@@ -680,7 +681,6 @@ client.on("messageCreate", async (message) => {
 
 
 
-        // Ende erreicht
         if (currentNumber > 100000) {
 
 
@@ -693,7 +693,6 @@ client.on("messageCreate", async (message) => {
             lastUserId = null;
 
         }
-
 
 
     } else {
