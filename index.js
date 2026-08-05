@@ -110,51 +110,43 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setColor('#2B2D31')
                 .setTitle('🎫 Allgemeiner Support')
                 .setDescription(`
-Willkommen im Support-Bereich unseres Servers! 👋
+🎫 **Support & Bau-Firma Center**
 
-Du hast ein Problem, eine Frage oder benötigst Hilfe?
-Dann bist du hier genau richtig! Unser Team steht dir jederzeit zur Verfügung und hilft dir gerne bei deinen Anliegen weiter.
+Du hast ein Problem, eine Frage oder benötigst Hilfe auf unserem Server?
+Dann bist du hier genau richtig!
 
-Erstelle einfach ein Ticket und beschreibe dein Anliegen so genau wie möglich. Je mehr Informationen du uns gibst, desto schneller können wir dir helfen und eine passende Lösung finden.
+Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich, damit unser Team dir schnell und gezielt helfen kann.
 
 ━━━━━━━━━━━━━━━━━━
 
-📌 Wobei wir dir helfen können:
+📌 **Wobei wir helfen können:**
 
 • ❓ Fragen rund um den Server
-• 🐛 Probleme, Bugs & Fehlermeldungen
-• 🚨 Spieler melden oder Regelverstöße melden
-• 🛠 Allgemeine Hilfe und Unterstützung
-• 🏗️ Fragen zu Bauprojekten und Aufträgen
-• 💬 Sonstige Anliegen rund um den Server
+• 🐛 Probleme & Bugs
+• 🚨 Spieler melden
+• 🛠 Allgemeine Hilfe & Unterstützung
+• 🏗️ Bauprojekte & Aufträge
 
 ━━━━━━━━━━━━━━━━━━
 
-👥 Bewerbungen & Bau-Firma
+👥 **Bewerbungen & Bau-Firma**
 
-Du möchtest Teil unseres Teams werden oder unsere Bau-Firma unterstützen? 🏗️
+Du möchtest Teil unseres Teams werden oder die Bau-Firma unterstützen? 🏗️
 
-Egal ob als Builder, Helfer oder in einem anderen Bereich – wir freuen uns über deine Bewerbung!
-
-Erstelle ein Ticket und teile uns folgende Informationen mit:
-
-• Deinen Namen / Minecraft-Namen
-• Deine bisherigen Erfahrungen
-• Deine Stärken und Fähigkeiten
-• Warum du unserem Team beitreten möchtest
+Egal ob als Builder, Helfer oder für ein anderes Teammitglied – erstelle einfach ein Ticket und sende uns deine Bewerbung.
 
 ━━━━━━━━━━━━━━━━━━
 
-📋 Wichtige Hinweise:
+📋 **Wichtige Hinweise:**
 
-• Erstelle nur ein Ticket, wenn du wirklich ein Anliegen hast.
-• Beschreibe dein Problem so genau wie möglich.
-• Bleibe freundlich und respektvoll gegenüber unserem Team.
-• Habe etwas Geduld – wir bearbeiten dein Ticket schnellstmöglich.
+• Beschreibe dein Anliegen genau
+• Bleibe freundlich und respektvoll
+• Erstelle nur ein Ticket pro Anliegen
 
 ━━━━━━━━━━━━━━━━━━
 
-Vielen Dank für deine Unterstützung und viel Spaß auf unserem Server!
+🚀 Vielen Dank und viel Spaß auf unserem Server!
+
                 `)
                 .setThumbnail(client.user.displayAvatarURL())
                 .setFooter({
