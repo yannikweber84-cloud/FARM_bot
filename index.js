@@ -197,14 +197,14 @@ Egal ob als Builder, Helfer oder für ein anderes Teammitglied – erstelle einf
                 .addOptions([
 
                     {
-                        label: ' Allgemeiner Support',
+                        label: 'Allgemeiner Support',
                         description: 'Hilfe und Anliegen',
                         emoji: '🛡',
                         value: 'clan_bewerbung'
                     },
 
                     {
-                        label: ' Team/Clan Bewerbung',
+                        label: 'Team/Clan Bewerbung',
                         description: 'Bewirb dich für Team oder Clan',
                         emoji: '👥',
                         value: 'team_bewerbung'
