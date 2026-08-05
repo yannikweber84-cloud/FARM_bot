@@ -36,17 +36,17 @@ const {
 // =======================
 
 const TOKEN = process.env.TOKEN;
-const CLIENT_ID = "1509566143051071578";
-const STAFF_ROLE_ID = "1508899899222134835";
+const CLIENT_ID = "1534286416945614889";
+const STAFF_ROLE_ID = "1488904093970858115";
 
 
 // =======================
 // TICKET KATEGORIEN
 // =======================
 
-const CLAN_CATEGORY_ID = "DEINE_CLAN_ID";
-const TEAM_CATEGORY_ID = "DEINE_TEAM_ID";
-const BAU_CATEGORY_ID = "DEINE_BAU_ID";
+const CLAN_CATEGORY_ID = "1534287236407759040";
+const TEAM_CATEGORY_ID = "1534287314464018655";
+const BAU_CATEGORY_ID = "1534287374819917896";
 
 
 const client = new Client({
