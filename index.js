@@ -624,3 +624,8 @@ Bitte kümmert euch schnellstmöglich um den Spieler.
 
 
 });
+    // =======================
+// LOGIN
+// =======================
+
+client.login(TOKEN);
