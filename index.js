@@ -519,95 +519,70 @@ Er wird sich zeitnah um dich kümmern!
     }
 
 
-});client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+const embed = new EmbedBuilder()
 
+    .setColor("#00A8FF")
 
-    try {
+    .setAuthor({
+        name: "VIBE Support System",
+        iconURL: client.user.displayAvatarURL({
+            dynamic: true
+        })
+    })
 
+    .setTitle("🎧 Neue Support-Anfrage")
 
-        if (
+    .setDescription(`
+> 🚨 **Ein Spieler benötigt Hilfe!**
 
-            newState.channelId === SUPPORT_WARTE_RAUM_ID &&
+━━━━━━━━━━━━━━━━━━
 
-            oldState.channelId !== SUPPORT_WARTE_RAUM_ID
-
-        ) {
-
-
-
-            const logChannel = newState.guild.channels.cache.get(
-
-                SUPPORT_LOG_CHANNEL_ID
-
-            );
-
-
-
-            if (!logChannel) return;
-
-
-
-            const embed = new EmbedBuilder()
-
-
-                .setColor("Yellow")
-
-
-                .setTitle("🎧 Voice-Support benötigt!")
-
-
-                .setDescription(
-
-`👤 Spieler:
-
+👤 **Spieler**
 ${newState.member}
 
+🆔 **User ID**
+\`${newState.member.id}\`
 
-📞 Kanal:
-
+📞 **Warteraum**
 ${newState.channel}
 
+⏱️ **Wartezeit**
+<t:${Math.floor(Date.now() / 1000)}:R>
 
-⏰ Zeit:
+━━━━━━━━━━━━━━━━━━
 
-<t:${Math.floor(Date.now() / 1000)}:R>`
+🛡️ **Support-Team**
+Bitte kümmert euch schnellstmöglich um den Spieler.
 
-                )
+✅ Freundlich bleiben  
+✅ Problem anhören  
+✅ Lösung finden
 
+━━━━━━━━━━━━━━━━━━
 
-                .setTimestamp();
+> 💙 Vielen Dank für euren Einsatz!
+`)
 
+    .setThumbnail(
+        newState.member.user.displayAvatarURL({
+            dynamic: true,
+            size: 1024
+        })
+    )
 
+    .setImage(
+        "https://media.discordapp.net/attachments/0/0/support_banner.png"
+    )
 
-            await logChannel.send({
+    .setFooter({
+        text: "VIBE Support • Premium Support System",
+        iconURL: client.user.displayAvatarURL({
+            dynamic: true,
+            size: 512
+        })
+    })
 
-
-                content:`<@&${SUPPORT_ROLE_ID}>`,
-
-
-                embeds:[embed]
-
-
-            });
-
-
-
-        }
-
-
-
-    } catch(err) {
-
-
-        console.error("Voice Fehler:",err);
-
-
-    }
-
-
-});
-
-
+    .setTimestamp();
 
 
 client.login(TOKEN);
