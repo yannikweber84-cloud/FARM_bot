@@ -12,8 +12,8 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🌐 Server läuft auf Port ${PORT}`);
 });
-;
-require("dotenv").config();
+
+
 const {
     Client,
     GatewayIntentBits,
@@ -30,6 +30,7 @@ const {
     EmbedBuilder
 } = require('discord.js');
 
+
 // =======================
 // BOT DATEN
 // =======================
@@ -38,9 +39,20 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = "1509566143051071578";
 const STAFF_ROLE_ID = "1508899899222134835";
 
+
+// =======================
+// TICKET KATEGORIEN
+// =======================
+
+const CLAN_CATEGORY_ID = "DEINE_CLAN_ID";
+const TEAM_CATEGORY_ID = "DEINE_TEAM_ID";
+const BAU_CATEGORY_ID = "DEINE_BAU_ID";
+
+
 const client = new Client({
     intents: [GatewayIntentBits.Guilds]
 });
+
 
 // =======================
 // SLASH COMMAND
@@ -52,7 +64,9 @@ const commands = [
         .setDescription('Erstellt das Ticket Panel')
 ].map(command => command.toJSON());
 
+
 const rest = new REST({ version: '10' }).setToken(TOKEN);
+
 
 (async () => {
     try {
@@ -69,6 +83,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
     }
 })();
 
+
 // =======================
 // READY
 // =======================
@@ -77,19 +92,19 @@ client.once(Events.ClientReady, () => {
     console.log(`✅ ${client.user.tag} ist online.`);
 });
 
+
 // =======================
 // INTERACTIONS
 // =======================
 
 client.on(Events.InteractionCreate, async interaction => {
 
-    // ====================================
-    // /ticketpanel
-    // ====================================
 
     if (interaction.isChatInputCommand()) {
 
+
         if (interaction.commandName === 'ticketpanel') {
+
 
             const embed = new EmbedBuilder()
                 .setColor('#2B2D31')
@@ -97,118 +112,150 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setDescription(`
 Du hast ein Problem, eine Frage oder benötigst Hilfe auf dem Server? Dann bist du hier genau richtig!
 
-Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich, damit wir dir schnell und effektiv helfen können.
+Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich.
 
 ━━━━━━━━━━━━━━━━━━
 
-📌 **Wobei wir dir helfen können:**
+📌 **Wobei wir helfen können:**
 
-• Fragen zum Server  
-• Probleme / Bugs  
-• Spieler melden  
-• Allgemeine Hilfe  
-• Sonstige Anliegen
+• Fragen zum Server
+• Probleme / Bugs
+• Spieler melden
+• Allgemeine Hilfe
 
 ━━━━━━━━━━━━━━━━━━
 
 👥 **Bewerbungen & Bau Firma**
 
-Du möchtest dich bewerben oder eine Bau Firma eröffnen?  
-Dann wähle unten die passende Kategorie aus.
+Wähle unten eine Kategorie aus.
 
 ━━━━━━━━━━━━━━━━━━
                 `)
                 .setThumbnail(client.user.displayAvatarURL())
                 .setFooter({
-                    text: 'FARMMC.de Support System'
+                    text: 'VIBE Support System'
                 });
+
 
             const menu = new StringSelectMenuBuilder()
                 .setCustomId('ticket_menu')
-                .setPlaceholder('Wähle eine Kategorie aus um ein Ticket zu öffnen')
+                .setPlaceholder('Wähle eine Kategorie aus')
                 .addOptions([
-                    {
 
-                        label: 'Clan Bewerbung',
-                        description: 'Bewirb dich mit deinem Clan',
+                    {
+                        label: '🎫 Allgemeiner Support',
+                        description: 'Hilfe und Anliegen',
                         emoji: '🛡',
                         value: 'clan_bewerbung'
                     },
+
                     {
-                        label: 'Team Bewerbung',
-                        description: 'Bewirb dich für das Team',
+                        label: '👥 Team/Clan Bewerbung',
+                        description: 'Bewirb dich für Team oder Clan',
                         emoji: '👥',
                         value: 'team_bewerbung'
                     },
+
                     {
-                        label: 'Bau Firma',
-                        description: 'Erstelle eine Bau Firma',
+                        label: '🧱 Bau Firma',
+                        description: 'Firmenbewerbung und Aufträge',
                         emoji: '🏗',
                         value: 'bau_firma'
                     }
+
                 ]);
 
-            const row = new ActionRowBuilder().addComponents(menu);
+
+            const row = new ActionRowBuilder()
+                .addComponents(menu);
+
 
             await interaction.reply({
                 embeds: [embed],
                 components: [row]
             });
+
         }
     }
 
-    // ====================================
-    // DROPDOWN MENÜ
-    // ====================================
+
 
     if (interaction.isStringSelectMenu()) {
 
+
         if (interaction.customId === 'ticket_menu') {
+
 
             const selected = interaction.values[0];
 
+
             let ticketName = "";
             let ticketTitle = "";
+            let categoryID = null;
 
-            if (selected === "clan_bewerbung") {
+
+
+            if (selected === "Allgemeiner Support") {
+
                 ticketName = `clan-${interaction.user.username}`;
-                ticketTitle = "🛡 Clan Bewerbung";
+                ticketTitle = "🛡 Allgemeiner Support";
+                categoryID = 1534287236407759040;
+
             }
 
-            if (selected === "team_bewerbung") {
+
+            if (selected === "Team/Clan bewerbung") {
+
                 ticketName = `team-${interaction.user.username}`;
-                ticketTitle = "👥 Team Bewerbung";
+                ticketTitle = "👥 Team/Clan Bewerbung";
+                categoryID = 1534287314464018655;
+
             }
+
 
             if (selected === "bau_firma") {
+
                 ticketName = `bau-${interaction.user.username}`;
                 ticketTitle = "🏗 Bau Firma";
+                categoryID = 1534287374819917896;
+
             }
 
-            // Prüfen ob Ticket schon existiert
+
 
             const existing = interaction.guild.channels.cache.find(
                 c => c.name === ticketName.toLowerCase()
             );
 
+
             if (existing) {
+
                 return interaction.reply({
                     content: `❌ Du hast bereits ein Ticket offen: ${existing}`,
                     ephemeral: true
                 });
+
             }
 
-            // Ticket erstellen
+
 
             const channel = await interaction.guild.channels.create({
+
                 name: ticketName,
+
                 type: ChannelType.GuildText,
 
+                parent: categoryID,
+
+
                 permissionOverwrites: [
-                    {
+                                        {
                         id: interaction.guild.id,
-                        deny: [PermissionsBitField.Flags.ViewChannel]
+                        deny: [
+                            PermissionsBitField.Flags.ViewChannel
+                        ]
                     },
+
                     {
                         id: interaction.user.id,
                         allow: [
@@ -217,6 +264,7 @@ Dann wähle unten die passende Kategorie aus.
                             PermissionsBitField.Flags.ReadMessageHistory
                         ]
                     },
+
                     {
                         id: STAFF_ROLE_ID,
                         allow: [
@@ -226,7 +274,10 @@ Dann wähle unten die passende Kategorie aus.
                         ]
                     }
                 ]
+
             });
+
+
 
             // =======================
             // BUTTONS
@@ -238,22 +289,33 @@ Dann wähle unten die passende Kategorie aus.
                 .setEmoji('📌')
                 .setStyle(ButtonStyle.Primary);
 
+
             const closeButton = new ButtonBuilder()
                 .setCustomId('close_ticket')
                 .setLabel('Ticket schließen')
                 .setEmoji('🔒')
                 .setStyle(ButtonStyle.Danger);
 
+
+
             const buttonRow = new ActionRowBuilder()
-                .addComponents(claimButton, closeButton);
+                .addComponents(
+                    claimButton,
+                    closeButton
+                );
+
+
 
             // =======================
             // TICKET EMBED
             // =======================
 
             const ticketEmbed = new EmbedBuilder()
+
                 .setColor('#57F287')
+
                 .setTitle(ticketTitle)
+
                 .setDescription(`
 Hallo ${interaction.user} 👋
 
@@ -261,101 +323,180 @@ Dein Ticket wurde erfolgreich erstellt.
 
 📌 Bitte beschreibe dein Anliegen möglichst genau, damit das Team dir schnell helfen kann.
                 `)
+
                 .setFooter({
-                    text: 'FARMMC.de Ticket System'
+                    text: 'VIBE Ticket System'
                 })
+
                 .setTimestamp();
 
+
+
             await channel.send({
+
                 content: `<@&${STAFF_ROLE_ID}>`,
-                embeds: [ticketEmbed],
-                components: [buttonRow]
+
+                embeds: [
+                    ticketEmbed
+                ],
+
+                components: [
+                    buttonRow
+                ]
+
             });
+
+
 
             await interaction.reply({
+
                 content: `✅ Dein Ticket wurde erstellt: ${channel}`,
+
                 ephemeral: true
+
             });
+
         }
+
     }
 
-    // ====================================
+
+
+    // =======================
     // BUTTONS
-    // ====================================
+    // =======================
+
 
     if (interaction.isButton()) {
 
-        // ====================================
-        // TICKET ÜBERNEHMEN
-        // ====================================
+
+
+        // Ticket übernehmen
 
         if (interaction.customId === 'claim_ticket') {
 
-            // Prüfen ob Staff
+
 
             if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
+
                 return interaction.reply({
+
                     content: '❌ Nur Teammitglieder können Tickets übernehmen.',
+
                     ephemeral: true
+
                 });
+
             }
 
-            // Neue Buttons
+
 
             const claimedButton = new ButtonBuilder()
+
                 .setCustomId('claimed_ticket')
+
                 .setLabel(`Übernommen von ${interaction.user.username}`)
+
                 .setEmoji('✅')
+
                 .setStyle(ButtonStyle.Success)
+
                 .setDisabled(true);
 
+
+
             const closeButton = new ButtonBuilder()
+
                 .setCustomId('close_ticket')
+
                 .setLabel('Ticket schließen')
+
                 .setEmoji('🔒')
+
                 .setStyle(ButtonStyle.Danger);
 
-            const newRow = new ActionRowBuilder()
-                .addComponents(claimedButton, closeButton);
 
-            // Nachricht bearbeiten
+
+            const newRow = new ActionRowBuilder()
+
+                .addComponents(
+                    claimedButton,
+                    closeButton
+                );
+
+
 
             await interaction.message.edit({
-                components: [newRow]
+
+                components: [
+                    newRow
+                ]
+
             });
 
-            // Claim Nachricht
+
 
             const claimEmbed = new EmbedBuilder()
+
                 .setColor('#5865F2')
+
                 .setDescription(`
+
 📌 Der Teamler ${interaction.user} hat das Ticket übernommen.
 
 Er wird sich zeitnah um dich kümmern!
+
                 `)
+
                 .setTimestamp();
 
+
+
             await interaction.reply({
-                embeds: [claimEmbed]
+
+                embeds: [
+                    claimEmbed
+                ]
+
             });
+
         }
 
-        // ====================================
-        // TICKET SCHLIESSEN
-        // ====================================
+
+
+        // Ticket schließen
+
 
         if (interaction.customId === 'close_ticket') {
 
+
+
             await interaction.reply({
+
                 content: '🔒 Ticket wird in 3 Sekunden geschlossen...',
+
                 ephemeral: false
+
             });
 
+
+
             setTimeout(() => {
-                interaction.channel.delete().catch(console.error);
+
+                interaction.channel.delete()
+                    .catch(console.error);
+
             }, 3000);
+
+
         }
+
+
     }
+
+
 });
+
+
 
 client.login(TOKEN);
