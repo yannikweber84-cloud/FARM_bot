@@ -608,7 +608,6 @@ ${newState.channel}
 // =======================
 // COUNTING
 // =======================
-const commands = [
   new SlashCommandBuilder()
     .setName("countingstart")
     .setDescription("Startet das Counting")
