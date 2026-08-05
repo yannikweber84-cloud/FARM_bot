@@ -505,7 +505,7 @@ Er wird sich zeitnah um dich kümmern!
 
 
 
-            setTimeout(() => {
+                        setTimeout(() => {
 
                 interaction.channel.delete()
                     .catch(console.error);
@@ -514,6 +514,8 @@ Er wird sich zeitnah um dich kümmern!
 
 
         }
+
+    }
 
 });
 
