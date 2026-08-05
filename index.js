@@ -37,6 +37,7 @@ const {
 
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = "1534286416945614889";
+const GUILD_ID = "1488581484565500157";
 const STAFF_ROLE_ID = "1488904093970858115";
 const SUPPORT_WARTE_RAUM_ID = "1488584492628185293";
 
@@ -88,10 +89,10 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 (async () => {
     try {
 
-        await rest.put(
-            Routes.applicationCommands(CLIENT_ID),
-            { body: commands }
-        );
+       await rest.put(
+    Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+    { body: commands }
+);
 
         console.log("✅ Slash Commands registriert.");
 
