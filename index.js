@@ -74,6 +74,11 @@ const commands = [
         .setDescription('Erstellt das Ticket Panel')
 ].map(command => command.toJSON());
 
+new SlashCommandBuilder()
+    .setName("countingstart")
+    .setDescription("Startet das Counting")
+    .toJSON(),
+
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
@@ -605,62 +610,42 @@ ${newState.channel}
 });
 
 
-// =======================
-// COUNTING
-// =======================
-  new SlashCommandBuilder()
-    .setName("countingstart")
-    .setDescription("Startet das Counting")
-    .toJSON()
-];
-
-const rest = new REST({ version: "10" }).setToken(TOKEN);
-
-(async () => {
-  try {
-    await rest.put(
-      Routes.applicationCommands(clientId),
-      { body: commands }
-    );
-    console.log("Slash Commands registriert.");
-  } catch (error) {
-    console.error(error);
-  }
-})();
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-
-  if (interaction.commandName === "countingstart") {
-    countingActive = true;
-    currentNumber = 1;
-    lastUserId = null;
-
-    await interaction.reply("🎉 Counting gestartet bei **1**!");
-  }
-});
-
 // =========================
 // COUNTING SYSTEM
 // =========================
-const commands = [
-    new SlashCommandBuilder()
-        .setName("countingstart")
-        .setDescription("Startet das Counting")
-        .toJSON()
-];
-client.on('messageCreate', async message => {
+
+let countingActive = false;
+let currentNumber = 1;
+let lastUserId = null;
+
+// /countingstart
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    if (interaction.commandName === "countingstart") {
+
+        countingActive = true;
+        currentNumber = 1;
+        lastUserId = null;
+
+        await interaction.reply("🎉 Das Counting wurde gestartet! Erste Zahl ist **1**.");
+    }
+});
+
+// Counting
+client.on("messageCreate", async (message) => {
+
     if (message.author.bot) return;
     if (!countingActive) return;
 
     if (!/^\d+$/.test(message.content)) return;
 
-    const number = parseInt(message.content);
+    const number = Number(message.content);
 
-    // Gleicher User 2x hintereinander
+    // Nicht zweimal hintereinander
     if (message.author.id === lastUserId) {
-        await message.channel.send(
-            '❌ Du kannst nicht zweimal hintereinander zählen! Reset auf **1**'
-        );
+
+        await message.reply("❌ Du kannst nicht zweimal hintereinander zählen! Neustart bei **1**.");
 
         currentNumber = 1;
         lastUserId = null;
@@ -670,16 +655,15 @@ client.on('messageCreate', async message => {
     // Richtige Zahl
     if (number === currentNumber) {
 
-        await message.react('✅');
+        await message.react("✅");
 
         lastUserId = message.author.id;
         currentNumber++;
 
-        // Bei 100000 wieder auf 1
+        // Ende
         if (currentNumber > 100000) {
-            await message.channel.send(
-                '🎉 100000 erreicht! Das Counting startet wieder bei **1**.'
-            );
+
+            await message.channel.send("🎉 **100000** erreicht! Das Counting startet wieder bei **1**.");
 
             currentNumber = 1;
             lastUserId = null;
@@ -687,14 +671,9 @@ client.on('messageCreate', async message => {
 
     } else {
 
-        await message.channel.send(
-            `❌ Falsch! Erwartet war **${currentNumber}**. Reset auf **1**`
-        );
+        await message.reply(`❌ Falsch! Erwartet wurde **${currentNumber}**. Neustart bei **1**.`);
 
         currentNumber = 1;
         lastUserId = null;
     }
 });
-
-
-client.login(TOKEN);
