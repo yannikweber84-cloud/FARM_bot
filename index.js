@@ -642,7 +642,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
 // =========================
 // COUNTING SYSTEM
 // =========================
-
+const commands = [
+    new SlashCommandBuilder()
+        .setName("countingstart")
+        .setDescription("Startet das Counting")
+        .toJSON()
+];
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
     if (!countingActive) return;
