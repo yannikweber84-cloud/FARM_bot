@@ -72,12 +72,14 @@ const commands = [
     new SlashCommandBuilder()
         .setName('ticketpanel')
         .setDescription('Erstellt das Ticket Panel')
-].map(command => command.toJSON());
+        .toJSON(),
 
-new SlashCommandBuilder()
-    .setName("countingstart")
-    .setDescription("Startet das Counting")
-    .toJSON(),
+    new SlashCommandBuilder()
+        .setName("countingstart")
+        .setDescription("Startet das Counting")
+        .toJSON()
+
+];
 
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
