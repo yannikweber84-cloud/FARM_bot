@@ -85,19 +85,28 @@ const commands = [
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
-
 (async () => {
     try {
 
+        // Alte globale Commands löschen
+        await rest.put(
+            Routes.applicationCommands(CLIENT_ID),
+            { body: [] }
+        );
+
+        console.log("🗑 Globale Commands gelöscht");
+
+
+        // Neue Server Commands registrieren
         await rest.put(
             Routes.applicationGuildCommands(
                 CLIENT_ID,
-                "DEINE_SERVER_ID"
+                "1488581484565500157"
             ),
             { body: commands }
         );
 
-        console.log("✅ Slash Commands registriert.");
+        console.log("✅ Server Commands registriert.");
 
     } catch (error) {
         console.error(error);
