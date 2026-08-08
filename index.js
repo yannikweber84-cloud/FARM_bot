@@ -583,13 +583,9 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 👤 **Spieler**
 
 ${newState.member}
-
-
 📞 **Warteraum**
 
 ${newState.channel}
-
-
 ⏰ **Zeit**
 
 <t:${Math.floor(Date.now()/1000)}:R>
