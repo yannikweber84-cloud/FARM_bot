@@ -47,6 +47,7 @@ const SUPPORT_LOG_CHANNEL_ID = "1535618767915065439";
 const SUPPORT_ROLE_ID = "1535618767172804702";
 
 let countingActive = false;
+let countingChannelId = null;
 let currentNumber = 1;
 let lastUserId = null;
 
@@ -127,18 +128,19 @@ client.on(Events.InteractionCreate, async interaction => {
  if (interaction.isChatInputCommand()) {
 
 
-    if (interaction.commandName === "countingstart") {
+   if (interaction.commandName === "countingstart") {
 
-        countingActive = true;
-        currentNumber = 1;
-        lastUserId = null;
+    countingActive = true;
+    countingChannelId = interaction.channelId;
+    currentNumber = 1;
+    lastUserId = null;
 
-        await interaction.reply(
-            "🎉 Das Counting wurde gestartet! Erste Zahl ist **1**."
-        );
+    await interaction.reply(
+        "🎉 Das Counting wurde hier gestartet! Erste Zahl ist **1**."
+    );
 
-        return;
-    }
+    return;
+}
 
 
 
@@ -643,19 +645,22 @@ ${newState.channel}
 // COUNTING SYSTEM
 // =========================
 
-
-// Counting
 client.on("messageCreate", async (message) => {
 
     if (message.author.bot) return;
+
+    // Counting ist nicht aktiv
     if (!countingActive) return;
 
-    if (!/^\d+$/.test(message.content)) return;
+    // NUR im Channel zählen, in dem /countingstart benutzt wurde
+    if (message.channel.id !== countingChannelId) return;
 
+    // Nur Zahlen erlauben
+    if (!/^\d+$/.test(message.content)) return;
 
     const number = Number(message.content);
 
-
+    // Gleicher User darf nicht zweimal hintereinander zählen
     if (message.author.id === lastUserId) {
 
         await message.reply(
@@ -668,46 +673,35 @@ client.on("messageCreate", async (message) => {
         return;
     }
 
-
-
+    // Richtige Zahl
     if (number === currentNumber) {
 
-
         await message.react("✅");
-
 
         lastUserId = message.author.id;
         currentNumber++;
 
-
-
+        // 100000 erreicht
         if (currentNumber > 100000) {
-
 
             await message.channel.send(
                 "🎉 **100000 erreicht!** Das Counting startet wieder bei **1**."
             );
 
-
             currentNumber = 1;
             lastUserId = null;
-
         }
-
 
     } else {
 
-
+        // Falsche Zahl
         await message.reply(
             `❌ Falsch! Erwartet wurde **${currentNumber}**. Neustart bei **1**.`
         );
 
-
         currentNumber = 1;
         lastUserId = null;
-
     }
-
 });
 
 
