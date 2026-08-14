@@ -95,7 +95,7 @@ const SUPPORT_LOG_CHANNEL_ID =
 
 const SERVER_LOG_CHANNEL_ID =
     process.env.SERVER_LOG_CHANNEL_ID ||
-    "1535618767915065439";
+    "1537927036293615634";
 
 // ======================================================
 // TICKET KATEGORIEN
