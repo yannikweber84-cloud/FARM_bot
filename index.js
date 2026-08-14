@@ -383,6 +383,26 @@ const commands = [
         .setDescription(
             "Testet das Server-Logging"
         )
+        .toJSON(),
+
+    new SlashCommandBuilder()
+        .setName("clear")
+        .setDescription(
+            "Löscht mehrere Nachrichten in diesem Channel"
+        )
+        .addIntegerOption(option =>
+            option
+                .setName("anzahl")
+                .setDescription(
+                    "Wie viele Nachrichten sollen gelöscht werden? (1-1000)"
+                )
+                .setMinValue(1)
+                .setMaxValue(1000)
+                .setRequired(true)
+        )
+        .setDefaultMemberPermissions(
+            PermissionsBitField.Flags.ManageMessages
+        )
         .toJSON()
 
 ];
@@ -657,6 +677,195 @@ client.on(
                         ephemeral: true
 
                     });
+
+                    return;
+                }
+
+                // ==================================================
+                // CLEAR
+                // ==================================================
+
+                if (
+                    interaction.commandName ===
+                    "clear"
+                ) {
+
+                    if (
+                        !interaction.member.permissions.has(
+                            PermissionsBitField.Flags.ManageMessages
+                        )
+                    ) {
+
+                        return interaction.reply({
+
+                            content:
+                                "❌ Du benötigst die Berechtigung **Nachrichten verwalten**.",
+
+                            ephemeral: true
+
+                        });
+                    }
+
+                    const channel =
+                        interaction.channel;
+
+                    if (
+                        !channel ||
+                        !channel.isTextBased()
+                    ) {
+
+                        return interaction.reply({
+
+                            content:
+                                "❌ Dieser Befehl funktioniert nur in Textkanälen.",
+
+                            ephemeral: true
+
+                        });
+                    }
+
+                    const amount =
+                        interaction.options.getInteger(
+                            "anzahl",
+                            true
+                        );
+
+                    await interaction.deferReply({
+                        ephemeral: true
+                    });
+
+                    let remaining =
+                        amount;
+
+                    let deletedTotal =
+                        0;
+
+                    let skippedOld =
+                        false;
+
+                    try {
+
+                        while (
+                            remaining > 0
+                        ) {
+
+                            const batchSize =
+                                Math.min(
+                                    remaining,
+                                    100
+                                );
+
+                            const deleted =
+                                await channel.bulkDelete(
+                                    batchSize,
+                                    true // filtert Nachrichten älter als 14 Tage automatisch raus
+                                );
+
+                            deletedTotal +=
+                                deleted.size;
+
+                            remaining -=
+                                batchSize;
+
+                            // Wenn weniger gelöscht wurden als angefragt,
+                            // gibt es entweder keine Nachrichten mehr
+                            // oder der Rest ist älter als 14 Tage.
+                            if (
+                                deleted.size <
+                                batchSize
+                            ) {
+
+                                if (
+                                    deleted.size <
+                                    batchSize
+                                ) {
+
+                                    skippedOld =
+                                        true;
+                                }
+
+                                break;
+                            }
+                        }
+
+                    } catch (error) {
+
+                        console.error(
+                            "❌ Clear Fehler:",
+                            error
+                        );
+
+                        await interaction.editReply({
+
+                            content:
+                                `❌ Es ist ein Fehler beim Löschen aufgetreten. Bisher gelöscht: **${deletedTotal}**.`
+
+                        });
+
+                        return;
+                    }
+
+                    await interaction.editReply({
+
+                        content:
+                            `🧹 **${deletedTotal}** Nachricht(en) in ${channel} gelöscht.` +
+                            (skippedOld
+                                ? "\n⚠️ Ein Teil der angefragten Nachrichten war älter als 14 Tage und konnte nicht per Bulk-Delete entfernt werden (Discord-Limit)."
+                                : "")
+
+                    });
+
+                    const logEmbed =
+                        baseEmbed(
+                            "🧹 Nachrichten gelöscht",
+                            0xed4245,
+                            `Es wurden Nachrichten mit /clear gelöscht.`
+                        );
+
+                    logEmbed.addFields(
+
+                        {
+                            name:
+                                "🛡️ Ausgeführt von",
+
+                            value:
+                                `${interaction.user} (${interaction.user.id})`
+                        },
+
+                        {
+                            name:
+                                "📍 Kanal",
+
+                            value:
+                                channel.toString()
+                        },
+
+                        {
+                            name:
+                                "🔢 Angefragt",
+
+                            value:
+                                `${amount}`,
+
+                            inline: true
+                        },
+
+                        {
+                            name:
+                                "✅ Gelöscht",
+
+                            value:
+                                `${deletedTotal}`,
+
+                            inline: true
+                        }
+
+                    );
+
+                    await sendLog(
+                        interaction.guild,
+                        logEmbed
+                    );
 
                     return;
                 }
