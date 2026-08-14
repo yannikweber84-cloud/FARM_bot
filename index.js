@@ -877,7 +877,7 @@ Egal ob Builder, Helfer oder für ein anderes Teammitglied – erstelle einfach 
                         `bewerbung-${interaction.user.username.toLowerCase()}`;
 
                     ticketTitle =
-                        "👥 Team/Clan Bewerbung";
+                        "👥 Team Bewerbung";
 
                     categoryID =
                         TEAM_CATEGORY_ID;
