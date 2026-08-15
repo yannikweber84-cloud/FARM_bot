@@ -1474,20 +1474,6 @@ Dein Ticket wurde erfolgreich erstellt.
 
 ━━━━━━━━━━━━━━━━━━
 
-📌 **Ticket übernehmen**
-
-Ein Teammitglied kann das Ticket übernehmen.
-
-Danach können andere normale Teammitglieder nicht mehr schreiben.
-
-━━━━━━━━━━━━━━━━━━
-
-➡️ **Weiterleiten**
-
-Der zuständige Teamler kann das Ticket an ein anderes Teammitglied weiterleiten.
-
-━━━━━━━━━━━━━━━━━━
-
 🔒 **Ticket schließen**
 
 Wenn dein Anliegen erledigt ist, kann das Ticket geschlossen werden.`
