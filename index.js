@@ -2045,6 +2045,12 @@ await interaction.editReply({
                 }
 
                 // ==================================================
+                // BUTTON HANDLERS
+                // ==================================================
+
+                try {
+
+                // ==================================================
                 // FORWARD BUTTON
                 // ==================================================
 
@@ -2223,28 +2229,32 @@ await interaction.editReply({
                                        return;
                 }
 
-            } catch (error) {
+                } catch (error) {
 
-                console.error(
-                    "❌ Interaction Fehler:",
-                    error
-                );
+                    console.error(
+                        "❌ Button Handler Fehler:",
+                        error
+                    );
 
+                }
+
+        } catch (error) {
+            console.error("❌ Interaction Fehler:", error);
+            
+            try {
                 if (
                     interaction.isRepliable() &&
                     !interaction.replied &&
                     !interaction.deferred
                 ) {
-
                     await interaction.reply({
                         content: "❌ Es ist ein Fehler aufgetreten.",
-                        flags: 64
+                        ephemeral: true
                     }).catch(() => {});
-
                 }
-
+            } catch (e) {
+                console.error("❌ Error Reply Fehler:", e);
             }
-
         }
     }
 );
@@ -2698,119 +2708,110 @@ client.on(
                         );
 
 
-                        // --------------------------------------------------
-                        // TICKET NACH 3 SEKUNDEN LÖSCHEN
-                        // --------------------------------------------------
+                       // --------------------------------------------------
+// TICKET NACH 3 SEKUNDEN LÖSCHEN
+// --------------------------------------------------
 
-                        setTimeout(
-                            async () => {
+setTimeout(
+    async () => {
 
-                                try {
+        try {
 
-                                    if (
-                                        channel &&
-                                        channel.deletable
-                                    ) {
+            if (
+                channel &&
+                channel.deletable
+            ) {
 
-                                        // Falls vorhanden:
-                                        if (
-                                            typeof ticketData !==
-                                            "undefined"
-                                        ) {
+                // Ticket aus der Map entfernen
+                if (
+                    typeof ticketData !== "undefined"
+                ) {
 
-                                            ticketData.delete(
-                                                channel.id
-                                            );
+                    ticketData.delete(
+                        channel.id
+                    );
 
-                                        }
-
-
-                                        await channel.delete();
-
-                                    }
-
-                                } catch (error) {
-
-                                    console.error(
-                                        "❌ Ticket Delete Fehler:",
-                                        error
-                                    );
-
-                                }
-
-                            },
-                            3000
-                        );
-
-
-                    } catch (error) {
-
-                        console.error(
-                            "❌ Close Ticket Fehler:",
-                            error
-                        );
-
-
-                        if (
-                            interaction.isRepliable() &&
-                            !interaction.replied &&
-                            !interaction.deferred
-                        ) {
-
-                            await interaction.reply({
-
-                                content:
-                                    "❌ Das Ticket konnte nicht geschlossen werden.",
-
-                                flags:
-                                    MessageFlags.Ephemeral
-
-                            }).catch(
-                                () => {}
-                            );
-
-                        }
-
-                    }
-
-                    return;
                 }
+
+                // Discord-Kanal löschen
+                await channel.delete();
 
             }
 
         } catch (error) {
 
             console.error(
-                "❌ Interaction Fehler:",
+                "❌ Ticket Delete Fehler:",
                 error
             );
 
+        }
 
-            if (
-                interaction.isRepliable() &&
-                !interaction.replied &&
-                !interaction.deferred
-            ) {
+    },
+    3000
+);
 
-                await interaction.reply({
+} catch (error) {
 
-                    content:
-                        "❌ Es ist ein Fehler aufgetreten.",
+    console.error(
+        "❌ Close Ticket Fehler:",
+        error
+    );
 
-                    flags:
-                        MessageFlags.Ephemeral
+    if (
+        interaction.isRepliable() &&
+        !interaction.replied &&
+        !interaction.deferred
+    ) {
 
-                }).catch(
-                    () => {}
-                );
+        await interaction.reply({
 
-            }
+            content:
+                "❌ Das Ticket konnte nicht geschlossen werden.",
+
+            flags:
+                MessageFlags.Ephemeral
+
+        }).catch(
+            () => {}
+        );
+
+    }
+
+}
+
+return;        }
+
+    } catch (error) {
+
+        console.error(
+            "❌ Interaction Fehler:",
+            error
+        );
+
+        if (
+            interaction.isRepliable() &&
+            !interaction.replied &&
+            !interaction.deferred
+        ) {
+
+            await interaction.reply({
+
+                content:
+                    "❌ Es ist ein Fehler aufgetreten.",
+
+                flags:
+                    MessageFlags.Ephemeral
+
+            }).catch(
+                () => {}
+            );
 
         }
 
     }
-);
 
+});
 
 // ======================================================
 // SUPPORT VOICE WARTERAUM
