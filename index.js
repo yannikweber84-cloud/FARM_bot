@@ -3555,218 +3555,358 @@ ${interaction.user}
                 return;
             }
 
+           // ======================================================
+// EINZIGER INTERACTION HANDLER
+// ======================================================
+
+client.on(
+    Events.InteractionCreate,
+    async interaction => {
+
+        try {
+
             // ==================================================
-            // FORWARD
+            // SLASH COMMANDS
+            // ==================================================
+
+            if (interaction.isChatInputCommand()) {
+
+                // --------------------------------------------------
+                // HIER DEINE SLASH COMMANDS
+                // --------------------------------------------------
+                // countingstart
+                // countingstop
+                // logtest
+                // ticketpanel
+                //
+                // Deine vorhandenen Slash-Command-Blöcke
+                // kommen hier hinein.
+                // --------------------------------------------------
+
+            }
+
+
+            // ==================================================
+            // TICKET SELECT MENU
             // ==================================================
 
             if (
-                interaction.customId ===
-                "forward_ticket"
+                interaction.isStringSelectMenu() &&
+                interaction.customId === "ticket_menu"
             ) {
 
+                // --------------------------------------------------
+                // HIER DEIN TICKET-ERSTELLEN-CODE
+                // --------------------------------------------------
+                // Dein vorhandener Ticket-Code kommt hier hinein.
+                // --------------------------------------------------
+
+            }
+
+
+            // ==================================================
+            // FORWARD USER SELECT
+            // ==================================================
+
+            if (
+                interaction.isUserSelectMenu() &&
+                interaction.customId === "forward_ticket_user"
+            ) {
+
+                // --------------------------------------------------
+                // HIER DEIN WEITERLEITUNGS-CODE
+                // --------------------------------------------------
+                // Dein vorhandener Code zum Weiterleiten
+                // kommt hier hinein.
+                // --------------------------------------------------
+
+            }
+
+
+            // ==================================================
+            // BUTTONS
+            // ==================================================
+
+            if (interaction.isButton()) {
+
+
+                // ==================================================
+                // CLAIM TICKET
+                // ==================================================
+
                 if (
-                    !interaction.member.roles.cache.has(
-                        STAFF_ROLE_ID
-                    )
+                    interaction.customId ===
+                    "claim_ticket"
                 ) {
 
-                    return interaction.reply({
-                        content:
-                            "❌ Nur Teammitglieder können Tickets weiterleiten.",
-                        flags: MessageFlags.Ephemeral
-                    });
+                    // --------------------------------------------------
+                    // HIER DEIN CLAIM-CODE
+                    // --------------------------------------------------
+                    // Dein vorhandener Claim-Code kommt hier hinein.
+                    // --------------------------------------------------
 
                 }
 
+
                 // ==================================================
-                // USER SELECT
+                // FORWARD TICKET
                 // ==================================================
 
-                const userSelect =
-                    new UserSelectMenuBuilder()
-                        .setCustomId(
-                            "forward_ticket_user"
-                        )
-                        .setPlaceholder(
-                            "Wähle das Teammitglied aus..."
-                        )
-                        .setMinValues(1)
-                        .setMaxValues(1);
+                if (
+                    interaction.customId ===
+                    "forward_ticket"
+                ) {
 
-                const row =
-                    new ActionRowBuilder()
-                        .addComponents(
-                            userSelect
+                    if (
+                        !interaction.member ||
+                        !interaction.member.roles.cache.has(
+                            STAFF_ROLE_ID
+                        )
+                    ) {
+
+                        return interaction.reply({
+
+                            content:
+                                "❌ Nur Teammitglieder können Tickets weiterleiten.",
+
+                            flags:
+                                MessageFlags.Ephemeral
+
+                        });
+
+                    }
+
+
+                    // ==================================================
+                    // USER SELECT MENU
+                    // ==================================================
+
+                    const userSelect =
+                        new UserSelectMenuBuilder()
+                            .setCustomId(
+                                "forward_ticket_user"
+                            )
+                            .setPlaceholder(
+                                "Wähle das Teammitglied aus..."
+                            )
+                            .setMinValues(1)
+                            .setMaxValues(1);
+
+
+                    const row =
+                        new ActionRowBuilder()
+                            .addComponents(
+                                userSelect
+                            );
+
+
+                    await interaction.reply({
+
+                        content:
+                            "➡️ **Ticket weiterleiten**\n\n" +
+                            "Wähle unten das Teammitglied aus, an das dieses Ticket weitergeleitet werden soll.",
+
+                        components: [
+                            row
+                        ],
+
+                        flags:
+                            MessageFlags.Ephemeral
+
+                    });
+
+                    return;
+                }
+
+
+                // ==================================================
+                // CLOSE TICKET
+                // ==================================================
+
+                if (
+                    interaction.customId ===
+                    "close_ticket"
+                ) {
+
+                    const channel =
+                        interaction.channel;
+
+
+                    try {
+
+                        // --------------------------------------------------
+                        // Antwort bestätigen
+                        // --------------------------------------------------
+
+                        await interaction.deferReply();
+
+
+                        await interaction.editReply({
+
+                            content:
+                                "🔒 Ticket wird in **3 Sekunden** geschlossen..."
+
+                        });
+
+
+                        // --------------------------------------------------
+                        // LOG EMBED
+                        // --------------------------------------------------
+
+                        const logEmbed =
+                            baseEmbed(
+                                "🔒 Ticket geschlossen",
+                                0xed4245
+                            );
+
+
+                        logEmbed.addFields(
+
+                            {
+                                name:
+                                    "👤 Geschlossen von",
+
+                                value:
+                                    `${interaction.user} (${interaction.user.id})`
+                            },
+
+                            {
+                                name:
+                                    "🎫 Ticket",
+
+                                value:
+                                    channel
+                                        ? `#${channel.name}`
+                                        : "Unbekannt"
+                            }
+
                         );
+
+
+                        // --------------------------------------------------
+                        // LOG SENDEN
+                        // --------------------------------------------------
+
+                        await sendLog(
+                            interaction.guild,
+                            logEmbed
+                        );
+
+
+                        // --------------------------------------------------
+                        // TICKET NACH 3 SEKUNDEN LÖSCHEN
+                        // --------------------------------------------------
+
+                        setTimeout(
+                            async () => {
+
+                                try {
+
+                                    if (
+                                        channel &&
+                                        channel.deletable
+                                    ) {
+
+                                        // Falls vorhanden:
+                                        if (
+                                            typeof ticketData !==
+                                            "undefined"
+                                        ) {
+
+                                            ticketData.delete(
+                                                channel.id
+                                            );
+
+                                        }
+
+
+                                        await channel.delete();
+
+                                    }
+
+                                } catch (error) {
+
+                                    console.error(
+                                        "❌ Ticket Delete Fehler:",
+                                        error
+                                    );
+
+                                }
+
+                            },
+                            3000
+                        );
+
+
+                    } catch (error) {
+
+                        console.error(
+                            "❌ Close Ticket Fehler:",
+                            error
+                        );
+
+
+                        if (
+                            interaction.isRepliable() &&
+                            !interaction.replied &&
+                            !interaction.deferred
+                        ) {
+
+                            await interaction.reply({
+
+                                content:
+                                    "❌ Das Ticket konnte nicht geschlossen werden.",
+
+                                flags:
+                                    MessageFlags.Ephemeral
+
+                            }).catch(
+                                () => {}
+                            );
+
+                        }
+
+                    }
+
+                    return;
+                }
+
+            }
+
+        } catch (error) {
+
+            console.error(
+                "❌ Interaction Fehler:",
+                error
+            );
+
+
+            if (
+                interaction.isRepliable() &&
+                !interaction.replied &&
+                !interaction.deferred
+            ) {
 
                 await interaction.reply({
 
                     content:
-                        "➡️ **Ticket weiterleiten**\n\n" +
-                        "Wähle unten das Teammitglied aus, an das dieses Ticket weitergeleitet werden soll.",
-
-                    components: [
-                        row
-                    ],
+                        "❌ Es ist ein Fehler aufgetreten.",
 
                     flags:
                         MessageFlags.Ephemeral
 
-                });
-
-                return;
-            }
-
-    // ==================================================
-// CLOSE TICKET
-// ==================================================
-
-if (interaction.customId === "close_ticket") {
-
-    const channel = interaction.channel;
-
-    try {
-
-        await interaction.deferReply();
-
-        await interaction.editReply({
-            content: "🔒 Ticket wird in **3 Sekunden** geschlossen..."
-        });
-
-        const logEmbed = baseEmbed(
-            "🔒 Ticket geschlossen",
-            0xed4245
-        );
-
-        logEmbed.addFields(
-            {
-                name: "👤 Geschlossen von",
-                value: `${interaction.user} (${interaction.user.id})`
-            },
-            {
-                name: "🎫 Ticket",
-                value: channel
-                    ? `#${channel.name}`
-                    : "Unbekannt"
-            }
-        );
-
-        await sendLog(
-            interaction.guild,
-            logEmbed
-        );
-
-        setTimeout(async () => {
-
-            try {
-
-                if (
-                    channel &&
-                    channel.deletable
-                ) {
-
-                    await channel.delete();
-
-                }
-
-            } catch (error) {
-
-                console.error(
-                    "❌ Ticket Delete Fehler:",
-                    error
+                }).catch(
+                    () => {}
                 );
 
             }
 
-        }, 3000);
-
-    } catch (error) {
-
-        console.error(
-            "❌ Close Ticket Fehler:",
-            error
-        );
-
-    }
-
-    return;
-}
-
-client.once(Events.ClientReady, async () => {
-    // READY
-});
-
-
-// ======================================================
-// EINZIGER INTERACTION HANDLER
-// ======================================================
-
-client.on(Events.InteractionCreate, async interaction => {
-
-    try {
-
-        // SLASH COMMANDS
-        if (interaction.isChatInputCommand()) {
-
-            // countingstart
-            // countingstop
-            // logtest
-            // ticketpanel
-
-        }
-
-        // TICKET SELECT MENU
-        if (
-            interaction.isStringSelectMenu() &&
-            interaction.customId === "ticket_menu"
-        ) {
-
-            // Ticket erstellen
-
-        }
-
-        // FORWARD USER SELECT
-        if (
-            interaction.isUserSelectMenu() &&
-            interaction.customId === "forward_ticket_user"
-        ) {
-
-            // Weiterleiten
-
-        }
-
-        // BUTTONS
-        if (interaction.isButton()) {
-
-            // claim_ticket
-            // forward_ticket
-            // close_ticket
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            "❌ Interaction Fehler:",
-            error
-        );
-
-        if (
-            interaction.isRepliable() &&
-            !interaction.replied &&
-            !interaction.deferred
-        ) {
-
-            await interaction.reply({
-                content: "❌ Es ist ein Fehler aufgetreten.",
-                flags: MessageFlags.Ephemeral
-            }).catch(() => {});
-
         }
 
     }
+);
 
-});
+
 // ======================================================
 // SUPPORT VOICE WARTERAUM
 // ======================================================
@@ -3777,34 +3917,61 @@ client.on(
 
         try {
 
+            // --------------------------------------------------
+            // Nur Support-Warteraum
+            // --------------------------------------------------
+
             if (
                 newState.channelId !==
                 SUPPORT_WARTE_RAUM_ID
             ) {
+
                 return;
+
             }
+
+
+            // --------------------------------------------------
+            // Bereits im Warteraum gewesen
+            // --------------------------------------------------
 
             if (
                 oldState.channelId ===
                 SUPPORT_WARTE_RAUM_ID
             ) {
+
                 return;
+
             }
+
 
             const guild =
                 newState.guild;
 
+
             const member =
                 newState.member;
 
-            if (!guild || !member) {
+
+            if (
+                !guild ||
+                !member
+            ) {
+
                 return;
+
             }
+
+
+            // --------------------------------------------------
+            // LOG CHANNEL
+            // --------------------------------------------------
 
             const logChannel =
                 guild.channels.cache.get(
                     SUPPORT_LOG_CHANNEL_ID
                 );
+
 
             if (!logChannel) {
 
@@ -3813,16 +3980,51 @@ client.on(
                 );
 
                 return;
+
             }
 
-            if (!logChannel.isTextBased()) {
+
+            if (
+                !logChannel.isTextBased()
+            ) {
 
                 console.error(
                     "❌ Support-Log-Kanal ist kein Textkanal."
                 );
 
                 return;
+
             }
+
+
+            // --------------------------------------------------
+            // SUPPORT ROLLE
+            // --------------------------------------------------
+
+            const staffRole =
+                await guild.roles
+                    .fetch(
+                        SUPPORT_ROLE_ID
+                    )
+                    .catch(
+                        () => null
+                    );
+
+
+            if (!staffRole) {
+
+                console.error(
+                    `❌ Staff-Rolle nicht gefunden: ${SUPPORT_ROLE_ID}`
+                );
+
+                return;
+
+            }
+
+
+            // --------------------------------------------------
+            // SUPPORT EMBED
+            // --------------------------------------------------
 
             const embed =
                 baseEmbed(
@@ -3831,25 +4033,42 @@ client.on(
                     "Ein Spieler wartet im Support-Warteraum."
                 );
 
+
             embed.addFields(
+
                 {
-                    name: "👤 Spieler",
+                    name:
+                        "👤 Spieler",
+
                     value:
                         `${member} (${member.id})`
+
                 },
+
                 {
-                    name: "📞 Warteraum",
+                    name:
+                        "📞 Warteraum",
+
                     value:
                         newState.channel
                             ? newState.channel.toString()
                             : "Unbekannt"
+
                 },
+
                 {
-                    name: "⏰ Zeit",
+                    name:
+                        "⏰ Zeit",
+
                     value:
-                        `<t:${Math.floor(Date.now() / 1000)}:R>`
+                        `<t:${Math.floor(
+                            Date.now() / 1000
+                        )}:R>`
+
                 }
+
             );
+
 
             embed.setThumbnail(
                 member.user.displayAvatarURL({
@@ -3857,12 +4076,25 @@ client.on(
                 })
             );
 
-            embed.setFooter({
-                text:
-                    "VIBE Support System",
-                iconURL:
-                    client.user.displayAvatarURL()
-            });
+
+            if (client.user) {
+
+                embed.setFooter({
+
+                    text:
+                        "VIBE Support System",
+
+                    iconURL:
+                        client.user.displayAvatarURL()
+
+                });
+
+            }
+
+
+            // --------------------------------------------------
+            // SUPPORT LOG SENDEN
+            // --------------------------------------------------
 
             await logChannel.send({
 
@@ -3870,9 +4102,11 @@ client.on(
                     `<@&${SUPPORT_ROLE_ID}>`,
 
                 allowedMentions: {
+
                     roles: [
                         SUPPORT_ROLE_ID
                     ]
+
                 },
 
                 embeds: [
@@ -3881,6 +4115,11 @@ client.on(
 
             });
 
+
+            // --------------------------------------------------
+            // SERVER LOG
+            // --------------------------------------------------
+
             const serverLog =
                 baseEmbed(
                     "🎧 Support-Warteraum",
@@ -3888,30 +4127,46 @@ client.on(
                     "Neue Support-Anfrage."
                 );
 
+
             serverLog.addFields(
+
                 {
-                    name: "Nutzer",
+                    name:
+                        "Nutzer",
+
                     value:
                         `${member} (${member.id})`
+
                 },
+
                 {
-                    name: "Kanal",
+                    name:
+                        "Kanal",
+
                     value:
                         newState.channel
                             ? newState.channel.toString()
                             : "Unbekannt"
+
                 },
+
                 {
-                    name: "Staff-Rolle",
+                    name:
+                        "Staff-Rolle",
+
                     value:
                         `<@&${SUPPORT_ROLE_ID}>`
+
                 }
+
             );
+
 
             await sendLog(
                 guild,
                 serverLog
             );
+
 
         } catch (error) {
 
@@ -3921,6 +4176,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -3935,31 +4191,70 @@ client.on(
 
         try {
 
-            if (message.author.bot) {
+            // --------------------------------------------------
+            // Bots ignorieren
+            // --------------------------------------------------
+
+            if (
+                message.author.bot
+            ) {
+
                 return;
+
             }
 
-            if (!countingActive) {
+
+            // --------------------------------------------------
+            // Counting muss aktiv sein
+            // --------------------------------------------------
+
+            if (
+                !countingActive
+            ) {
+
                 return;
+
             }
+
+
+            // --------------------------------------------------
+            // Nur Counting-Kanal
+            // --------------------------------------------------
 
             if (
                 message.channel.id !==
                 countingChannelId
             ) {
+
                 return;
+
             }
+
+
+            // --------------------------------------------------
+            // Nur Zahlen
+            // --------------------------------------------------
 
             if (
                 !/^\d+$/.test(
                     message.content
                 )
             ) {
+
                 return;
+
             }
 
+
             const number =
-                Number(message.content);
+                Number(
+                    message.content
+                );
+
+
+            // --------------------------------------------------
+            // Gleicher User zweimal
+            // --------------------------------------------------
 
             if (
                 message.author.id ===
@@ -3967,28 +4262,48 @@ client.on(
             ) {
 
                 await message.reply(
+
                     "❌ Du kannst nicht zweimal hintereinander zählen!\n" +
                     "🔄 Neustart bei **1**."
+
                 );
 
+
                 currentNumber = 1;
+
                 lastUserId = null;
 
                 return;
+
             }
+
+
+            // --------------------------------------------------
+            // Richtige Zahl
+            // --------------------------------------------------
 
             if (
                 number ===
                 currentNumber
             ) {
 
-                await message.react("✅")
-                    .catch(() => {});
+                await message
+                    .react("✅")
+                    .catch(
+                        () => {}
+                    );
+
 
                 lastUserId =
                     message.author.id;
 
+
                 currentNumber++;
+
+
+                // --------------------------------------------------
+                // 100000 erreicht
+                // --------------------------------------------------
 
                 if (
                     currentNumber >
@@ -3996,26 +4311,39 @@ client.on(
                 ) {
 
                     await message.channel.send(
+
                         "🎉 **100000 erreicht!**\n" +
                         "Das Counting startet wieder bei **1**."
+
                     );
 
+
                     currentNumber = 1;
+
                     lastUserId = null;
 
                 }
 
             } else {
 
+                // --------------------------------------------------
+                // Falsche Zahl
+                // --------------------------------------------------
+
                 await message.reply(
+
                     `❌ **Falsch!** Erwartet wurde **${currentNumber}**.\n` +
                     `🔄 Neustart bei **1**.`
+
                 );
 
+
                 currentNumber = 1;
+
                 lastUserId = null;
 
             }
+
 
         } catch (error) {
 
@@ -4025,6 +4353,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -4044,16 +4373,23 @@ client.on(
                     WELCOME_CHANNEL_ID
                 );
 
+
             if (!channel) {
+
                 return;
+
             }
+
 
             const embed =
                 new EmbedBuilder()
+
                     .setColor("#FEE75C")
+
                     .setTitle(
                         "⚡ Willkommen ⚡"
                     )
+
                     .setDescription(
 `${member} ist dem Server beigetreten!
 
@@ -4066,22 +4402,31 @@ ${member.id}
 👥 **Mitglieder:**
 ${member.guild.memberCount}`
                     )
+
                     .setThumbnail(
                         member.user.displayAvatarURL({
                             dynamic: true
                         })
                     )
+
                     .setTimestamp()
+
                     .setFooter({
+
                         text:
                             "VIBE Community"
+
                     });
 
+
             await channel.send({
+
                 embeds: [
                     embed
                 ]
+
             });
+
 
         } catch (error) {
 
@@ -4091,6 +4436,7 @@ ${member.guild.memberCount}`
             );
 
         }
+
     }
 );
 
@@ -4109,10 +4455,13 @@ client.on(
                 Date.now() -
                 member.user.createdTimestamp;
 
+
             const days =
                 Math.floor(
-                    accountAge / 86400000
+                    accountAge /
+                    86400000
                 );
+
 
             const embed =
                 baseEmbed(
@@ -4121,39 +4470,63 @@ client.on(
                     "Ein neues Mitglied ist dem Server beigetreten."
                 );
 
+
             embed.setThumbnail(
                 member.displayAvatarURL()
             );
 
+
             embed.addFields(
+
                 {
-                    name: "👤 Nutzer",
+                    name:
+                        "👤 Nutzer",
+
                     value:
                         `${member} (${member.user.tag})`
+
                 },
+
                 {
-                    name: "⏲️ Kontoalter",
+                    name:
+                        "⏲️ Kontoalter",
+
                     value:
                         `${days} Tage`,
-                    inline: true
+
+                    inline:
+                        true
+
                 },
+
                 {
-                    name: "👥 Mitglieder",
+                    name:
+                        "👥 Mitglieder",
+
                     value:
                         `${member.guild.memberCount}`,
-                    inline: true
+
+                    inline:
+                        true
+
                 }
+
             );
 
+
             embed.setFooter({
+
                 text:
                     `ID: ${member.id}`
+
             });
+
 
             await sendLog(
                 member.guild,
                 embed
             );
+
 
         } catch (error) {
 
@@ -4163,6 +4536,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -4185,12 +4559,14 @@ client.on(
                     )
             );
 
+
             const entry =
                 await getAuditExecutor(
                     member.guild,
                     AuditLogEvent.MemberKick,
                     member.id
                 );
+
 
             if (entry) {
 
@@ -4201,36 +4577,49 @@ client.on(
                         "Ein Mitglied wurde vom Server gekickt."
                     );
 
+
                 embed.addFields(
+
                     {
                         name:
                             "👤 Nutzer",
+
                         value:
                             `${member.user.tag} (${member.id})`
+
                     },
+
                     {
                         name:
                             "🛡️ Verantwortlicher Moderator",
+
                         value:
                             entry.executor
                                 ? entry.executor.toString()
                                 : "Unbekannt"
+
                     },
+
                     {
                         name:
                             "📄 Grund",
+
                         value:
                             safeText(
                                 entry.reason,
                                 "Kein Grund angegeben"
                             )
+
                     }
+
                 );
+
 
                 await sendLog(
                     member.guild,
                     embed
                 );
+
 
             } else {
 
@@ -4241,23 +4630,33 @@ client.on(
                         "Ein Mitglied hat den Server verlassen."
                     );
 
+
                 embed.addFields({
+
                     name:
                         "👤 Nutzer",
+
                     value:
                         `${member.user.tag} (${member.id})`
+
                 });
 
+
                 embed.setFooter({
+
                     text:
                         `Aktuelle Memberanzahl: ${member.guild.memberCount}`
+
                 });
+
 
                 await sendLog(
                     member.guild,
                     embed
                 );
+
             }
+
 
         } catch (error) {
 
@@ -4267,6 +4666,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -4289,12 +4689,14 @@ client.on(
                     )
             );
 
+
             const entry =
                 await getAuditExecutor(
                     ban.guild,
                     AuditLogEvent.MemberBanAdd,
                     ban.user.id
                 );
+
 
             const embed =
                 baseEmbed(
@@ -4303,40 +4705,55 @@ client.on(
                     "Ein Mitglied wurde gebannt."
                 );
 
+
             embed.addFields({
+
                 name:
                     "👤 Nutzer",
+
                 value:
                     `${ban.user.tag} (${ban.user.id})`
+
             });
+
 
             if (entry) {
 
                 embed.addFields(
+
                     {
                         name:
                             "🛡️ Verantwortlicher Moderator",
+
                         value:
                             entry.executor
                                 ? entry.executor.toString()
                                 : "Unbekannt"
+
                     },
+
                     {
                         name:
                             "📄 Grund",
+
                         value:
                             safeText(
                                 entry.reason,
                                 "Kein Grund angegeben"
                             )
+
                     }
+
                 );
+
             }
+
 
             await sendLog(
                 ban.guild,
                 embed
             );
+
 
         } catch (error) {
 
@@ -4346,6 +4763,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -4368,12 +4786,14 @@ client.on(
                     )
             );
 
+
             const entry =
                 await getAuditExecutor(
                     ban.guild,
                     AuditLogEvent.MemberBanRemove,
                     ban.user.id
                 );
+
 
             const embed =
                 baseEmbed(
@@ -4382,30 +4802,40 @@ client.on(
                     "Ein Mitglied wurde entbannt."
                 );
 
+
             embed.addFields({
+
                 name:
                     "👤 Nutzer",
+
                 value:
                     `${ban.user.tag} (${ban.user.id})`
+
             });
+
 
             if (entry) {
 
                 embed.addFields({
+
                     name:
                         "🛡️ Verantwortlicher",
+
                     value:
                         entry.executor
                             ? entry.executor.toString()
                             : "Unbekannt"
+
                 });
 
             }
+
 
             await sendLog(
                 ban.guild,
                 embed
             );
+
 
         } catch (error) {
 
@@ -4415,6 +4845,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -4429,6 +4860,10 @@ client.on(
 
         try {
 
+            // ==================================================
+            // NICKNAME
+            // ==================================================
+
             if (
                 before.nickname !==
                 after.nickname
@@ -4442,12 +4877,14 @@ client.on(
                         )
                 );
 
+
                 const entry =
                     await getAuditExecutor(
                         after.guild,
                         AuditLogEvent.MemberUpdate,
                         after.id
                     );
+
 
                 const embed =
                     baseEmbed(
@@ -4456,51 +4893,73 @@ client.on(
                         "Der Nickname eines Mitglieds wurde geändert."
                     );
 
+
                 embed.addFields(
+
                     {
                         name:
                             "👤 Nutzer",
+
                         value:
                             `${after} (${after.id})`
+
                     },
+
                     {
                         name:
                             "Vorher",
+
                         value:
                             safeText(
                                 before.nickname,
                                 before.user.username
                             )
+
                     },
+
                     {
                         name:
                             "Nachher",
+
                         value:
                             safeText(
                                 after.nickname,
                                 after.user.username
                             )
+
                     }
+
                 );
+
 
                 if (entry) {
 
                     embed.addFields({
+
                         name:
                             "🛡️ Verantwortlicher",
+
                         value:
                             entry.executor
                                 ? entry.executor.toString()
                                 : "Unbekannt"
+
                     });
 
                 }
+
 
                 await sendLog(
                     after.guild,
                     embed
                 );
+
             }
+
+
+            // ==================================================
+            // ROLLEN
+            // ==================================================
 
             const beforeRoles =
                 new Set(
@@ -4509,12 +4968,14 @@ client.on(
                     )
                 );
 
+
             const afterRoles =
                 new Set(
                     after.roles.cache.map(
                         role => role.id
                     )
                 );
+
 
             const addedRoles =
                 after.roles.cache.filter(
@@ -4524,6 +4985,7 @@ client.on(
                         )
                 );
 
+
             const removedRoles =
                 before.roles.cache.filter(
                     role =>
@@ -4532,12 +4994,16 @@ client.on(
                         )
                 );
 
+
             if (
                 addedRoles.size === 0 &&
                 removedRoles.size === 0
             ) {
+
                 return;
+
             }
+
 
             await new Promise(
                 resolve =>
@@ -4547,12 +5013,14 @@ client.on(
                     )
             );
 
+
             const entry =
                 await getAuditExecutor(
                     after.guild,
                     AuditLogEvent.MemberRoleUpdate,
                     after.id
                 );
+
 
             const embed =
                 baseEmbed(
@@ -4561,20 +5029,27 @@ client.on(
                     "Die Rollen eines Mitglieds wurden geändert."
                 );
 
+
             embed.addFields({
+
                 name:
                     "👤 Nutzer",
+
                 value:
                     `${after} (${after.id})`
+
             });
+
 
             if (
                 addedRoles.size > 0
             ) {
 
                 embed.addFields({
+
                     name:
                         "✅ Hinzugefügt",
+
                     value:
                         addedRoles
                             .map(
@@ -4586,17 +5061,21 @@ client.on(
                                 0,
                                 1024
                             )
+
                 });
 
             }
+
 
             if (
                 removedRoles.size > 0
             ) {
 
                 embed.addFields({
+
                     name:
                         "❌ Entfernt",
+
                     value:
                         removedRoles
                             .map(
@@ -4608,27 +5087,34 @@ client.on(
                                 0,
                                 1024
                             )
+
                 });
 
             }
+
 
             if (entry) {
 
                 embed.addFields({
+
                     name:
                         "🛡️ Verantwortlicher",
+
                     value:
                         entry.executor
                             ? entry.executor.toString()
                             : "Unbekannt"
+
                 });
 
             }
+
 
             await sendLog(
                 after.guild,
                 embed
             );
+
 
         } catch (error) {
 
@@ -4638,6 +5124,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -4656,9 +5143,17 @@ client.on(
                 after.member ||
                 before.member;
 
+
             if (!member) {
+
                 return;
+
             }
+
+
+            // ==================================================
+            // JOIN
+            // ==================================================
 
             if (
                 !before.channel &&
@@ -4672,31 +5167,51 @@ client.on(
                         "Ein Mitglied ist einem Sprachkanal beigetreten."
                     );
 
+
                 embed.addFields(
+
                     {
                         name:
                             "👤 Nutzer",
+
                         value:
                             member.toString(),
-                        inline: true
+
+                        inline:
+                            true
+
                     },
+
                     {
                         name:
                             "🔊 Kanal",
+
                         value:
                             after.channel
                                 ? after.channel.toString()
                                 : "Unbekannt",
-                        inline: true
+
+                        inline:
+                            true
+
                     }
+
                 );
+
 
                 await sendLog(
                     member.guild,
                     embed
                 );
 
-            } else if (
+            }
+
+
+            // ==================================================
+            // LEAVE
+            // ==================================================
+
+            else if (
                 before.channel &&
                 !after.channel
             ) {
@@ -4708,31 +5223,51 @@ client.on(
                         "Ein Mitglied hat einen Sprachkanal verlassen."
                     );
 
+
                 embed.addFields(
+
                     {
                         name:
                             "👤 Nutzer",
+
                         value:
                             member.toString(),
-                        inline: true
+
+                        inline:
+                            true
+
                     },
+
                     {
                         name:
                             "🔊 Kanal",
+
                         value:
                             before.channel
                                 ? before.channel.toString()
                                 : "Unbekannt",
-                        inline: true
+
+                        inline:
+                            true
+
                     }
+
                 );
+
 
                 await sendLog(
                     member.guild,
                     embed
                 );
 
-            } else if (
+            }
+
+
+            // ==================================================
+            // MOVE
+            // ==================================================
+
+            else if (
                 before.channel &&
                 after.channel &&
                 before.channel.id !==
@@ -4746,34 +5281,52 @@ client.on(
                         "Ein Mitglied hat den Sprachkanal gewechselt."
                     );
 
+
                 embed.addFields(
+
                     {
                         name:
                             "👤 Nutzer",
+
                         value:
                             member.toString()
+
                     },
+
                     {
                         name:
                             "Von",
+
                         value:
                             before.channel.toString(),
-                        inline: true
+
+                        inline:
+                            true
+
                     },
+
                     {
                         name:
                             "Zu",
+
                         value:
                             after.channel.toString(),
-                        inline: true
+
+                        inline:
+                            true
+
                     }
+
                 );
+
 
                 await sendLog(
                     member.guild,
                     embed
                 );
+
             }
+
 
             // ==================================================
             // SERVER MUTE
@@ -4792,6 +5345,7 @@ client.on(
                         )
                 );
 
+
                 const entry =
                     await getAuditExecutor(
                         member.guild,
@@ -4799,42 +5353,56 @@ client.on(
                         member.id
                     );
 
+
                 const embed =
                     baseEmbed(
                         after.serverMute
                             ? "🔇 Server-Stummschaltung aktiviert"
                             : "🔊 Server-Stummschaltung aufgehoben",
+
                         after.serverMute
                             ? 0xed4245
                             : 0x57f287,
+
                         "Der Server-Mute-Status wurde geändert."
                     );
 
+
                 embed.addFields({
+
                     name:
                         "👤 Nutzer",
+
                     value:
                         member.toString()
+
                 });
+
 
                 if (entry) {
 
                     embed.addFields({
+
                         name:
                             "🛡️ Verantwortlicher Moderator",
+
                         value:
                             entry.executor
                                 ? entry.executor.toString()
                                 : "Unbekannt"
+
                     });
 
                 }
+
 
                 await sendLog(
                     member.guild,
                     embed
                 );
+
             }
+
 
             // ==================================================
             // SERVER DEAF
@@ -4853,6 +5421,7 @@ client.on(
                         )
                 );
 
+
                 const entry =
                     await getAuditExecutor(
                         member.guild,
@@ -4860,42 +5429,56 @@ client.on(
                         member.id
                     );
 
+
                 const embed =
                     baseEmbed(
                         after.serverDeaf
                             ? "🔕 Server-Taubschaltung aktiviert"
                             : "🔔 Server-Taubschaltung aufgehoben",
+
                         after.serverDeaf
                             ? 0xed4245
                             : 0x57f287,
+
                         "Der Server-Deaf-Status wurde geändert."
                     );
 
+
                 embed.addFields({
+
                     name:
                         "👤 Nutzer",
+
                     value:
                         member.toString()
+
                 });
+
 
                 if (entry) {
 
                     embed.addFields({
+
                         name:
                             "🛡️ Verantwortlicher Moderator",
+
                         value:
                             entry.executor
                                 ? entry.executor.toString()
                                 : "Unbekannt"
+
                     });
 
                 }
+
 
                 await sendLog(
                     member.guild,
                     embed
                 );
+
             }
+
 
             // ==================================================
             // SELF MUTE
@@ -4911,32 +5494,45 @@ client.on(
                         after.selfMute
                             ? "🎙️ Nutzer hat sich selbst stummgeschaltet"
                             : "🎙️ Nutzer ist nicht mehr stummgeschaltet",
+
                         0x99aab5,
+
                         "Der Nutzer hat seinen Self-Mute-Status geändert."
                     );
 
+
                 embed.addFields(
+
                     {
                         name:
                             "👤 Nutzer",
+
                         value:
                             member.toString()
+
                     },
+
                     {
                         name:
                             "🔊 Kanal",
+
                         value:
                             after.channel
                                 ? after.channel.toString()
                                 : "Keiner"
+
                     }
+
                 );
+
 
                 await sendLog(
                     member.guild,
                     embed
                 );
+
             }
+
 
             // ==================================================
             // SELF DEAF
@@ -4952,32 +5548,45 @@ client.on(
                         after.selfDeaf
                             ? "🎧 Nutzer hat sich selbst taubgeschaltet"
                             : "🎧 Nutzer ist nicht mehr taubgeschaltet",
+
                         0x99aab5,
+
                         "Der Nutzer hat seinen Self-Deaf-Status geändert."
                     );
 
+
                 embed.addFields(
+
                     {
                         name:
                             "👤 Nutzer",
+
                         value:
                             member.toString()
+
                     },
+
                     {
                         name:
                             "🔊 Kanal",
+
                         value:
                             after.channel
                                 ? after.channel.toString()
                                 : "Keiner"
+
                     }
+
                 );
+
 
                 await sendLog(
                     member.guild,
                     embed
                 );
+
             }
+
 
         } catch (error) {
 
@@ -4987,6 +5596,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -5002,8 +5612,11 @@ client.on(
         try {
 
             if (!channel.guild) {
+
                 return;
+
             }
+
 
             await new Promise(
                 resolve =>
@@ -5013,12 +5626,14 @@ client.on(
                     )
             );
 
+
             const entry =
                 await getAuditExecutor(
                     channel.guild,
                     AuditLogEvent.ChannelCreate,
                     channel.id
                 );
+
 
             const embed =
                 baseEmbed(
@@ -5027,22 +5642,31 @@ client.on(
                     "Ein neuer Kanal wurde erstellt."
                 );
 
+
             embed.addFields(
+
                 {
                     name:
                         "📁 Kanal",
+
                     value:
                         channel.toString()
+
                 },
+
                 {
                     name:
                         "🆔 ID",
+
                     value:
                         channel.id
+
                 },
+
                 {
                     name:
                         "Typ",
+
                     value:
                         channel.type ===
                         ChannelType.GuildText
@@ -5051,26 +5675,34 @@ client.on(
                               ChannelType.GuildVoice
                                 ? "Sprachkanal"
                                 : "Sonstiger Kanal"
+
                 }
+
             );
+
 
             if (entry) {
 
                 embed.addFields({
+
                     name:
                         "🛡️ Verantwortlicher",
+
                     value:
                         entry.executor
                             ? entry.executor.toString()
                             : "Unbekannt"
+
                 });
 
             }
+
 
             await sendLog(
                 channel.guild,
                 embed
             );
+
 
         } catch (error) {
 
@@ -5080,6 +5712,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -5095,8 +5728,11 @@ client.on(
         try {
 
             if (!channel.guild) {
+
                 return;
+
             }
+
 
             await new Promise(
                 resolve =>
@@ -5106,12 +5742,14 @@ client.on(
                     )
             );
 
+
             const entry =
                 await getAuditExecutor(
                     channel.guild,
                     AuditLogEvent.ChannelDelete,
                     channel.id
                 );
+
 
             const embed =
                 baseEmbed(
@@ -5120,41 +5758,55 @@ client.on(
                     "Ein Kanal wurde gelöscht."
                 );
 
+
             embed.addFields(
+
                 {
                     name:
                         "📁 Kanal",
+
                     value:
                         `#${safeText(
                             channel.name,
                             "Unbekannt"
                         )}`
+
                 },
+
                 {
                     name:
                         "🆔 ID",
+
                     value:
                         channel.id
+
                 }
+
             );
+
 
             if (entry) {
 
                 embed.addFields({
+
                     name:
                         "🛡️ Verantwortlicher",
+
                     value:
                         entry.executor
                             ? entry.executor.toString()
                             : "Unbekannt"
+
                 });
 
             }
+
 
             await sendLog(
                 channel.guild,
                 embed
             );
+
 
         } catch (error) {
 
@@ -5164,6 +5816,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -5183,8 +5836,11 @@ client.on(
                     after.permissionOverwrites.cache
                 )
             ) {
+
                 return;
+
             }
+
 
             await new Promise(
                 resolve =>
@@ -5194,12 +5850,14 @@ client.on(
                     )
             );
 
+
             const entry =
                 await getAuditExecutor(
                     after.guild,
                     AuditLogEvent.ChannelOverwriteUpdate,
                     after.id
                 );
+
 
             const embed =
                 baseEmbed(
@@ -5208,30 +5866,40 @@ client.on(
                     "Die Berechtigungen eines Kanals wurden geändert."
                 );
 
+
             embed.addFields({
+
                 name:
                     "📁 Kanal",
+
                 value:
                     after.toString()
+
             });
+
 
             if (entry) {
 
                 embed.addFields({
+
                     name:
                         "🛡️ Verantwortlicher",
+
                     value:
                         entry.executor
                             ? entry.executor.toString()
                             : "Unbekannt"
+
                 });
 
             }
+
 
             await sendLog(
                 after.guild,
                 embed
             );
+
 
         } catch (error) {
 
@@ -5241,6 +5909,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -5256,8 +5925,11 @@ client.on(
         try {
 
             if (!message.guild) {
+
                 return;
+
             }
+
 
             if (
                 message.author &&
@@ -5265,8 +5937,11 @@ client.on(
                 message.author.id ===
                     client.user.id
             ) {
+
                 return;
+
             }
+
 
             const content =
                 message.content
@@ -5276,6 +5951,7 @@ client.on(
                     )
                     : "*(Kein Textinhalt / Embed / Anhang)*";
 
+
             const embed =
                 baseEmbed(
                     "🗑️ Nachricht gelöscht",
@@ -5283,26 +5959,35 @@ client.on(
                     "Eine Nachricht wurde gelöscht."
                 );
 
+
             embed.addFields(
+
                 {
                     name:
                         "👤 Autor",
+
                     value:
                         message.author
                             ? `${message.author} (${message.author.id})`
                             : "Unbekannt"
+
                 },
+
                 {
                     name:
                         "📍 Kanal",
+
                     value:
                         message.channel
                             ? message.channel.toString()
                             : "Unbekannt"
+
                 },
+
                 {
                     name:
                         "💬 Inhalt",
+
                     value:
                         safeText(
                             content,
@@ -5311,13 +5996,17 @@ client.on(
                             0,
                             1024
                         )
+
                 }
+
             );
+
 
             await sendLog(
                 message.guild,
                 embed
             );
+
 
         } catch (error) {
 
@@ -5327,6 +6016,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -5342,22 +6032,31 @@ client.on(
         try {
 
             if (!before.guild) {
+
                 return;
+
             }
+
 
             if (
                 before.author &&
                 before.author.bot
             ) {
+
                 return;
+
             }
+
 
             if (
                 before.content ===
                 after.content
             ) {
+
                 return;
+
             }
+
 
             const embed =
                 baseEmbed(
@@ -5366,26 +6065,35 @@ client.on(
                     "Eine Nachricht wurde bearbeitet."
                 );
 
+
             embed.addFields(
+
                 {
                     name:
                         "👤 Autor",
+
                     value:
                         before.author
                             ? `${before.author} (${before.author.id})`
                             : "Unbekannt"
+
                 },
+
                 {
                     name:
                         "📍 Kanal",
+
                     value:
                         before.channel
                             ? before.channel.toString()
                             : "Unbekannt"
+
                 },
+
                 {
                     name:
                         "Vorher",
+
                     value:
                         safeText(
                             before.content,
@@ -5394,10 +6102,13 @@ client.on(
                             0,
                             1024
                         )
+
                 },
+
                 {
                     name:
                         "Nachher",
+
                     value:
                         safeText(
                             after.content,
@@ -5406,24 +6117,32 @@ client.on(
                             0,
                             1024
                         )
+
                 }
+
             );
+
 
             if (after.url) {
 
                 embed.addFields({
+
                     name:
                         "🔗 Nachricht",
+
                     value:
                         `[Zur Nachricht](${after.url})`
+
                 });
 
             }
+
 
             await sendLog(
                 before.guild,
                 embed
             );
+
 
         } catch (error) {
 
@@ -5433,6 +6152,7 @@ client.on(
             );
 
         }
+
     }
 );
 
@@ -5532,6 +6252,7 @@ if (!TOKEN) {
     console.error("");
 
     process.exit(1);
+
 }
 
 
@@ -5542,6 +6263,7 @@ if (!TOKEN) {
 console.log(
     "🔐 Bot wird eingeloggt..."
 );
+
 
 client.login(TOKEN)
 
