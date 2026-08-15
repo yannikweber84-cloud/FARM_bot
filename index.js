@@ -1192,8 +1192,8 @@ async function endGiveaway(
 
                 `🎁 **Preis:** ${data.prize}\n\n` +
 
-                "Herzlichen Glückwunsch!
-                Bitte mach ein Ticket auf #Ticket🎊",
+                "Herzlichen Glückwunsch!🎊",
+                "Bitte öffne ein Ticket in #Ticket",
 
             allowedMentions: {
 
