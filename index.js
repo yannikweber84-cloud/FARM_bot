@@ -26,6 +26,8 @@ const {
 
 const app = express();
 
+const PORT = process.env.PORT || 3000;
+
 app.get("/", (req, res) => {
     res.status(200).send("VIBE Bot läuft! 🟢");
 });
@@ -37,9 +39,7 @@ app.get("/health", (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`🌐 Webserver läuft auf Port ${PORT}`);
 });
 
@@ -107,18 +107,6 @@ const TEAM_CATEGORY_ID =
 
 const BAU_CATEGORY_ID =
     "1537927037916942456";
-
-// ======================================================
-// GIVEAWAY TICKET KATEGORIE
-// ======================================================
-//
-// HIER DIE ID DER NEUEN GIVEAWAY-KATEGORIE EINTRAGEN
-//
-// Beispiel:
-// const GIVEAWAY_CATEGORY_ID =
-//     "123456789012345678";
-//
-// ======================================================
 
 const GIVEAWAY_CATEGORY_ID =
     "1538095441940447294";
@@ -269,11 +257,7 @@ async function sendLog(
 
     try {
 
-        if (!guild) {
-            return;
-        }
-
-        if (!embed) {
+        if (!guild || !embed) {
             return;
         }
 
@@ -321,8 +305,13 @@ async function getAuditExecutor(
 
         const logs =
             await guild.fetchAuditLogs({
-                limit: maxEntries,
-                type: action
+
+                limit:
+                    maxEntries,
+
+                type:
+                    action
+
             });
 
         const entry =
@@ -337,12 +326,12 @@ async function getAuditExecutor(
                     }
 
                     return (
-                        entry.target.id ===
-                            targetId &&
+                        entry.target.id === targetId &&
                         Date.now() -
                             entry.createdTimestamp <
                             10000
                     );
+
                 }
             );
 
@@ -494,6 +483,27 @@ client.once(
 
         console.log("");
 
+        // Server und Rollen nach Login laden
+        const guild =
+            await client.guilds
+                .fetch(GUILD_ID)
+                .catch(() => null);
+
+        if (guild) {
+
+            await guild.roles
+                .fetch()
+                .catch(() => {});
+
+            await guild.channels
+                .fetch()
+                .catch(() => {});
+
+            console.log(
+                `✅ Guild geladen: ${guild.name}`
+            );
+        }
+
         await registerCommands();
 
     }
@@ -537,7 +547,7 @@ client.on(
                             content:
                                 "❌ Du benötigst die Berechtigung **Server verwalten**.",
 
-                            ephemeral: true
+                            flags: 64
 
                         });
                     }
@@ -583,7 +593,7 @@ client.on(
                             content:
                                 "❌ Du benötigst die Berechtigung **Server verwalten**.",
 
-                            ephemeral: true
+                            flags: 64
 
                         });
                     }
@@ -627,7 +637,7 @@ client.on(
                             content:
                                 "❌ Nur Administratoren können diesen Befehl benutzen.",
 
-                            ephemeral: true
+                            flags: 64
 
                         });
                     }
@@ -671,7 +681,7 @@ client.on(
                         content:
                             "✅ Test-Log wurde gesendet.",
 
-                        ephemeral: true
+                        flags: 64
 
                     });
 
@@ -698,7 +708,7 @@ client.on(
                             content:
                                 "❌ Nur Administratoren können das Ticket Panel erstellen.",
 
-                            ephemeral: true
+                            flags: 64
 
                         });
                     }
@@ -876,14 +886,9 @@ Erstelle dafür ein Giveaway-Ticket.
                 const selected =
                     interaction.values[0];
 
-                let ticketName =
-                    null;
-
-                let ticketTitle =
-                    null;
-
-                let categoryID =
-                    null;
+                let ticketName = null;
+                let ticketTitle = null;
+                let categoryID = null;
 
                 // ==================================================
                 // SUPPORT
@@ -972,30 +977,93 @@ Erstelle dafür ein Giveaway-Ticket.
                         content:
                             "❌ Ungültige Ticket-Kategorie.",
 
-                        ephemeral: true
+                        flags: 64
 
                     });
                 }
 
                 // ==================================================
-                // GIVEAWAY KATEGORIE ID PRÜFEN
+                // KATEGORIE SICHER LADEN
                 // ==================================================
 
+                const category =
+                    await interaction.guild.channels
+                        .fetch(categoryID)
+                        .catch(() => null);
+
+                if (!category) {
+
+                    console.error(
+                        `❌ Ticket-Kategorie nicht gefunden: ${categoryID}`
+                    );
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Die Ticket-Kategorie wurde nicht gefunden. Prüfe die Kategorie-ID.",
+
+                        flags: 64
+
+                    });
+                }
+
                 if (
-                    selected === "giveaway" &&
-                    (
-                        !GIVEAWAY_CATEGORY_ID ||
-                        GIVEAWAY_CATEGORY_ID ===
-                            "HIER_GIVEAWAY_KATEGORIE_ID_EINTRAGEN"
-                    )
+                    category.type !==
+                    ChannelType.GuildCategory
                 ) {
 
                     return interaction.reply({
 
                         content:
-                            "❌ Die Giveaway-Kategorie wurde noch nicht eingerichtet. Trage oben im index.js die Kategorie-ID ein.",
+                            "❌ Die angegebene Ticket-Kategorie ist keine Kategorie.",
 
-                        ephemeral: true
+                        flags: 64
+
+                    });
+                }
+
+                // ==================================================
+                // STAFF ROLLE SICHER LADEN
+                // ==================================================
+
+                const staffRole =
+                    await interaction.guild.roles
+                        .fetch(STAFF_ROLE_ID)
+                        .catch(() => null);
+
+                if (!staffRole) {
+
+                    console.error(
+                        `❌ Staff-Rolle nicht gefunden: ${STAFF_ROLE_ID}`
+                    );
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Die Staff-Rolle wurde nicht gefunden. Prüfe die STAFF_ROLE_ID.",
+
+                        flags: 64
+
+                    });
+                }
+
+                // ==================================================
+                // USER / MEMBER SICHER LADEN
+                // ==================================================
+
+                const ticketMember =
+                    await interaction.guild.members
+                        .fetch(interaction.user.id)
+                        .catch(() => null);
+
+                if (!ticketMember) {
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Dein Mitglied konnte nicht geladen werden. Bitte versuche es erneut.",
+
+                        flags: 64
 
                     });
                 }
@@ -1018,13 +1086,13 @@ Erstelle dafür ein Giveaway-Ticket.
                         content:
                             `❌ Du hast bereits ein Ticket offen: ${existing}`,
 
-                        ephemeral: true
+                        flags: 64
 
                     });
                 }
 
                 // ==================================================
-                // TICKET ERSTELLEN
+                // TICKET ERSTELLEN – REPARIERT
                 // ==================================================
 
                 const channel =
@@ -1037,13 +1105,14 @@ Erstelle dafür ein Giveaway-Ticket.
                             ChannelType.GuildText,
 
                         parent:
-                            categoryID,
+                            category.id,
 
                         permissionOverwrites: [
 
+                            // @everyone
                             {
                                 id:
-                                    interaction.guild.id,
+                                    interaction.guild.roles.everyone,
 
                                 deny: [
 
@@ -1052,9 +1121,10 @@ Erstelle dafür ein Giveaway-Ticket.
                                 ]
                             },
 
+                            // Ticket-Ersteller
                             {
                                 id:
-                                    interaction.user.id,
+                                    ticketMember,
 
                                 allow: [
 
@@ -1067,9 +1137,10 @@ Erstelle dafür ein Giveaway-Ticket.
                                 ]
                             },
 
+                            // Staff
                             {
                                 id:
-                                    STAFF_ROLE_ID,
+                                    staffRole,
 
                                 allow: [
 
@@ -1233,7 +1304,7 @@ Dein Ticket wurde erfolgreich erstellt.
                     content:
                         `✅ Dein Ticket wurde erstellt: ${channel}`,
 
-                    ephemeral: true
+                    flags: 64
 
                 });
 
@@ -1281,9 +1352,7 @@ Dein Ticket wurde erfolgreich erstellt.
                 );
 
                 return;
-            }
-
-            // ==================================================
+            }            // ==================================================
             // TICKET USER SELECT MENU
             // ==================================================
 
@@ -1308,7 +1377,7 @@ Dein Ticket wurde erfolgreich erstellt.
                         content:
                             "❌ Nur Teammitglieder können Tickets weiterleiten.",
 
-                        ephemeral: true
+                        flags: 64
 
                     });
                 }
@@ -1316,14 +1385,11 @@ Dein Ticket wurde erfolgreich erstellt.
                 const selectedUserId =
                     interaction.values[0];
 
+                // User/Member sicher laden
                 const selectedMember =
                     await interaction.guild.members
-                        .fetch(
-                            selectedUserId
-                        )
-                        .catch(
-                            () => null
-                        );
+                        .fetch(selectedUserId)
+                        .catch(() => null);
 
                 if (!selectedMember) {
 
@@ -1332,7 +1398,7 @@ Dein Ticket wurde erfolgreich erstellt.
                         content:
                             "❌ Das ausgewählte Teammitglied wurde nicht gefunden.",
 
-                        ephemeral: true
+                        flags: 64
 
                     });
                 }
@@ -1352,7 +1418,7 @@ Dein Ticket wurde erfolgreich erstellt.
                         content:
                             "❌ Du kannst das Ticket nur an ein Mitglied mit der Staff-Rolle weiterleiten.",
 
-                        ephemeral: true
+                        flags: 64
 
                     });
                 }
@@ -1367,7 +1433,7 @@ Dein Ticket wurde erfolgreich erstellt.
                         content:
                             "❌ Der Ticket-Kanal wurde nicht gefunden.",
 
-                        ephemeral: true
+                        flags: 64
 
                     });
                 }
@@ -1378,7 +1444,7 @@ Dein Ticket wurde erfolgreich erstellt.
 
                 await channel.permissionOverwrites.edit(
 
-                    selectedMember.id,
+                    selectedMember,
 
                     {
 
@@ -1396,7 +1462,8 @@ Dein Ticket wurde erfolgreich erstellt.
                 // AUSWAHLMENÜ ENTFERNEN
                 // ==================================================
 
-                await interaction.message.delete()
+                await interaction.message
+                    .delete()
                     .catch(() => {});
 
                 // ==================================================
@@ -1542,7 +1609,7 @@ ${selectedMember}
                             content:
                                 "❌ Nur Teammitglieder können Tickets übernehmen.",
 
-                            ephemeral: true
+                            flags: 64
 
                         });
                     }
@@ -1666,7 +1733,7 @@ ${selectedMember}
                             content:
                                 "❌ Nur Teammitglieder können Tickets weiterleiten.",
 
-                            ephemeral: true
+                            flags: 64
 
                         });
                     }
@@ -1709,7 +1776,7 @@ ${selectedMember}
                             row
                         ],
 
-                        ephemeral: true
+                        flags: 64
 
                     });
 
@@ -1792,6 +1859,7 @@ ${selectedMember}
                                     "❌ Ticket Delete Fehler:",
                                     error
                                 );
+
                             }
 
                         },
@@ -1820,7 +1888,7 @@ ${selectedMember}
                     content:
                         "❌ Es ist ein Fehler aufgetreten.",
 
-                    ephemeral: true
+                    flags: 64
 
                 }).catch(() => {});
 
@@ -1839,7 +1907,7 @@ client.on(
 
         try {
 
-            // Nur wenn jemand den Support-Warteraum BETRITT
+            // Nur beim Betreten
             if (
                 newState.channelId !==
                     SUPPORT_WARTE_RAUM_ID
@@ -1864,14 +1932,10 @@ client.on(
                 return;
             }
 
-            // ==================================================
-            // SUPPORT LOG CHANNEL
-            // ==================================================
-
             const logChannel =
-                guild.channels.cache.get(
-                    SUPPORT_LOG_CHANNEL_ID
-                );
+                await guild.channels
+                    .fetch(SUPPORT_LOG_CHANNEL_ID)
+                    .catch(() => null);
 
             if (!logChannel) {
 
@@ -1894,29 +1958,6 @@ client.on(
             }
 
             // ==================================================
-            // STAFF ROLLE PRÜFEN
-            // ==================================================
-
-            const staffRole =
-                guild.roles.cache.get(
-                    SUPPORT_ROLE_ID
-                );
-
-            if (!staffRole) {
-
-                console.error(
-                    `❌ Staff-Rolle nicht gefunden: ${SUPPORT_ROLE_ID}`
-                );
-
-            } else {
-
-                console.log(
-                    `🛡️ Support-Ping wird an Rolle gesendet: ${staffRole.name} (${staffRole.id})`
-                );
-
-            }
-
-            // ==================================================
             // SUPPORT EMBED
             // ==================================================
 
@@ -1930,37 +1971,37 @@ client.on(
             embed.addFields(
 
                 {
+
                     name:
                         "👤 Spieler",
 
                     value:
-                        `${member} (${member.id})`,
+                        `${member} (${member.id})`
 
-                    inline: false
                 },
 
                 {
+
                     name:
                         "📞 Warteraum",
 
                     value:
                         newState.channel
                             ? newState.channel.toString()
-                            : "Unbekannt",
+                            : "Unbekannt"
 
-                    inline: false
                 },
 
                 {
+
                     name:
                         "⏰ Zeit",
 
                     value:
                         `<t:${Math.floor(
                             Date.now() / 1000
-                        )}:R>`,
+                        )}:R>`
 
-                    inline: false
                 }
 
             );
@@ -2005,7 +2046,7 @@ client.on(
             });
 
             console.log(
-                `📢 Staff-Rolle wurde im Support-Warteraum gepingt.`
+                "📢 Staff-Rolle wurde im Support-Warteraum gepingt."
             );
 
             // ==================================================
@@ -2154,10 +2195,6 @@ client.on(
 
                 currentNumber++;
 
-                // ==================================================
-                // 100000
-                // ==================================================
-
                 if (
                     currentNumber >
                     100000
@@ -2210,9 +2247,9 @@ client.on(
         try {
 
             const channel =
-                member.guild.channels.cache.get(
-                    WELCOME_CHANNEL_ID
-                );
+                await member.guild.channels
+                    .fetch(WELCOME_CHANNEL_ID)
+                    .catch(() => null);
 
             if (!channel) {
                 return;
@@ -2632,7 +2669,7 @@ client.on(
                 embed.addFields({
 
                     name:
-                        "🛡️ Verantwortlicher Moderator",
+                        "🛡️ Verantwortlicher",
 
                     value:
                         entry.executor
@@ -3105,25 +3142,6 @@ client.on(
                 after.serverMute
             ) {
 
-                await new Promise(
-                    resolve =>
-                        setTimeout(
-                            resolve,
-                            1000
-                        )
-                );
-
-                const entry =
-                    await getAuditExecutor(
-
-                        member.guild,
-
-                        AuditLogEvent.MemberUpdate,
-
-                        member.id
-
-                    );
-
                 const embed =
                     baseEmbed(
 
@@ -3149,21 +3167,6 @@ client.on(
 
                 });
 
-                if (entry) {
-
-                    embed.addFields({
-
-                        name:
-                            "🛡️ Verantwortlicher Moderator",
-
-                        value:
-                            entry.executor
-                                ? entry.executor.toString()
-                                : "Unbekannt"
-
-                    });
-                }
-
                 await sendLog(
                     member.guild,
                     embed
@@ -3178,25 +3181,6 @@ client.on(
                 before.serverDeaf !==
                 after.serverDeaf
             ) {
-
-                await new Promise(
-                    resolve =>
-                        setTimeout(
-                            resolve,
-                            1000
-                        )
-                );
-
-                const entry =
-                    await getAuditExecutor(
-
-                        member.guild,
-
-                        AuditLogEvent.MemberUpdate,
-
-                        member.id
-
-                    );
 
                 const embed =
                     baseEmbed(
@@ -3222,21 +3206,6 @@ client.on(
                         member.toString()
 
                 });
-
-                if (entry) {
-
-                    embed.addFields({
-
-                        name:
-                            "🛡️ Verantwortlicher Moderator",
-
-                        value:
-                            entry.executor
-                                ? entry.executor.toString()
-                                : "Unbekannt"
-
-                    });
-                }
 
                 await sendLog(
                     member.guild,
@@ -3275,6 +3244,7 @@ client.on(
 
                         value:
                             member.toString()
+
                     },
 
                     {
@@ -3328,6 +3298,7 @@ client.on(
 
                         value:
                             member.toString()
+
                     },
 
                     {
