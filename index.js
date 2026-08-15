@@ -6,6 +6,7 @@ const {
     Client,
     GatewayIntentBits,
     Partials,
+    SlashCommandBuilder
     Events,
     EmbedBuilder,
     ActionRowBuilder,
