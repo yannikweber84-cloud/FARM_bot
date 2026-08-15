@@ -936,17 +936,16 @@ Erstelle dafür ein Giveaway-Ticket.
                                 menu
                             );
 
-                   await interaction.deferReply();
+                  await interaction.deferReply();
 
-                        embeds: [
-                            embed
-                        ],
-
-                        components: [
-                            row
-                        ]
-
-                    });
+await interaction.editReply({
+    embeds: [
+        embed
+    ],
+    components: [
+        row
+    ]
+});
 
                     return;
                 }
