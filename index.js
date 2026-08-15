@@ -3621,83 +3621,107 @@ ${interaction.user}
                 return;
             }
 
-            // ==================================================
-// CLOSE
+    // ==================================================
+// CLOSE TICKET
 // ==================================================
 
 if (interaction.customId === "close_ticket") {
 
     const channel = interaction.channel;
 
-    await interaction.deferReply();
+    try {
 
-    await interaction.editReply({
-        content: "🔒 Ticket wird in **3 Sekunden** geschlossen..."
-    });
+        await interaction.deferReply();
 
-    const logEmbed = baseEmbed(
-        "🔒 Ticket geschlossen",
-        0xed4245
-    );
+        await interaction.editReply({
+            content: "🔒 Ticket wird in **3 Sekunden** geschlossen..."
+        });
 
-    logEmbed.addFields(
-        {
-            name: "Geschlossen von",
-            value: `${interaction.user} (${interaction.user.id})`
-        },
-        {
-            name: "Ticket",
-            value: channel ? `#${channel.name}` : "Unbekannt"
-        }
-    );
+        const logEmbed = baseEmbed(
+            "🔒 Ticket geschlossen",
+            0xed4245
+        );
 
-    await sendLog(
-        interaction.guild,
-        logEmbed
-    );
+        logEmbed.addFields(
+            {
+                name: "👤 Geschlossen von",
+                value: `${interaction.user} (${interaction.user.id})`
+            },
+            {
+                name: "🎫 Ticket",
+                value: channel
+                    ? `#${channel.name}`
+                    : "Unbekannt"
+            }
+        );
 
-    setTimeout(async () => {
+        await sendLog(
+            interaction.guild,
+            logEmbed
+        );
 
-        try {
+        setTimeout(async () => {
 
-            if (channel && channel.deletable) {
-                await channel.delete();
+            try {
+
+                if (
+                    channel &&
+                    channel.deletable
+                ) {
+
+                    await channel.delete();
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "❌ Ticket Delete Fehler:",
+                    error
+                );
+
             }
 
-        } catch (error) {
+        }, 3000);
 
-            console.error(
-                "❌ Ticket Delete Fehler:",
-                error
-            );
+    } catch (error) {
 
-        }
+        console.error(
+            "❌ Close Ticket Fehler:",
+            error
+        );
 
-    }, 3000);
+    }
 
     return;
 }
 
- } catch (error) {
 
-        console.error(
-            "❌ Interaction Fehler:",
-            error
-        );
+// ==================================================
+// ENDE INTERACTION HANDLER
+// ==================================================
 
-        if (
-            interaction.isRepliable() &&
-            !interaction.replied &&
-            !interaction.deferred
-        ) {
+} catch (error) {
 
-            await interaction.reply({
-                content: "❌ Es ist ein Fehler aufgetreten.",
-                flags: MessageFlags.Ephemeral
-            }).catch(() => {});
+    console.error(
+        "❌ Interaction Fehler:",
+        error
+    );
 
-        }
+    if (
+        interaction.isRepliable() &&
+        !interaction.replied &&
+        !interaction.deferred
+    ) {
+
+        await interaction.reply({
+            content: "❌ Es ist ein Fehler aufgetreten.",
+            flags: MessageFlags.Ephemeral
+        }).catch(() => {});
+
     }
+
+}
 
 });
 
