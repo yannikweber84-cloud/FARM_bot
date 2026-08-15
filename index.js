@@ -3595,10 +3595,10 @@ ${interaction.user}
 
               await interaction.deferReply();
 
-                    content:
-                        "🔒 Ticket wird in **3 Sekunden** geschlossen..."
-
-                });
+await interaction.editReply({
+    content:
+        "🔒 Ticket wird in **3 Sekunden** geschlossen..."
+});
 
                 const logEmbed =
                     baseEmbed(
