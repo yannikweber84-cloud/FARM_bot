@@ -1162,6 +1162,31 @@ Erstelle dafür ein Giveaway-Ticket.
                 // TICKET ERSTELLEN
                 // ==================================================
 
+               // ==================================================
+// PRÜFEN, OB USER BEREITS EIN TICKET HAT
+// ==================================================
+
+const existingTicket = guild.channels.cache.find(
+    ch =>
+        ch.type === ChannelType.GuildText &&
+        ch.name === ticketName
+);
+
+if (existingTicket) {
+
+    if (!interaction.replied && !interaction.deferred) {
+
+        await interaction.reply({
+            content:
+                `❌ Du hast bereits ein offenes Ticket: ${existingTicket}`,
+            flags: MessageFlags.Ephemeral
+        });
+
+    }
+
+    return;
+}
+                
                 const channel =
                     await guild.channels.create({
 
