@@ -2224,7 +2224,7 @@ await interaction.editReply({
                 }
             }
 
-        } catch (error) {
+               } catch (error) {
 
             console.error(
                 "❌ Interaction Fehler:",
@@ -2238,18 +2238,11 @@ await interaction.editReply({
             ) {
 
                 await interaction.reply({
-
-                    content:
-                        "❌ Es ist ein Fehler aufgetreten.",
-
+                    content: "❌ Es ist ein Fehler aufgetreten.",
                     flags: 64
-
-                }).catch(
-                    () => {}
-                );
+                }).catch(() => {});
 
             }
-
         }
 
     }
