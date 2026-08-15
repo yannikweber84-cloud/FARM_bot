@@ -2819,7 +2819,6 @@ return;        }
 
 client.on(
     Events.VoiceStateUpdate,
-    async (oldState, newState) => {
 
         try {
 
