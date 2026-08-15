@@ -128,22 +128,15 @@ let lastUserId = null;
 // ======================================================
 // TICKET DATEN
 // ======================================================
-//
-// Wir speichern hier, wer ein Ticket erstellt und
-// wer es übernommen hat.
-//
-// Dadurch wissen wir später genau, wer schreiben darf.
-//
 
 const ticketData = new Map();
 
-// Beispiel:
-//
-// ticketData.set(channel.id, {
-//     ownerId: "123",
-//     claimedBy: null,
-//     forwardedTo: null
-// });
+// ======================================================
+// GIVEAWAY DATEN
+// ======================================================
+
+const giveawayData = new Map();
+const giveawayTimers = new Map();
 
 // ======================================================
 // DISCORD CLIENT
@@ -438,6 +431,613 @@ function getTicketData(channel) {
 }
 
 // ======================================================
+// GIVEAWAY HILFSFUNKTIONEN
+// ======================================================
+
+function parseGiveawayDuration(input) {
+
+    if (!input) {
+        return null;
+    }
+
+    const value =
+        String(input)
+            .trim()
+            .toLowerCase()
+            .replace(",", ".");
+
+    const compact =
+        value.replace(/\s+/g, "");
+
+    const shortMatch =
+        compact.match(
+            /^(\d+(?:\.\d+)?)(s|m|h|d|w)$/i
+        );
+
+    if (shortMatch) {
+
+        const amount =
+            Number(
+                shortMatch[1]
+            );
+
+        const unit =
+            shortMatch[2]
+                .toLowerCase();
+
+        const multipliers = {
+
+            s: 1000,
+
+            m:
+                60 *
+                1000,
+
+            h:
+                60 *
+                60 *
+                1000,
+
+            d:
+                24 *
+                60 *
+                60 *
+                1000,
+
+            w:
+                7 *
+                24 *
+                60 *
+                60 *
+                1000
+
+        };
+
+        return Math.floor(
+            amount *
+            multipliers[unit]
+        );
+    }
+
+    const longMatch =
+        value.match(
+            /^(\d+(?:\.\d+)?)\s*(sekunde|sekunden|min|minute|minuten|stunde|stunden|std|tag|tage|tagen|woche|wochen)$/i
+        );
+
+    if (!longMatch) {
+        return null;
+    }
+
+    const amount =
+        Number(
+            longMatch[1]
+        );
+
+    const unit =
+        longMatch[2]
+            .toLowerCase();
+
+    let multiplier =
+        null;
+
+    if (
+        unit === "sekunde" ||
+        unit === "sekunden"
+    ) {
+
+        multiplier =
+            1000;
+
+    }
+
+    if (
+        unit === "min" ||
+        unit === "minute" ||
+        unit === "minuten"
+    ) {
+
+        multiplier =
+            60 *
+            1000;
+
+    }
+
+    if (
+        unit === "stunde" ||
+        unit === "stunden" ||
+        unit === "std"
+    ) {
+
+        multiplier =
+            60 *
+            60 *
+            1000;
+
+    }
+
+    if (
+        unit === "tag" ||
+        unit === "tage" ||
+        unit === "tagen"
+    ) {
+
+        multiplier =
+            24 *
+            60 *
+            60 *
+            1000;
+
+    }
+
+    if (
+        unit === "woche" ||
+        unit === "wochen"
+    ) {
+
+        multiplier =
+            7 *
+            24 *
+            60 *
+            60 *
+            1000;
+
+    }
+
+    if (!multiplier) {
+        return null;
+    }
+
+    return Math.floor(
+        amount *
+        multiplier
+    );
+}
+
+// ======================================================
+// GIVEAWAY EMBED
+// ======================================================
+
+function createGiveawayEmbed(
+    data,
+    ended = false,
+    winnerIds = []
+) {
+
+    const endUnix =
+        Math.floor(
+            data.endAt /
+            1000
+        );
+
+    const embed =
+        new EmbedBuilder()
+
+            .setColor(
+                ended
+                    ? "#57F287"
+                    : "#5865F2"
+            )
+
+            .setTitle(
+                `🎁 ${data.prize}`
+            )
+
+            .setDescription(
+                data.description ||
+                "Viel Glück an alle Teilnehmer! 🍀"
+            )
+
+            .addFields(
+
+                {
+                    name:
+                        "⏰ Ende",
+
+                    value:
+                        ended
+                            ? `Beendet <t:${endUnix}:R>`
+                            : `<t:${endUnix}:R>\n<t:${endUnix}:f>`,
+
+                    inline:
+                        false
+                },
+
+                {
+                    name:
+                        "👤 Veranstaltet von",
+
+                    value:
+                        `<@${data.hostId}>`,
+
+                    inline:
+                        true
+                },
+
+                {
+                    name:
+                        "🎟️ Teilnehmer",
+
+                    value:
+                        `${data.participants.size}`,
+
+                    inline:
+                        true
+                },
+
+                {
+                    name:
+                        "🏆 Gewinner",
+
+                    value:
+                        `${data.winnerCount}`,
+
+                    inline:
+                        true
+                }
+
+            )
+
+            .setTimestamp(
+                data.createdAt
+            )
+
+            .setFooter({
+
+                text:
+                    ended
+                        ? "Gewinnspiel beendet"
+                        : "Klicke unten auf 🎉 Teilnehmen!"
+
+            });
+
+    if (ended) {
+
+        embed.addFields({
+
+            name:
+                "🎉 Ergebnis",
+
+            value:
+                winnerIds.length > 0
+                    ? winnerIds
+                        .map(
+                            id =>
+                                `<@${id}>`
+                        )
+                        .join(", ")
+                    : "Keine gültigen Teilnehmer."
+
+        });
+
+    }
+
+    return embed;
+}
+
+// ======================================================
+// GEWINNER ZIEHEN
+// ======================================================
+
+function pickGiveawayWinners(
+    participants,
+    count
+) {
+
+    const pool =
+        [
+            ...participants
+        ];
+
+    const winners =
+        [];
+
+    while (
+        pool.length > 0 &&
+        winners.length <
+            count
+    ) {
+
+        const index =
+            Math.floor(
+                Math.random() *
+                pool.length
+            );
+
+        winners.push(
+
+            pool.splice(
+                index,
+                1
+            )[0]
+
+        );
+
+    }
+
+    return winners;
+}
+
+// ======================================================
+// GIVEAWAY BEENDEN
+// ======================================================
+
+async function endGiveaway(
+    giveawayId
+) {
+
+    const data =
+        giveawayData.get(
+            giveawayId
+        );
+
+    if (
+        !data ||
+        data.ended
+    ) {
+        return;
+    }
+
+    data.ended =
+        true;
+
+    const timer =
+        giveawayTimers.get(
+            giveawayId
+        );
+
+    if (timer) {
+
+        clearTimeout(
+            timer
+        );
+
+        giveawayTimers.delete(
+            giveawayId
+        );
+
+    }
+
+    const winners =
+        pickGiveawayWinners(
+
+            data.participants,
+
+            data.winnerCount
+
+        );
+
+    data.winnerIds =
+        winners;
+
+    const guild =
+        client.guilds.cache.get(
+            data.guildId
+        );
+
+    const channel =
+        guild
+
+            ? await guild.channels
+                .fetch(
+                    data.channelId
+                )
+                .catch(
+                    () =>
+                        null
+                )
+
+            : null;
+
+    if (
+        !channel ||
+        !channel.isTextBased()
+    ) {
+
+        return;
+
+    }
+
+    const message =
+        await channel.messages
+
+            .fetch(
+                data.messageId
+            )
+
+            .catch(
+                () =>
+                    null
+            );
+
+    if (message) {
+
+        const disabledButton =
+            new ButtonBuilder()
+
+                .setCustomId(
+                    `giveaway_join_${giveawayId}`
+                )
+
+                .setLabel(
+                    "Gewinnspiel beendet"
+                )
+
+                .setEmoji(
+                    "🎉"
+                )
+
+                .setStyle(
+                    ButtonStyle.Secondary
+                )
+
+                .setDisabled(
+                    true
+                );
+
+        await message.edit({
+
+            embeds: [
+
+                createGiveawayEmbed(
+                    data,
+                    true,
+                    winners
+                )
+
+            ],
+
+            components: [
+
+                new ActionRowBuilder()
+                    .addComponents(
+                        disabledButton
+                    )
+
+            ]
+
+        }).catch(
+            () => {}
+        );
+
+    }
+
+    if (
+        winners.length > 0
+    ) {
+
+        await channel.send({
+
+            content:
+
+                `🎉 **Gewinnspiel beendet!**\n\n` +
+
+                `🏆 Gewinner: ${
+                    winners
+                        .map(
+                            id =>
+                                `<@${id}>`
+                        )
+                        .join(", ")
+                }\n` +
+
+                `🎁 Preis: **${data.prize}**\n\n` +
+
+                `Herzlichen Glückwunsch!`,
+
+            allowedMentions: {
+
+                users:
+                    winners
+
+            }
+
+        }).catch(
+            () => {}
+        );
+
+    } else {
+
+        await channel.send({
+
+            content:
+
+                `🎉 **Gewinnspiel beendet!**\n\n` +
+
+                `Leider gab es keine Teilnehmer.\n` +
+
+                `🎁 Preis: **${data.prize}**`
+
+        }).catch(
+            () => {}
+        );
+
+    }
+
+}
+
+// ======================================================
+// GIVEAWAY TIMER
+// ======================================================
+
+function scheduleGiveawayEnd(
+    giveawayId
+) {
+
+    const data =
+        giveawayData.get(
+            giveawayId
+        );
+
+    if (!data) {
+        return;
+    }
+
+    const scheduleNext =
+        () => {
+
+            const current =
+                giveawayData.get(
+                    giveawayId
+                );
+
+            if (
+                !current ||
+                current.ended
+            ) {
+
+                return;
+
+            }
+
+            const remaining =
+                current.endAt -
+                Date.now();
+
+            if (
+                remaining <=
+                0
+            ) {
+
+                endGiveaway(
+                    giveawayId
+                ).catch(
+                    error => {
+
+                        console.error(
+                            "❌ Giveaway End Fehler:",
+                            error
+                        );
+
+                    }
+                );
+
+                return;
+
+            }
+
+            const wait =
+                Math.min(
+                    remaining,
+                    2_000_000_000
+                );
+
+            const timer =
+                setTimeout(
+                    scheduleNext,
+                    wait
+                );
+
+            giveawayTimers.set(
+                giveawayId,
+                timer
+            );
+
+        };
+
+    scheduleNext();
+}
+
+// ======================================================
 // SLASH COMMANDS
 // ======================================================
 
@@ -445,7 +1045,9 @@ const commands = [
 
     new SlashCommandBuilder()
 
-        .setName("ticketpanel")
+        .setName(
+            "ticketpanel"
+        )
 
         .setDescription(
             "Erstellt das Ticket Panel"
@@ -455,7 +1057,9 @@ const commands = [
 
     new SlashCommandBuilder()
 
-        .setName("countingstart")
+        .setName(
+            "countingstart"
+        )
 
         .setDescription(
             "Startet das Counting"
@@ -465,7 +1069,9 @@ const commands = [
 
     new SlashCommandBuilder()
 
-        .setName("countingstop")
+        .setName(
+            "countingstop"
+        )
 
         .setDescription(
             "Stoppt das Counting"
@@ -475,17 +1081,49 @@ const commands = [
 
     new SlashCommandBuilder()
 
-        .setName("logtest")
+        .setName(
+            "logtest"
+        )
 
         .setDescription(
             "Testet das Server-Logging"
         )
 
+        .toJSON(),
+
+    // ==================================================
+    // /CREATE GIVEAWAY
+    // ==================================================
+
+    new SlashCommandBuilder()
+
+        .setName(
+            "create"
+        )
+
+        .setDescription(
+            "Erstellt Inhalte auf dem Server"
+        )
+
+        .addSubcommand(
+
+            subcommand =>
+
+                subcommand
+
+                    .setName(
+                        "giveaway"
+                    )
+
+                    .setDescription(
+                        "Erstellt ein Gewinnspiel"
+                    )
+
+        )
+
         .toJSON()
 
-];
-
-// ======================================================
+];// ======================================================
 // REST
 // ======================================================
 
@@ -586,7 +1224,7 @@ client.once(
 );
 
 // ======================================================
-// INTERACTIONS – SAUBERER EINZIGER HANDLER
+// INTERACTIONS
 // ======================================================
 
 client.on(
@@ -602,6 +1240,232 @@ client.on(
             if (
                 interaction.isChatInputCommand()
             ) {
+
+                // ==================================================
+                // /CREATE GIVEAWAY
+                // ==================================================
+
+                if (
+                    interaction.commandName ===
+                    "create" &&
+                    interaction.options.getSubcommand() ===
+                    "giveaway"
+                ) {
+
+                    // ==================================================
+                    // BERECHTIGUNG PRÜFEN
+                    // ==================================================
+
+                    if (
+                        !isAdmin(
+                            interaction.member
+                        ) &&
+                        !interaction.member.permissions.has(
+                            PermissionsBitField.Flags.ManageGuild
+                        )
+                    ) {
+
+                        return interaction.reply({
+
+                            content:
+                                "❌ Du benötigst die Berechtigung **Server verwalten**, um ein Gewinnspiel zu erstellen.",
+
+                            flags:
+                                MessageFlags.Ephemeral
+
+                        });
+
+                    }
+
+                    // ==================================================
+                    // GIVEAWAY MODAL
+                    // ==================================================
+
+                    const modal =
+                        new ModalBuilder()
+
+                            .setCustomId(
+                                "create_giveaway_modal"
+                            )
+
+                            .setTitle(
+                                "Gewinnspiel erstellen"
+                            );
+
+                    // ==================================================
+                    // DAUER
+                    // ==================================================
+
+                    const durationInput =
+                        new TextInputBuilder()
+
+                            .setCustomId(
+                                "giveaway_duration"
+                            )
+
+                            .setLabel(
+                                "Dauer"
+                            )
+
+                            .setPlaceholder(
+                                "z. B. 10 Minuten, 2 Stunden oder 1 Tag"
+                            )
+
+                            .setStyle(
+                                TextInputStyle.Short
+                            )
+
+                            .setRequired(
+                                true
+                            )
+
+                            .setMaxLength(
+                                50
+                            );
+
+                    // ==================================================
+                    // ANZAHL GEWINNER
+                    // ==================================================
+
+                    const winnersInput =
+                        new TextInputBuilder()
+
+                            .setCustomId(
+                                "giveaway_winners"
+                            )
+
+                            .setLabel(
+                                "Anzahl der Gewinner"
+                            )
+
+                            .setPlaceholder(
+                                "z. B. 1"
+                            )
+
+                            .setStyle(
+                                TextInputStyle.Short
+                            )
+
+                            .setRequired(
+                                true
+                            )
+
+                            .setMaxLength(
+                                2
+                            );
+
+                    // ==================================================
+                    // PREIS
+                    // ==================================================
+
+                    const prizeInput =
+                        new TextInputBuilder()
+
+                            .setCustomId(
+                                "giveaway_prize"
+                            )
+
+                            .setLabel(
+                                "Preis"
+                            )
+
+                            .setPlaceholder(
+                                "Was kann man gewinnen?"
+                            )
+
+                            .setStyle(
+                                TextInputStyle.Short
+                            )
+
+                            .setRequired(
+                                true
+                            )
+
+                            .setMaxLength(
+                                100
+                            );
+
+                    // ==================================================
+                    // BESCHREIBUNG
+                    // ==================================================
+
+                    const descriptionInput =
+                        new TextInputBuilder()
+
+                            .setCustomId(
+                                "giveaway_description"
+                            )
+
+                            .setLabel(
+                                "Beschreibung"
+                            )
+
+                            .setPlaceholder(
+                                "Optional: Weitere Informationen zum Gewinnspiel"
+                            )
+
+                            .setStyle(
+                                TextInputStyle.Paragraph
+                            )
+
+                            .setRequired(
+                                false
+                            )
+
+                            .setMaxLength(
+                                1000
+                            );
+
+                    // ==================================================
+                    // MODAL ZEILEN
+                    // ==================================================
+
+                    const durationRow =
+                        new ActionRowBuilder()
+                            .addComponents(
+                                durationInput
+                            );
+
+                    const winnersRow =
+                        new ActionRowBuilder()
+                            .addComponents(
+                                winnersInput
+                            );
+
+                    const prizeRow =
+                        new ActionRowBuilder()
+                            .addComponents(
+                                prizeInput
+                            );
+
+                    const descriptionRow =
+                        new ActionRowBuilder()
+                            .addComponents(
+                                descriptionInput
+                            );
+
+                    modal.addComponents(
+
+                        durationRow,
+
+                        winnersRow,
+
+                        prizeRow,
+
+                        descriptionRow
+
+                    );
+
+                    // ==================================================
+                    // MODAL ANZEIGEN
+                    // ==================================================
+
+                    await interaction.showModal(
+                        modal
+                    );
+
+                    return;
+                }
 
                 // ==================================================
                 // COUNTING START
@@ -655,7 +1519,6 @@ client.on(
                     });
 
                     return;
-
                 }
 
                 // ==================================================
@@ -708,7 +1571,6 @@ client.on(
                     });
 
                     return;
-
                 }
 
                 // ==================================================
@@ -791,7 +1653,6 @@ client.on(
                     });
 
                     return;
-
                 }
 
                 // ==================================================
@@ -971,6 +1832,7 @@ Erstelle dafür ein Giveaway-Ticket.
 
                     const row =
                         new ActionRowBuilder()
+
                             .addComponents(
                                 menu
                             );
@@ -988,113 +1850,169 @@ Erstelle dafür ein Giveaway-Ticket.
                     });
 
                     return;
-
                 }
 
-            }            // ==================================================
-            // TICKET SELECT MENU
+            }
+
+            // ==================================================
+            // GIVEAWAY MODAL ABGESENDET
             // ==================================================
 
             if (
-                interaction.isStringSelectMenu() &&
-                interaction.customId === "ticket_menu"
+                interaction.isModalSubmit() &&
+                interaction.customId ===
+                "create_giveaway_modal"
             ) {
 
-                const selected =
-                    interaction.values[0];
-
-                let ticketName = null;
-                let ticketTitle = null;
-                let categoryID = null;
-
                 // ==================================================
-                // SUPPORT
+                // EINGABEN AUSLESEN
                 // ==================================================
 
-                if (selected === "clan_bewerbung") {
+                const durationText =
+                    interaction.fields
+                        .getTextInputValue(
+                            "giveaway_duration"
+                        )
+                        .trim();
 
-                    ticketName =
-                        `support-${interaction.user.username.toLowerCase()}`;
+                const winnersText =
+                    interaction.fields
+                        .getTextInputValue(
+                            "giveaway_winners"
+                        )
+                        .trim();
 
-                    ticketTitle =
-                        "🛡️ Allgemeiner Support";
+                const prize =
+                    interaction.fields
+                        .getTextInputValue(
+                            "giveaway_prize"
+                        )
+                        .trim();
 
-                    categoryID =
-                        CLAN_CATEGORY_ID;
-                }
-
-                // ==================================================
-                // TEAM
-                // ==================================================
-
-                if (selected === "team_bewerbung") {
-
-                    ticketName =
-                        `bewerbung-${interaction.user.username.toLowerCase()}`;
-
-                    ticketTitle =
-                        "👥 Team Bewerbung";
-
-                    categoryID =
-                        TEAM_CATEGORY_ID;
-                }
-
-                // ==================================================
-                // BAU FIRMA
-                // ==================================================
-
-                if (selected === "bau_firma") {
-
-                    ticketName =
-                        `bau-${interaction.user.username.toLowerCase()}`;
-
-                    ticketTitle =
-                        "🏗️ Bau Firma";
-
-                    categoryID =
-                        BAU_CATEGORY_ID;
-                }
+                const description =
+                    interaction.fields
+                        .getTextInputValue(
+                            "giveaway_description"
+                        )
+                        .trim();
 
                 // ==================================================
-                // GIVEAWAY
+                // DAUER UMWANDELN
                 // ==================================================
 
-                if (selected === "giveaway") {
-
-                    ticketName =
-                        `giveaway-${interaction.user.username.toLowerCase()}`;
-
-                    ticketTitle =
-                        "🎁 Giveaway";
-
-                    categoryID =
-                        GIVEAWAY_CATEGORY_ID;
-                }
+                const duration =
+                    parseGiveawayDuration(
+                        durationText
+                    );
 
                 // ==================================================
-                // DATEN PRÜFEN
+                // GEWINNER ANZAHL
+                // ==================================================
+
+                const winnerCount =
+                    Number.parseInt(
+                        winnersText,
+                        10
+                    );
+
+                // ==================================================
+                // DAUER PRÜFEN
                 // ==================================================
 
                 if (
-                    !ticketName ||
-                    !ticketTitle ||
-                    !categoryID
+                    !duration ||
+                    duration <
+                        10000
                 ) {
 
                     return interaction.reply({
 
                         content:
-                            "❌ Ungültige Ticket-Kategorie.",
+                            "❌ Ungültige Dauer.\n\n" +
+                            "Beispiele:\n" +
+                            "• `10 Minuten`\n" +
+                            "• `2 Stunden`\n" +
+                            "• `1 Tag`\n" +
+                            "• `30m`\n" +
+                            "• `2h`\n" +
+                            "• `1d`\n\n" +
+                            "Die Mindestdauer beträgt **10 Sekunden**.",
 
                         flags:
                             MessageFlags.Ephemeral
 
                     });
+
                 }
 
                 // ==================================================
-                // SOFORT DEFER
-                // Verhindert "Interaction failed"
+                // GEWINNER PRÜFEN
+                // ==================================================
+
+                if (
+                    !Number.isInteger(
+                        winnerCount
+                    ) ||
+                    winnerCount < 1 ||
+                    winnerCount > 20
+                ) {
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Die Anzahl der Gewinner muss zwischen **1 und 20** liegen.",
+
+                        flags:
+                            MessageFlags.Ephemeral
+
+                    });
+
+                }
+
+                // ==================================================
+                // PREIS PRÜFEN
+                // ==================================================
+
+                if (
+                    !prize ||
+                    prize.length < 1
+                ) {
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Bitte gib einen Preis an.",
+
+                        flags:
+                            MessageFlags.Ephemeral
+
+                    });
+
+                }
+
+                // ==================================================
+                // CHANNEL PRÜFEN
+                // ==================================================
+
+                if (
+                    !interaction.channel ||
+                    !interaction.channel.isTextBased()
+                ) {
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Das Gewinnspiel kann in diesem Kanal nicht erstellt werden.",
+
+                        flags:
+                            MessageFlags.Ephemeral
+
+                    });
+
+                }
+
+                // ==================================================
+                // INTERACTION BESTÄTIGEN
                 // ==================================================
 
                 await interaction.deferReply({
@@ -1104,25 +2022,1259 @@ Erstelle dafür ein Giveaway-Ticket.
 
                 });
 
-                const guild =
-                    interaction.guild;
+                // ==================================================
+                // GIVEAWAY ID
+                // ==================================================
 
-                if (!guild) {
+                const giveawayId =
+                    `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+
+                // ==================================================
+                // GIVEAWAY DATEN
+                // ==================================================
+
+                const data = {
+
+                    id:
+                        giveawayId,
+
+                    guildId:
+                        interaction.guildId,
+
+                    channelId:
+                        interaction.channelId,
+
+                    messageId:
+                        null,
+
+                    hostId:
+                        interaction.user.id,
+
+                    prize:
+                        prize,
+
+                    description:
+                        description,
+
+                    winnerCount:
+                        winnerCount,
+
+                    participants:
+                        new Set(),
+
+                    createdAt:
+                        Date.now(),
+
+                    endAt:
+                        Date.now() +
+                        duration,
+
+                    ended:
+                        false,
+
+                    winnerIds:
+                        []
+
+                };
+
+                // ==================================================
+                // TEILNEHMEN BUTTON
+                // ==================================================
+
+                const joinButton =
+                    new ButtonBuilder()
+
+                        .setCustomId(
+                            `giveaway_join_${giveawayId}`
+                        )
+
+                        .setLabel(
+                            "Teilnehmen"
+                        )
+
+                        .setEmoji(
+                            "🎉"
+                        )
+
+                        .setStyle(
+                            ButtonStyle.Primary
+                        );
+
+                const joinRow =
+                    new ActionRowBuilder()
+
+                        .addComponents(
+                            joinButton
+                        );
+
+                // ==================================================
+                // GIVEAWAY SENDEN
+                // ==================================================
+
+                const giveawayMessage =
+                    await interaction.channel.send({
+
+                        embeds: [
+
+                            createGiveawayEmbed(
+                                data
+                            )
+
+                        ],
+
+                        components: [
+                            joinRow
+                        ]
+
+                    });
+
+                // ==================================================
+                // MESSAGE ID SPEICHERN
+                // ==================================================
+
+                data.messageId =
+                    giveawayMessage.id;
+
+                // ==================================================
+                // GIVEAWAY SPEICHERN
+                // ==================================================
+
+                giveawayData.set(
+                    giveawayId,
+                    data
+                );
+
+                // ==================================================
+                // TIMER STARTEN
+                // ==================================================
+
+                scheduleGiveawayEnd(
+                    giveawayId
+                );
+
+                // ==================================================
+                // LOG
+                // ==================================================
+
+                const logEmbed =
+                    baseEmbed(
+
+                        "🎁 Gewinnspiel erstellt",
+
+                        0x5865f2,
+
+                        "Ein neues Gewinnspiel wurde erstellt."
+
+                    );
+
+                logEmbed.addFields(
+
+                    {
+
+                        name:
+                            "👤 Erstellt von",
+
+                        value:
+                            `${interaction.user} (${interaction.user.id})`
+
+                    },
+
+                    {
+
+                        name:
+                            "🎁 Preis",
+
+                        value:
+                            prize
+
+                    },
+
+                    {
+
+                        name:
+                            "🏆 Gewinner",
+
+                        value:
+                            `${winnerCount}`
+
+                    },
+
+                    {
+
+                        name:
+                            "⏰ Ende",
+
+                        value:
+                            `<t:${Math.floor(
+                                data.endAt /
+                                1000
+                            )}:f>`
+
+                    }
+
+                );
+
+                await sendLog(
+                    interaction.guild,
+                    logEmbed
+                );
+
+                // ==================================================
+                // BESTÄTIGUNG
+                // ==================================================
+
+                await interaction.editReply({
+
+                    content:
+                        `✅ Das Gewinnspiel wurde erfolgreich erstellt!\n${giveawayMessage.url}`
+
+                });
+
+                return;
+            }
+
+            // ==================================================
+            // GIVEAWAY BUTTON
+            // ==================================================
+
+            if (
+                interaction.isButton() &&
+                interaction.customId.startsWith(
+                    "giveaway_join_"
+                )
+            ) {
+
+                // ==================================================
+                // SOFORT BESTÄTIGEN
+                // ==================================================
+
+                await interaction.deferReply({
+
+                    flags:
+                        MessageFlags.Ephemeral
+
+                });
+
+                // ==================================================
+                // GIVEAWAY ID
+                // ==================================================
+
+                const giveawayId =
+                    interaction.customId.replace(
+                        "giveaway_join_",
+                        ""
+                    );
+
+                // ==================================================
+                // DATEN LADEN
+                // ==================================================
+
+                const data =
+                    giveawayData.get(
+                        giveawayId
+                    );
+
+                // ==================================================
+                // NICHT GEFUNDEN
+                // ==================================================
+
+                if (!data) {
 
                     return interaction.editReply({
 
                         content:
-                            "❌ Der Discord-Server konnte nicht geladen werden."
+                            "❌ Dieses Gewinnspiel ist nicht mehr aktiv oder der Bot wurde zwischenzeitlich neu gestartet."
 
                     });
+
                 }
 
                 // ==================================================
-                // USER LADEN
+                // BEREITS BEENDET
                 // ==================================================
 
+                if (
+                    data.ended ||
+                    Date.now() >=
+                        data.endAt
+                ) {
+
+                    await endGiveaway(
+                        giveawayId
+                    ).catch(
+                        () => {}
+                    );
+
+                    return interaction.editReply({
+
+                        content:
+                            "❌ Dieses Gewinnspiel ist bereits beendet."
+
+                    });
+
+                }
+
+                // ==================================================
+                // BEREITS TEILGENOMMEN
+                // ==================================================
+
+                if (
+                    data.participants.has(
+                        interaction.user.id
+                    )
+                ) {
+
+                    return interaction.editReply({
+
+                        content:
+                            "🎉 Du nimmst bereits an diesem Gewinnspiel teil!"
+
+                    });
+
+                }
+
+                // ==================================================
+                // TEILNEHMER HINZUFÜGEN
+                // ==================================================
+
+                data.participants.add(
+                    interaction.user.id
+                );
+
+                // ==================================================
+                // GIVEAWAY EMBED AKTUALISIEREN
+                // ==================================================
+
+                await interaction.message.edit({
+
+                    embeds: [
+
+                        createGiveawayEmbed(
+                            data
+                        )
+
+                    ]
+
+                }).catch(
+                    () => {}
+                );
+
+                // ==================================================
+                // BESTÄTIGUNG
+                // ==================================================
+
+                await interaction.editReply({
+
+                    content:
+                        "🎉 **Du machst jetzt beim Gewinnspiel mit!**\n\n🍀 Viel Glück!"
+
+                });
+
+                return;
+            }        // ==================================================
+        // TICKET SELECT MENU
+        // ==================================================
+
+        if (
+            interaction.isStringSelectMenu() &&
+            interaction.customId ===
+                "ticket_menu"
+        ) {
+
+            await interaction.deferReply({
+                flags:
+                    MessageFlags.Ephemeral
+            });
+
+            const selected =
+                interaction.values[0];
+
+            const config = {
+
+                clan_bewerbung: {
+
+                    name:
+                        `support-${interaction.user.username.toLowerCase()}`,
+
+                    title:
+                        "🛡️ Allgemeiner Support",
+
+                    categoryId:
+                        CLAN_CATEGORY_ID
+
+                },
+
+                team_bewerbung: {
+
+                    name:
+                        `bewerbung-${interaction.user.username.toLowerCase()}`,
+
+                    title:
+                        "👥 Team Bewerbung",
+
+                    categoryId:
+                        TEAM_CATEGORY_ID
+
+                },
+
+                bau_firma: {
+
+                    name:
+                        `bau-${interaction.user.username.toLowerCase()}`,
+
+                    title:
+                        "🏗️ Bau Firma",
+
+                    categoryId:
+                        BAU_CATEGORY_ID
+
+                },
+
+                giveaway: {
+
+                    name:
+                        `giveaway-${interaction.user.username.toLowerCase()}`,
+
+                    title:
+                        "🎁 Giveaway",
+
+                    categoryId:
+                        GIVEAWAY_CATEGORY_ID
+
+                }
+
+            }[selected];
+
+            if (!config) {
+
+                return interaction.editReply({
+
+                    content:
+                        "❌ Ungültige Ticket-Kategorie."
+
+                });
+
+            }
+
+            const guild =
+                interaction.guild;
+
+            if (!guild) {
+
+                return interaction.editReply({
+
+                    content:
+                        "❌ Server konnte nicht geladen werden."
+
+                });
+
+            }
+
+            // ==================================================
+            // BEREITS OFFENES TICKET?
+            // ==================================================
+
+            const existing =
+                guild.channels.cache.find(
+
+                    channel =>
+
+                        channel.type ===
+                            ChannelType.GuildText &&
+
+                        channel.name ===
+                            config.name
+
+                );
+
+            if (existing) {
+
+                return interaction.editReply({
+
+                    content:
+                        `❌ Du hast bereits ein Ticket offen: ${existing}`
+
+                });
+
+            }
+
+            // ==================================================
+            // MEMBER / STAFF / KATEGORIE LADEN
+            // ==================================================
+
+            const member =
+                await guild.members
+                    .fetch(
+                        interaction.user.id
+                    )
+                    .catch(
+                        () => null
+                    );
+
+            const staffRole =
+                await guild.roles
+                    .fetch(
+                        STAFF_ROLE_ID
+                    )
+                    .catch(
+                        () => null
+                    );
+
+            const category =
+                await guild.channels
+                    .fetch(
+                        config.categoryId
+                    )
+                    .catch(
+                        () => null
+                    );
+
+            if (!member) {
+
+                return interaction.editReply({
+
+                    content:
+                        "❌ Dein Discord-Mitglied konnte nicht geladen werden."
+
+                });
+
+            }
+
+            if (!staffRole) {
+
+                return interaction.editReply({
+
+                    content:
+                        "❌ Die Staff-Rolle konnte nicht gefunden werden."
+
+                });
+
+            }
+
+            if (
+                !category ||
+                category.type !==
+                    ChannelType.GuildCategory
+            ) {
+
+                return interaction.editReply({
+
+                    content:
+                        "❌ Die Ticket-Kategorie wurde nicht gefunden."
+
+                });
+
+            }
+
+            // ==================================================
+            // TICKET ERSTELLEN
+            // ==================================================
+
+            const channel =
+                await guild.channels.create({
+
+                    name:
+                        config.name,
+
+                    type:
+                        ChannelType.GuildText,
+
+                    parent:
+                        category.id,
+
+                    permissionOverwrites: [
+
+                        {
+                            id:
+                                guild.roles.everyone.id,
+
+                            deny: [
+                                PermissionsBitField
+                                    .Flags
+                                    .ViewChannel
+                            ]
+                        },
+
+                        {
+                            id:
+                                member.id,
+
+                            allow: [
+                                PermissionsBitField
+                                    .Flags
+                                    .ViewChannel,
+
+                                PermissionsBitField
+                                    .Flags
+                                    .SendMessages,
+
+                                PermissionsBitField
+                                    .Flags
+                                    .ReadMessageHistory
+                            ]
+                        },
+
+                        {
+                            id:
+                                staffRole.id,
+
+                            allow: [
+                                PermissionsBitField
+                                    .Flags
+                                    .ViewChannel,
+
+                                PermissionsBitField
+                                    .Flags
+                                    .SendMessages,
+
+                                PermissionsBitField
+                                    .Flags
+                                    .ReadMessageHistory
+                            ]
+                        }
+
+                    ]
+
+                });
+
+            // ==================================================
+            // TICKET DATEN SPEICHERN
+            // ==================================================
+
+            ticketData.set(
+                channel.id,
+                {
+
+                    ownerId:
+                        member.id,
+
+                    claimedBy:
+                        null,
+
+                    forwardedTo:
+                        null
+
+                }
+            );
+
+            // ==================================================
+            // BUTTONS
+            // ==================================================
+
+            const claimButton =
+                new ButtonBuilder()
+
+                    .setCustomId(
+                        "claim_ticket"
+                    )
+
+                    .setLabel(
+                        "Ticket übernehmen"
+                    )
+
+                    .setEmoji(
+                        "📌"
+                    )
+
+                    .setStyle(
+                        ButtonStyle.Primary
+                    );
+
+            const forwardButton =
+                new ButtonBuilder()
+
+                    .setCustomId(
+                        "forward_ticket"
+                    )
+
+                    .setLabel(
+                        "Weiterleiten"
+                    )
+
+                    .setEmoji(
+                        "➡️"
+                    )
+
+                    .setStyle(
+                        ButtonStyle.Secondary
+                    );
+
+            const closeButton =
+                new ButtonBuilder()
+
+                    .setCustomId(
+                        "close_ticket"
+                    )
+
+                    .setLabel(
+                        "Ticket schließen"
+                    )
+
+                    .setEmoji(
+                        "🔒"
+                    )
+
+                    .setStyle(
+                        ButtonStyle.Danger
+                    );
+
+            const buttonRow =
+                new ActionRowBuilder()
+
+                    .addComponents(
+
+                        claimButton,
+
+                        forwardButton,
+
+                        closeButton
+
+                    );
+
+            // ==================================================
+            // TICKET EMBED
+            // ==================================================
+
+            const ticketEmbed =
+                new EmbedBuilder()
+
+                    .setColor(
+                        "#57F287"
+                    )
+
+                    .setTitle(
+                        config.title
+                    )
+
+                    .setDescription(
+`Hallo ${member} 👋
+
+Dein Ticket wurde erfolgreich erstellt.
+
+📌 Bitte beschreibe dein Anliegen möglichst genau, damit das Team dir schnell helfen kann.
+
+🛡️ Ein Teammitglied wird sich schnellstmöglich darum kümmern.
+
+📌 **Ticket übernehmen:** Ein Teammitglied übernimmt das Ticket.
+
+➡️ **Weiterleiten:** Das Ticket kann an ein anderes Teammitglied weitergeleitet werden.
+
+🔒 **Schließen:** Das Ticket wird geschlossen.`
+                    )
+
+                    .setFooter({
+
+                        text:
+                            "VIBE Ticket System"
+
+                    })
+
+                    .setTimestamp();
+
+            // ==================================================
+            // TICKET NACHRICHT SENDEN
+            // ==================================================
+
+            await channel.send({
+
+                content:
+                    `<@&${STAFF_ROLE_ID}>`,
+
+                allowedMentions: {
+
+                    roles: [
+                        STAFF_ROLE_ID
+                    ]
+
+                },
+
+                embeds: [
+                    ticketEmbed
+                ],
+
+                components: [
+                    buttonRow
+                ]
+
+            });
+
+            // ==================================================
+            // USER BESTÄTIGUNG
+            // ==================================================
+
+            await interaction.editReply({
+
+                content:
+                    `✅ Dein Ticket wurde erstellt: ${channel}`
+
+            });
+
+            // ==================================================
+            // LOG
+            // ==================================================
+
+            const logEmbed =
+                baseEmbed(
+                    "🎫 Ticket erstellt",
+                    0x57f287
+                );
+
+            logEmbed.addFields(
+
+                {
+
+                    name:
+                        "Ersteller",
+
+                    value:
+                        `${member} (${member.id})`
+
+                },
+
+                {
+
+                    name:
+                        "Ticket",
+
+                    value:
+                        channel.toString()
+
+                },
+
+                {
+
+                    name:
+                        "Kategorie",
+
+                    value:
+                        config.title
+
+                }
+
+            );
+
+            await sendLog(
+                guild,
+                logEmbed
+            );
+
+            return;
+        }
+
+        // ==================================================
+        // USER SELECT – WEITERLEITEN
+        // ==================================================
+
+        if (
+            interaction.isUserSelectMenu() &&
+            interaction.customId ===
+                "forward_ticket_user"
+        ) {
+
+            await interaction.deferReply({
+
+                flags:
+                    MessageFlags.Ephemeral
+
+            });
+
+            // ==================================================
+            // STAFF PRÜFEN
+            // ==================================================
+
+            if (
+                !isStaff(
+                    interaction.member
+                )
+            ) {
+
+                return interaction.editReply({
+
+                    content:
+                        "❌ Nur Teammitglieder können Tickets weiterleiten."
+
+                });
+
+            }
+
+            const selectedUserId =
+                interaction.values[0];
+
+            const selectedMember =
+                await interaction.guild.members
+                    .fetch(
+                        selectedUserId
+                    )
+                    .catch(
+                        () => null
+                    );
+
+            if (!selectedMember) {
+
+                return interaction.editReply({
+
+                    content:
+                        "❌ Das ausgewählte Teammitglied wurde nicht gefunden."
+
+                });
+
+            }
+
+            if (
+                !isStaff(
+                    selectedMember
+                )
+            ) {
+
+                return interaction.editReply({
+
+                    content:
+                        "❌ Du kannst das Ticket nur an ein Mitglied mit der Staff-Rolle weiterleiten."
+
+                });
+
+            }
+
+            const channel =
+                interaction.channel;
+
+            const data =
+                getTicketData(
+                    channel
+                );
+
+            if (
+                !channel ||
+                !data
+            ) {
+
+                return interaction.editReply({
+
+                    content:
+                        "❌ Die Ticket-Daten konnten nicht gefunden werden."
+
+                });
+
+            }
+
+            // ==================================================
+            // ZUGRIFF GEBEN
+            // ==================================================
+
+            await channel.permissionOverwrites.edit(
+
+                selectedMember.id,
+
+                {
+
+                    ViewChannel:
+                        true,
+
+                    SendMessages:
+                        true,
+
+                    ReadMessageHistory:
+                        true
+
+                }
+
+            );
+
+            data.forwardedTo =
+                selectedMember.id;
+
+            // ==================================================
+            // WEITERLEITUNG EMBED
+            // ==================================================
+
+            const forwardEmbed =
+                new EmbedBuilder()
+
+                    .setColor(
+                        "#5865F2"
+                    )
+
+                    .setTitle(
+                        "➡️ Ticket weitergeleitet"
+                    )
+
+                    .setDescription(
+`Dieses Ticket wurde weitergeleitet.
+
+👤 **Weitergeleitet von:**
+${interaction.user}
+
+🎯 **Weitergeleitet an:**
+${selectedMember}
+
+🔓 Das ausgewählte Teammitglied hat jetzt Zugriff auf dieses Ticket.`
+                    )
+
+                    .setFooter({
+
+                        text:
+                            "VIBE Ticket System"
+
+                    })
+
+                    .setTimestamp();
+
+            await channel.send({
+
+                content:
+                    `${selectedMember}`,
+
+                allowedMentions: {
+
+                    users: [
+                        selectedMember.id
+                    ]
+
+                },
+
+                embeds: [
+                    forwardEmbed
+                ]
+
+            });
+
+            // ==================================================
+            // LOG
+            // ==================================================
+
+            const logEmbed =
+                baseEmbed(
+
+                    "➡️ Ticket weitergeleitet",
+
+                    0x5865f2,
+
+                    "Ein Ticket wurde an ein anderes Teammitglied weitergeleitet."
+
+                );
+
+            logEmbed.addFields(
+
+                {
+
+                    name:
+                        "🎫 Ticket",
+
+                    value:
+                        channel.toString()
+
+                },
+
+                {
+
+                    name:
+                        "👤 Weitergeleitet von",
+
+                    value:
+                        `${interaction.user} (${interaction.user.id})`
+
+                },
+
+                {
+
+                    name:
+                        "🎯 Weitergeleitet an",
+
+                    value:
+                        `${selectedMember} (${selectedMember.id})`
+
+                }
+
+            );
+
+            await sendLog(
+                interaction.guild,
+                logEmbed
+            );
+
+            await interaction.editReply({
+
+                content:
+                    `✅ Ticket wurde an ${selectedMember} weitergeleitet.`
+
+            });
+
+            return;
+        }
+
+        // ==================================================
+        // BUTTONS
+        // ==================================================
+
+        if (
+            interaction.isButton()
+        ) {
+
+            // ==================================================
+            // GIVEAWAY TEILNAHME
+            // ==================================================
+
+            if (
+                interaction.customId.startsWith(
+                    "giveaway_join_"
+                )
+            ) {
+
+                await interaction.deferReply({
+
+                    flags:
+                        MessageFlags.Ephemeral
+
+                });
+
+                const giveawayId =
+                    interaction.customId.replace(
+                        "giveaway_join_",
+                        ""
+                    );
+
+                const data =
+                    giveawayData.get(
+                        giveawayId
+                    );
+
+                if (!data) {
+
+                    return interaction.editReply({
+
+                        content:
+                            "❌ Dieses Gewinnspiel ist nicht mehr aktiv oder der Bot wurde zwischenzeitlich neu gestartet."
+
+                    });
+
+                }
+
+                if (
+                    data.ended ||
+                    Date.now() >=
+                        data.endAt
+                ) {
+
+                    await endGiveaway(
+                        giveawayId
+                    ).catch(
+                        () => {}
+                    );
+
+                    return interaction.editReply({
+
+                        content:
+                            "❌ Dieses Gewinnspiel ist bereits beendet."
+
+                    });
+
+                }
+
+                if (
+                    data.participants.has(
+                        interaction.user.id
+                    )
+                ) {
+
+                    return interaction.editReply({
+
+                        content:
+                            "🎉 Du nimmst bereits an diesem Gewinnspiel teil!"
+
+                    });
+
+                }
+
+                data.participants.add(
+                    interaction.user.id
+                );
+
+                await interaction.message.edit({
+
+                    embeds: [
+
+                        createGiveawayEmbed(
+                            data
+                        )
+
+                    ]
+
+                }).catch(
+                    () => {}
+                );
+
+                return interaction.editReply({
+
+                    content:
+                        "🎉 **Du machst jetzt beim Gewinnspiel mit!** Viel Glück! 🍀"
+
+                });
+
+            }
+
+            // ==================================================
+            // CLAIM TICKET
+            // ==================================================
+
+            if (
+                interaction.customId ===
+                    "claim_ticket"
+            ) {
+
+                await interaction.deferReply();
+
+                if (
+                    !isStaff(
+                        interaction.member
+                    )
+                ) {
+
+                    return interaction.editReply({
+
+                        content:
+                            "❌ Nur Teammitglieder können Tickets übernehmen."
+
+                    });
+
+                }
+
+                const channel =
+                    interaction.channel;
+
+                const data =
+                    getTicketData(
+                        channel
+                    );
+
+                if (
+                    !channel ||
+                    !data
+                ) {
+
+                    return interaction.editReply({
+
+                        content:
+                            "❌ Die Ticket-Daten wurden nicht gefunden."
+
+                    });
+
+                }
+
+                if (
+                    data.claimedBy
+                ) {
+
+                    return interaction.editReply({
+
+                        content:
+                            `❌ Dieses Ticket wurde bereits von <@${data.claimedBy}> übernommen.`
+
+                    });
+
+                }
+
                 const member =
-                    await guild.members
+                    await interaction.guild.members
                         .fetch(
                             interaction.user.id
                         )
@@ -1130,22 +3282,8 @@ Erstelle dafür ein Giveaway-Ticket.
                             () => null
                         );
 
-                if (!member) {
-
-                    return interaction.editReply({
-
-                        content:
-                            "❌ Dein Discord-Mitglied konnte nicht geladen werden."
-
-                    });
-                }
-
-                // ==================================================
-                // STAFF ROLLE LADEN
-                // ==================================================
-
                 const staffRole =
-                    await guild.roles
+                    await interaction.guild.roles
                         .fetch(
                             STAFF_ROLE_ID
                         )
@@ -1153,248 +3291,130 @@ Erstelle dafür ein Giveaway-Ticket.
                             () => null
                         );
 
-                if (!staffRole) {
-
-                    console.error(
-                        `❌ Staff-Rolle nicht gefunden: ${STAFF_ROLE_ID}`
-                    );
-
-                    return interaction.editReply({
-
-                        content:
-                            "❌ Die Staff-Rolle konnte nicht gefunden werden."
-
-                    });
-                }
-
-                // ==================================================
-                // KATEGORIE LADEN
-                // ==================================================
-
-                const category =
-                    await guild.channels
-                        .fetch(
-                            categoryID
-                        )
-                        .catch(
-                            () => null
-                        );
-
-                if (!category) {
-
-                    console.error(
-                        `❌ Ticket-Kategorie nicht gefunden: ${categoryID}`
-                    );
-
-                    return interaction.editReply({
-
-                        content:
-                            "❌ Die Ticket-Kategorie wurde nicht gefunden."
-
-                    });
-                }
-
                 if (
-                    category.type !==
-                    ChannelType.GuildCategory
+                    !member ||
+                    !staffRole
                 ) {
 
                     return interaction.editReply({
 
                         content:
-                            "❌ Die eingetragene Ticket-ID ist keine Kategorie."
+                            "❌ Teammitglied oder Staff-Rolle konnte nicht geladen werden."
 
                     });
+
                 }
 
                 // ==================================================
-                // TICKET NAME SÄUBERN
+                // CLAIM SPEICHERN
                 // ==================================================
 
-                ticketName =
-                    ticketName
-                        .replace(
-                            /[^a-z0-9-_]/gi,
-                            "-"
-                        )
-                        .substring(
-                            0,
-                            90
-                        );
+                data.claimedBy =
+                    member.id;
+
+                data.forwardedTo =
+                    null;
 
                 // ==================================================
-                // BEREITS OFFEN?
+                // STAFF ROLLE DARF NICHT MEHR SCHREIBEN
                 // ==================================================
 
-                const existing =
-                    guild.channels.cache.find(
-                        channel =>
-                            channel.type ===
-                                ChannelType.GuildText &&
-                            channel.name ===
-                                ticketName
-                    );
+                await channel.permissionOverwrites.edit(
 
-                if (existing) {
+                    staffRole.id,
 
-                    return interaction.editReply({
-
-                        content:
-                            `❌ Du hast bereits ein Ticket offen: ${existing}`
-
-                    });
-                }
-
-                // ==================================================
-                // TICKET ERSTELLEN
-                // ==================================================
-
-                const channel =
-                    await guild.channels.create({
-
-                        name:
-                            ticketName,
-
-                        type:
-                            ChannelType.GuildText,
-
-                        parent:
-                            category.id,
-
-                        permissionOverwrites: [
-
-                            // ------------------------------------------
-                            // @everyone
-                            // ------------------------------------------
-
-                            {
-
-                                id:
-                                    guild.roles.everyone.id,
-
-                                deny: [
-
-                                    PermissionsBitField
-                                        .Flags
-                                        .ViewChannel
-
-                                ]
-
-                            },
-
-                            // ------------------------------------------
-                            // TICKET ERSTELLER
-                            // ------------------------------------------
-
-                            {
-
-                                id:
-                                    member.id,
-
-                                allow: [
-
-                                    PermissionsBitField
-                                        .Flags
-                                        .ViewChannel,
-
-                                    PermissionsBitField
-                                        .Flags
-                                        .SendMessages,
-
-                                    PermissionsBitField
-                                        .Flags
-                                        .ReadMessageHistory,
-
-                                    PermissionsBitField
-                                        .Flags
-                                        .AttachFiles,
-
-                                    PermissionsBitField
-                                        .Flags
-                                        .EmbedLinks
-
-                                ]
-
-                            },
-
-                            // ------------------------------------------
-                            // STAFF
-                            // ------------------------------------------
-
-                            {
-
-                                id:
-                                    staffRole.id,
-
-                                allow: [
-
-                                    PermissionsBitField
-                                        .Flags
-                                        .ViewChannel,
-
-                                    PermissionsBitField
-                                        .Flags
-                                        .SendMessages,
-
-                                    PermissionsBitField
-                                        .Flags
-                                        .ReadMessageHistory
-
-                                ]
-
-                            }
-
-                        ]
-
-                    });
-
-                // ==================================================
-                // TICKET DATEN SPEICHERN
-                // ==================================================
-
-                ticketData.set(
-                    channel.id,
                     {
 
-                        ownerId:
-                            member.id,
+                        ViewChannel:
+                            true,
 
-                        claimedBy:
-                            null,
+                        SendMessages:
+                            false,
 
-                        forwardedTo:
-                            null,
-
-                        category:
-                            selected,
-
-                        createdAt:
-                            Date.now()
+                        ReadMessageHistory:
+                            true
 
                     }
+
                 );
 
                 // ==================================================
-                // BUTTONS
+                // CLAIMER DARF SCHREIBEN
                 // ==================================================
 
-                const claimButton =
+                await channel.permissionOverwrites.edit(
+
+                    member.id,
+
+                    {
+
+                        ViewChannel:
+                            true,
+
+                        SendMessages:
+                            true,
+
+                        ReadMessageHistory:
+                            true
+
+                    }
+
+                );
+
+                // ==================================================
+                // TICKET ERSTELLER DARF SCHREIBEN
+                // ==================================================
+
+                if (
+                    data.ownerId
+                ) {
+
+                    await channel.permissionOverwrites.edit(
+
+                        data.ownerId,
+
+                        {
+
+                            ViewChannel:
+                                true,
+
+                            SendMessages:
+                                true,
+
+                            ReadMessageHistory:
+                                true
+
+                        }
+
+                    );
+
+                }
+
+                // ==================================================
+                // BUTTONS AKTUALISIEREN
+                // ==================================================
+
+                const claimedButton =
                     new ButtonBuilder()
 
                         .setCustomId(
-                            "claim_ticket"
+                            "claimed_ticket"
                         )
 
                         .setLabel(
-                            "Ticket übernehmen"
+                            `Übernommen von ${member.user.username}`
                         )
 
                         .setEmoji(
-                            "📌"
+                            "✅"
                         )
 
                         .setStyle(
-                            ButtonStyle.Primary
+                            ButtonStyle.Success
+                        )
+
+                        .setDisabled(
+                            true
                         );
 
                 const forwardButton =
@@ -1435,12 +3455,12 @@ Erstelle dafür ein Giveaway-Ticket.
                             ButtonStyle.Danger
                         );
 
-                const buttonRow =
+                const newRow =
                     new ActionRowBuilder()
 
                         .addComponents(
 
-                            claimButton,
+                            claimedButton,
 
                             forwardButton,
 
@@ -1448,754 +3468,24 @@ Erstelle dafür ein Giveaway-Ticket.
 
                         );
 
-                // ==================================================
-                // TICKET EMBED
-                // ==================================================
-
-                const ticketEmbed =
-                    new EmbedBuilder()
-
-                        .setColor(
-                            "#57F287"
-                        )
-
-                        .setTitle(
-                            ticketTitle
-                        )
-
-                        .setDescription(
-`Hallo ${member} 👋
-
-Dein Ticket wurde erfolgreich erstellt.
-
-📌 Bitte beschreibe dein Anliegen möglichst genau, damit das Team dir schnell helfen kann.
-
-🛡️ Ein Teammitglied wird sich schnellstmöglich darum kümmern.
-
-━━━━━━━━━━━━━━━━━━
-
-🔒 **Ticket schließen**
-
-Wenn dein Anliegen erledigt ist, kann das Ticket geschlossen werden.`
-                        )
-
-                        .setThumbnail(
-                            interaction.user
-                                .displayAvatarURL()
-                        )
-
-                        .setFooter({
-
-                            text:
-                                "VIBE Ticket System"
-
-                        })
-
-                        .setTimestamp();
-
-                // ==================================================
-                // TICKET NACHRICHT SENDEN
-                // ==================================================
-
-                await channel.send({
-
-                    content:
-                        `${member} <@&${STAFF_ROLE_ID}>`,
-
-                    allowedMentions: {
-
-                        users: [
-                            member.id
-                        ],
-
-                        roles: [
-                            STAFF_ROLE_ID
-                        ]
-
-                    },
-
-                    embeds: [
-                        ticketEmbed
-                    ],
+                await interaction.message.edit({
 
                     components: [
-                        buttonRow
+                        newRow
                     ]
 
                 });
 
                 // ==================================================
-                // USER INFORMIEREN
+                // CLAIM EMBED
                 // ==================================================
 
-                await interaction.editReply({
-
-                    content:
-                        `✅ Dein Ticket wurde erstellt: ${channel}`
-
-                });
-
-                // ==================================================
-                // LOG
-                // ==================================================
-
-                const logEmbed =
+                const claimEmbed =
                     baseEmbed(
 
-                        "🎫 Ticket erstellt",
-
-                        0x57f287,
-
-                        "Ein neues Support-Ticket wurde erstellt."
-
-                    );
-
-                logEmbed.addFields(
-
-                    {
-
-                        name:
-                            "👤 Ersteller",
-
-                        value:
-                            `${member} (${member.id})`
-
-                    },
-
-                    {
-
-                        name:
-                            "🎫 Ticket",
-
-                        value:
-                            channel.toString()
-
-                    },
-
-                    {
-
-                        name:
-                            "📁 Kategorie",
-
-                        value:
-                            ticketTitle
-
-                    }
-
-                );
-
-                await sendLog(
-                    guild,
-                    logEmbed
-                );
-
-                return;
-            }
-
-            // ==================================================
-            // USER SELECT – TICKET WEITERLEITEN
-            // ==================================================
-
-            if (
-                interaction.isUserSelectMenu() &&
-                interaction.customId ===
-                    "forward_ticket_user"
-            ) {
-
-                await interaction.deferReply({
-
-                    flags:
-                        MessageFlags.Ephemeral
-
-                });
-
-                // ==================================================
-                // STAFF PRÜFEN
-                // ==================================================
-
-                if (
-                    !isStaff(
-                        interaction.member
-                    )
-                ) {
-
-                    return interaction.editReply({
-
-                        content:
-                            "❌ Nur Teammitglieder können Tickets weiterleiten."
-
-                    });
-                }
-
-                const channel =
-                    interaction.channel;
-
-                if (!channel) {
-
-                    return interaction.editReply({
-
-                        content:
-                            "❌ Ticket-Kanal wurde nicht gefunden."
-
-                    });
-                }
-
-                const data =
-                    getTicketData(
-                        channel
-                    );
-
-                if (!data) {
-
-                    return interaction.editReply({
-
-                        content:
-                            "❌ Die Ticket-Daten konnten nicht gefunden werden."
-
-                    });
-                }
-
-                // ==================================================
-                // AUSGEWÄHLTEN USER LADEN
-                // ==================================================
-
-                const selectedUserId =
-                    interaction.values[0];
-
-                const selectedMember =
-                    await interaction.guild.members
-                        .fetch(
-                            selectedUserId
-                        )
-                        .catch(
-                            () => null
-                        );
-
-                if (!selectedMember) {
-
-                    return interaction.editReply({
-
-                        content:
-                            "❌ Das ausgewählte Mitglied konnte nicht gefunden werden."
-
-                    });
-                }
-
-                // ==================================================
-                // BOT NICHT ERLAUBEN
-                // ==================================================
-
-                if (
-                    selectedMember.user.bot
-                ) {
-
-                    return interaction.editReply({
-
-                        content:
-                            "❌ Du kannst ein Ticket nicht an einen Bot weiterleiten."
-
-                    });
-                }
-
-                // ==================================================
-                // MUSS STAFF SEIN
-                // ==================================================
-
-                if (
-                    !isStaff(
-                        selectedMember
-                    )
-                ) {
-
-                    return interaction.editReply({
-
-                        content:
-                            "❌ Du kannst das Ticket nur an ein Teammitglied weiterleiten."
-
-                    });
-                }
-
-                // ==================================================
-                // ZUGRIFF GEBEN
-                // ==================================================
-
-                await channel.permissionOverwrites.edit(
-
-                    selectedMember.id,
-
-                    {
-
-                        ViewChannel:
-                            true,
-
-                        SendMessages:
-                            true,
-
-                        ReadMessageHistory:
-                            true
-
-                    }
-
-                );
-
-                // ==================================================
-                // ALTEN WEITERGELEITETEN USER SPERREN
-                // ==================================================
-
-                if (
-                    data.forwardedTo &&
-                    data.forwardedTo !==
-                        selectedMember.id &&
-                    data.forwardedTo !==
-                        data.claimedBy
-                ) {
-
-                    await channel.permissionOverwrites
-                        .edit(
-
-                            data.forwardedTo,
-
-                            {
-
-                                ViewChannel:
-                                    true,
-
-                                SendMessages:
-                                    false,
-
-                                ReadMessageHistory:
-                                    true
-
-                            }
-
-                        )
-                        .catch(
-                            () => {}
-                        );
-                }
-
-                data.forwardedTo =
-                    selectedMember.id;
-
-                // ==================================================
-                // SELECT-NACHRICHT ENTFERNEN
-                // ==================================================
-
-                await interaction.message
-                    .delete()
-                    .catch(
-                        () => {}
-                    );
-
-                // ==================================================
-                // WEITERLEITUNG EMBED
-                // ==================================================
-
-                const forwardEmbed =
-                    new EmbedBuilder()
-
-                        .setColor(
-                            "#5865F2"
-                        )
-
-                        .setTitle(
-                            "➡️ Ticket weitergeleitet"
-                        )
-
-                        .setDescription(
-`Dieses Ticket wurde weitergeleitet.
-
-👤 **Weitergeleitet von:**
-${interaction.user}
-
-🎯 **Weitergeleitet an:**
-${selectedMember}
-
-🔓 ${selectedMember} kann jetzt in diesem Ticket schreiben.`
-                        )
-
-                        .setFooter({
-
-                            text:
-                                "VIBE Ticket System"
-
-                        })
-
-                        .setTimestamp();
-
-                await channel.send({
-
-                    content:
-                        `${selectedMember}`,
-
-                    allowedMentions: {
-
-                        users: [
-                            selectedMember.id
-                        ]
-
-                    },
-
-                    embeds: [
-                        forwardEmbed
-                    ]
-
-                });
-
-                // ==================================================
-                // LOG
-                // ==================================================
-
-                const logEmbed =
-                    baseEmbed(
-
-                        "➡️ Ticket weitergeleitet",
+                        "📌 Ticket übernommen",
 
                         0x5865f2,
-
-                        "Ein Ticket wurde an ein anderes Teammitglied weitergeleitet."
-
-                    );
-
-                logEmbed.addFields(
-
-                    {
-
-                        name:
-                            "🎫 Ticket",
-
-                        value:
-                            channel.toString()
-
-                    },
-
-                    {
-
-                        name:
-                            "👤 Weitergeleitet von",
-
-                        value:
-                            `${interaction.user} (${interaction.user.id})`
-
-                    },
-
-                    {
-
-                        name:
-                            "🎯 Weitergeleitet an",
-
-                        value:
-                            `${selectedMember} (${selectedMember.id})`
-
-                    }
-
-                );
-
-                await sendLog(
-                    interaction.guild,
-                    logEmbed
-                );
-
-                await interaction.editReply({
-
-                    content:
-                        `✅ Ticket wurde an ${selectedMember} weitergeleitet.`
-
-                });
-
-                return;
-            }
-
-            // ==================================================
-            // BUTTONS
-            // ==================================================
-
-            if (
-                interaction.isButton()
-            ) {
-
-                // ==================================================
-                // CLAIM
-                // ==================================================
-
-                if (
-                    interaction.customId ===
-                    "claim_ticket"
-                ) {
-
-                    // Sofort bestätigen, damit Discord
-                    // keinen Unknown Interaction Fehler wirft.
-
-                    await interaction.deferReply();
-
-                    const member =
-                        interaction.member;
-
-                    // ==================================================
-                    // STAFF PRÜFEN
-                    // ==================================================
-
-                    if (
-                        !isStaff(
-                            member
-                        )
-                    ) {
-
-                        return interaction.editReply({
-
-                            content:
-                                "❌ Nur Teammitglieder können Tickets übernehmen."
-
-                        });
-                    }
-
-                    const channel =
-                        interaction.channel;
-
-                    if (!channel) {
-
-                        return interaction.editReply({
-
-                            content:
-                                "❌ Ticket-Kanal nicht gefunden."
-
-                        });
-                    }
-
-                    const data =
-                        getTicketData(
-                            channel
-                        );
-
-                    if (!data) {
-
-                        return interaction.editReply({
-
-                            content:
-                                "❌ Die Ticket-Daten wurden nicht gefunden."
-
-                        });
-                    }
-
-                    // ==================================================
-                    // BEREITS ÜBERNOMMEN
-                    // ==================================================
-
-                    if (
-                        data.claimedBy
-                    ) {
-
-                        return interaction.editReply({
-
-                            content:
-                                `❌ Dieses Ticket wurde bereits von <@${data.claimedBy}> übernommen.`
-
-                        });
-                    }
-
-                    // ==================================================
-                    // STAFF ROLLE LADEN
-                    // ==================================================
-
-                    const staffRole =
-                        await interaction.guild.roles
-                            .fetch(
-                                STAFF_ROLE_ID
-                            )
-                            .catch(
-                                () => null
-                            );
-
-                    if (!staffRole) {
-
-                        return interaction.editReply({
-
-                            content:
-                                "❌ Die Staff-Rolle konnte nicht gefunden werden."
-
-                        });
-                    }
-
-                    // ==================================================
-                    // CLAIM SPEICHERN
-                    // ==================================================
-
-                    data.claimedBy =
-                        member.id;
-
-                    data.forwardedTo =
-                        null;
-
-                    // ==================================================
-                    // STAFF DARF NUR NOCH LESEN
-                    // ==================================================
-
-                    await channel.permissionOverwrites.edit(
-
-                        staffRole.id,
-
-                        {
-
-                            ViewChannel:
-                                true,
-
-                            SendMessages:
-                                false,
-
-                            ReadMessageHistory:
-                                true
-
-                        }
-
-                    );
-
-                    // ==================================================
-                    // CLAIMER DARF SCHREIBEN
-                    // ==================================================
-
-                    await channel.permissionOverwrites.edit(
-
-                        member.id,
-
-                        {
-
-                            ViewChannel:
-                                true,
-
-                            SendMessages:
-                                true,
-
-                            ReadMessageHistory:
-                                true
-
-                        }
-
-                    );
-
-                    // ==================================================
-                    // TICKET ERSTELLER DARF SCHREIBEN
-                    // ==================================================
-
-                    if (
-                        data.ownerId
-                    ) {
-
-                        await channel.permissionOverwrites.edit(
-
-                            data.ownerId,
-
-                            {
-
-                                ViewChannel:
-                                    true,
-
-                                SendMessages:
-                                    true,
-
-                                ReadMessageHistory:
-                                    true
-
-                            }
-
-                        );
-                    }
-
-                    // ==================================================
-                    // BUTTONS AKTUALISIEREN
-                    // ==================================================
-
-                    const claimedButton =
-                        new ButtonBuilder()
-
-                            .setCustomId(
-                                "claimed_ticket"
-                            )
-
-                            .setLabel(
-                                `Übernommen von ${member.user.username}`
-                            )
-
-                            .setEmoji(
-                                "✅"
-                            )
-
-                            .setStyle(
-                                ButtonStyle.Success
-                            )
-
-                            .setDisabled(
-                                true
-                            );
-
-                    const forwardButton =
-                        new ButtonBuilder()
-
-                            .setCustomId(
-                                "forward_ticket"
-                            )
-
-                            .setLabel(
-                                "Weiterleiten"
-                            )
-
-                            .setEmoji(
-                                "➡️"
-                            )
-
-                            .setStyle(
-                                ButtonStyle.Secondary
-                            );
-
-                    const closeButton =
-                        new ButtonBuilder()
-
-                            .setCustomId(
-                                "close_ticket"
-                            )
-
-                            .setLabel(
-                                "Ticket schließen"
-                            )
-
-                            .setEmoji(
-                                "🔒"
-                            )
-
-                            .setStyle(
-                                ButtonStyle.Danger
-                            );
-
-                    const newRow =
-                        new ActionRowBuilder()
-
-                            .addComponents(
-
-                                claimedButton,
-
-                                forwardButton,
-
-                                closeButton
-
-                            );
-
-                    await interaction.message.edit({
-
-                        components: [
-                            newRow
-                        ]
-
-                    });
-
-                    // ==================================================
-                    // CLAIM EMBED
-                    // ==================================================
-
-                    const claimEmbed =
-                        baseEmbed(
-
-                            "📌 Ticket übernommen",
-
-                            0x5865f2,
 
 `Der Teamler ${member} hat dieses Ticket übernommen.
 
@@ -2207,368 +3497,301 @@ ${selectedMember}
 
 ➡️ Ein anderes Teammitglied kann nur über **Weiterleiten** Zugriff zum Schreiben erhalten.`
 
-                        );
+                    );
 
-                    await interaction.editReply({
+                await interaction.editReply({
 
-                        embeds: [
-                            claimEmbed
-                        ]
+                    embeds: [
+                        claimEmbed
+                    ]
 
-                    });
+                });
 
-                    // ==================================================
-                    // CLAIM LOG
-                    // ==================================================
+                // ==================================================
+                // LOG
+                // ==================================================
 
-                    const logEmbed =
-                        baseEmbed(
+                const logEmbed =
+                    baseEmbed(
 
-                            "📌 Ticket übernommen",
+                        "📌 Ticket übernommen",
 
-                            0x5865f2
-
-                        );
-
-                    logEmbed.addFields(
-
-                        {
-
-                            name:
-                                "🎫 Ticket",
-
-                            value:
-                                channel.toString()
-
-                        },
-
-                        {
-
-                            name:
-                                "👤 Übernommen von",
-
-                            value:
-                                `${interaction.user} (${interaction.user.id})`
-
-                        }
+                        0x5865f2
 
                     );
 
-                    await sendLog(
-                        interaction.guild,
-                        logEmbed
-                    );
+                logEmbed.addFields(
 
-                    return;
-                }
+                    {
 
-                // ==================================================
-                // FORWARD BUTTON
-                // ==================================================
+                        name:
+                            "🎫 Ticket",
+
+                        value:
+                            channel.toString()
+
+                    },
+
+                    {
+
+                        name:
+                            "👤 Übernommen von",
+
+                        value:
+                            `${interaction.user} (${interaction.user.id})`
+
+                    }
+
+                );
+
+                await sendLog(
+                    interaction.guild,
+                    logEmbed
+                );
+
+                return;
+            }            // ==================================================
+            // FORWARD TICKET
+            // ==================================================
+
+            if (
+                interaction.customId ===
+                "forward_ticket"
+            ) {
 
                 if (
-                    interaction.customId ===
-                    "forward_ticket"
+                    !isStaff(
+                        interaction.member
+                    )
                 ) {
 
-                    if (
-                        !isStaff(
-                            interaction.member
-                        )
-                    ) {
-
-                        return interaction.reply({
-
-                            content:
-                                "❌ Nur Teammitglieder können Tickets weiterleiten.",
-
-                            flags:
-                                MessageFlags.Ephemeral
-
-                        });
-                    }
-
-                    const channel =
-                        interaction.channel;
-
-                    const data =
-                        getTicketData(
-                            channel
-                        );
-
-                    if (!data) {
-
-                        return interaction.reply({
-
-                            content:
-                                "❌ Dieses Ticket wurde nicht im System gefunden.",
-
-                            flags:
-                                MessageFlags.Ephemeral
-
-                        });
-                    }
-
-                    // ==================================================
-                    // NUR CLAIMER / ADMIN
-                    // ==================================================
-
-                    if (
-                        data.claimedBy &&
-                        data.claimedBy !==
-                            interaction.user.id &&
-                        !isAdmin(
-                            interaction.member
-                        )
-                    ) {
-
-                        return interaction.reply({
-
-                            content:
-                                `❌ Nur <@${data.claimedBy}> oder ein Administrator kann dieses Ticket weiterleiten.`,
-
-                            flags:
-                                MessageFlags.Ephemeral
-
-                        });
-                    }
-
-                    // ==================================================
-                    // USER SELECT
-                    // ==================================================
-
-                    const userSelect =
-                        new UserSelectMenuBuilder()
-
-                            .setCustomId(
-                                "forward_ticket_user"
-                            )
-
-                            .setPlaceholder(
-                                "Wähle das Teammitglied aus..."
-                            )
-
-                            .setMinValues(
-                                1
-                            )
-
-                            .setMaxValues(
-                                1
-                            );
-
-                    const row =
-                        new ActionRowBuilder()
-
-                            .addComponents(
-                                userSelect
-                            );
-
-                    await interaction.reply({
+                    return interaction.reply({
 
                         content:
-                            "➡️ **Ticket weiterleiten**\n\n" +
-                            "Wähle unten das Teammitglied aus, an das dieses Ticket weitergeleitet werden soll.",
-
-                        components: [
-                            row
-                        ],
+                            "❌ Nur Teammitglieder können Tickets weiterleiten.",
 
                         flags:
                             MessageFlags.Ephemeral
 
                     });
 
-                    return;
                 }
 
-                // ==================================================
-                // CLOSE BUTTON
-                // ==================================================
+                const userSelect =
+                    new UserSelectMenuBuilder()
+
+                        .setCustomId(
+                            "forward_ticket_user"
+                        )
+
+                        .setPlaceholder(
+                            "Wähle das Teammitglied aus..."
+                        )
+
+                        .setMinValues(
+                            1
+                        )
+
+                        .setMaxValues(
+                            1
+                        );
+
+                const row =
+                    new ActionRowBuilder()
+
+                        .addComponents(
+                            userSelect
+                        );
+
+                return interaction.reply({
+
+                    content:
+                        "➡️ **Ticket weiterleiten**\n\n" +
+                        "Wähle unten das Teammitglied aus, an das dieses Ticket weitergeleitet werden soll.",
+
+                    components: [
+                        row
+                    ],
+
+                    flags:
+                        MessageFlags.Ephemeral
+
+                });
+
+            }
+
+            // ==================================================
+            // CLOSE TICKET
+            // ==================================================
+
+            if (
+                interaction.customId ===
+                "close_ticket"
+            ) {
 
                 if (
-                    interaction.customId ===
-                    "close_ticket"
+                    !isStaff(
+                        interaction.member
+                    )
                 ) {
 
-                    if (
-                        !isStaff(
-                            interaction.member
-                        )
-                    ) {
-
-                        return interaction.reply({
-
-                            content:
-                                "❌ Nur Teammitglieder können Tickets schließen.",
-
-                            flags:
-                                MessageFlags.Ephemeral
-
-                        });
-                    }
-
-                    const channel =
-                        interaction.channel;
-
-                    if (!channel) {
-
-                        return interaction.reply({
-
-                            content:
-                                "❌ Ticket-Kanal nicht gefunden.",
-
-                            flags:
-                                MessageFlags.Ephemeral
-
-                        });
-                    }
-
-                    // ==================================================
-                    // INTERACTION SOFORT BESTÄTIGEN
-                    // ==================================================
-
-                    await interaction.deferReply();
-
-                    await interaction.editReply({
+                    return interaction.reply({
 
                         content:
-                            "🔒 Ticket wird in **3 Sekunden** geschlossen..."
+                            "❌ Nur Teammitglieder können Tickets schließen.",
+
+                        flags:
+                            MessageFlags.Ephemeral
 
                     });
 
-                    // ==================================================
-                    // LOG
-                    // ==================================================
+                }
 
-                    const logEmbed =
-                        baseEmbed(
+                const channel =
+                    interaction.channel;
 
-                            "🔒 Ticket geschlossen",
+                await interaction.reply({
 
-                            0xed4245
+                    content:
+                        "🔒 Ticket wird in **3 Sekunden** geschlossen..."
 
-                        );
+                });
 
-                    logEmbed.addFields(
+                // ==================================================
+                // LOG
+                // ==================================================
 
-                        {
+                const logEmbed =
+                    baseEmbed(
 
-                            name:
-                                "👤 Geschlossen von",
+                        "🔒 Ticket geschlossen",
 
-                            value:
-                                `${interaction.user} (${interaction.user.id})`
-
-                        },
-
-                        {
-
-                            name:
-                                "🎫 Ticket",
-
-                            value:
-                                `#${channel.name}`
-
-                        }
+                        0xed4245
 
                     );
 
-                    await sendLog(
-                        interaction.guild,
-                        logEmbed
-                    );
+                logEmbed.addFields(
 
-                    // ==================================================
-                    // NACH 3 SEKUNDEN LÖSCHEN
-                    // ==================================================
+                    {
 
-                    setTimeout(
+                        name:
+                            "Geschlossen von",
 
-                        async () => {
+                        value:
+                            `${interaction.user} (${interaction.user.id})`
 
-                            try {
+                    },
+
+                    {
+
+                        name:
+                            "Ticket",
+
+                        value:
+                            channel
+                                ? `#${channel.name}`
+                                : "Unbekannt"
+
+                    }
+
+                );
+
+                await sendLog(
+                    interaction.guild,
+                    logEmbed
+                );
+
+                // ==================================================
+                // TICKET NACH 3 SEKUNDEN LÖSCHEN
+                // ==================================================
+
+                setTimeout(
+
+                    async () => {
+
+                        try {
+
+                            if (
+                                channel &&
+                                channel.deletable
+                            ) {
 
                                 ticketData.delete(
                                     channel.id
                                 );
 
-                                if (
-                                    channel.deletable
-                                ) {
-
-                                    await channel.delete();
-
-                                }
-
-                            } catch (error) {
-
-                                console.error(
-                                    "❌ Ticket Delete Fehler:",
-                                    error
-                                );
+                                await channel.delete();
 
                             }
 
-                        },
+                        } catch (error) {
 
-                        3000
+                            console.error(
+                                "❌ Ticket Delete Fehler:",
+                                error
+                            );
 
-                    );
+                        }
 
-                    return;
-                }
+                    },
 
-            }
+                    3000
 
-        } catch (error) {
-
-            console.error(
-                "❌ Interaction Fehler:",
-                error
-            );
-
-            // ==================================================
-            // FEHLERANTWORT
-            // ==================================================
-
-            if (
-                interaction.isRepliable() &&
-                !interaction.replied &&
-                !interaction.deferred
-            ) {
-
-                await interaction.reply({
-
-                    content:
-                        "❌ Es ist ein Fehler aufgetreten.",
-
-                    flags:
-                        MessageFlags.Ephemeral
-
-                }).catch(
-                    () => {}
                 );
 
-            } else if (
-                interaction.deferred &&
-                !interaction.replied
-            ) {
-
-                await interaction.editReply({
-
-                    content:
-                        "❌ Es ist ein Fehler aufgetreten."
-
-                }).catch(
-                    () => {}
-                );
-
+                return;
             }
 
         }
 
+    } catch (error) {
+
+        // ==================================================
+        // INTERACTION ERROR HANDLER
+        // ==================================================
+
+        console.error(
+            "❌ Interaction Fehler:",
+            error
+        );
+
+        if (
+            interaction.isRepliable() &&
+            !interaction.replied &&
+            !interaction.deferred
+        ) {
+
+            await interaction.reply({
+
+                content:
+                    "❌ Es ist ein Fehler aufgetreten.",
+
+                flags:
+                    MessageFlags.Ephemeral
+
+            }).catch(
+                () => {}
+            );
+
+        } else if (
+            interaction.deferred &&
+            !interaction.replied
+        ) {
+
+            await interaction.editReply({
+
+                content:
+                    "❌ Es ist ein Fehler aufgetreten."
+
+            }).catch(
+                () => {}
+            );
+
+        }
+
     }
-);
+
+});
 
 // ======================================================
 // SUPPORT VOICE WARTERAUM
@@ -2580,8 +3803,9 @@ client.on(
 
         try {
 
-            // Nur reagieren, wenn User den
-            // Support-Warteraum betritt.
+            // ==================================================
+            // NUR WENN USER IN DEN SUPPORT-WARTERAUM KOMMT
+            // ==================================================
 
             if (
                 newState.channelId !==
@@ -2589,9 +3813,12 @@ client.on(
             ) {
 
                 return;
+
             }
 
-            // War vorher bereits im Warteraum.
+            // ==================================================
+            // USER WAR SCHON IM WARTERAUM
+            // ==================================================
 
             if (
                 oldState.channelId ===
@@ -2599,6 +3826,7 @@ client.on(
             ) {
 
                 return;
+
             }
 
             const guild =
@@ -2613,35 +3841,42 @@ client.on(
             ) {
 
                 return;
+
             }
 
             // ==================================================
-            // SUPPORT LOG KANAL
+            // SUPPORT LOG CHANNEL
             // ==================================================
 
             const logChannel =
-                await guild.channels
-                    .fetch(
-                        SUPPORT_LOG_CHANNEL_ID
-                    )
-                    .catch(
-                        () => null
-                    );
+                guild.channels.cache.get(
+                    SUPPORT_LOG_CHANNEL_ID
+                );
 
-            if (
-                !logChannel ||
-                !logChannel.isTextBased()
-            ) {
+            if (!logChannel) {
 
                 console.error(
                     `❌ Support-Log-Kanal nicht gefunden: ${SUPPORT_LOG_CHANNEL_ID}`
                 );
 
                 return;
+
+            }
+
+            if (
+                !logChannel.isTextBased()
+            ) {
+
+                console.error(
+                    "❌ Support-Log-Kanal ist kein Textkanal."
+                );
+
+                return;
+
             }
 
             // ==================================================
-            // SUPPORT ROLLE
+            // SUPPORT ROLLE LADEN
             // ==================================================
 
             const staffRole =
@@ -2656,10 +3891,11 @@ client.on(
             if (!staffRole) {
 
                 console.error(
-                    `❌ Support-Rolle nicht gefunden: ${SUPPORT_ROLE_ID}`
+                    `❌ Staff-Rolle nicht gefunden: ${SUPPORT_ROLE_ID}`
                 );
 
                 return;
+
             }
 
             // ==================================================
@@ -2707,19 +3943,33 @@ client.on(
                         "⏰ Zeit",
 
                     value:
-                        `<t:${Math.floor(Date.now() / 1000)}:R>`
+                        `<t:${Math.floor(
+                            Date.now() /
+                            1000
+                        )}:R>`
 
                 }
 
             );
 
+            // ==================================================
+            // PROFILBILD
+            // ==================================================
+
             embed.setThumbnail(
 
                 member.user.displayAvatarURL({
-                    dynamic: true
+
+                    dynamic:
+                        true
+
                 })
 
             );
+
+            // ==================================================
+            // FOOTER
+            // ==================================================
 
             if (
                 client.user
@@ -2738,7 +3988,7 @@ client.on(
             }
 
             // ==================================================
-            // SUPPORT TEAM PINGEN
+            // SUPPORT ROLLE PINGEN
             // ==================================================
 
             await logChannel.send({
@@ -2780,7 +4030,7 @@ client.on(
                 {
 
                     name:
-                        "👤 Nutzer",
+                        "Nutzer",
 
                     value:
                         `${member} (${member.id})`
@@ -2790,7 +4040,7 @@ client.on(
                 {
 
                     name:
-                        "📞 Kanal",
+                        "Kanal",
 
                     value:
                         newState.channel
@@ -2802,7 +4052,7 @@ client.on(
                 {
 
                     name:
-                        "🛡️ Staff-Rolle",
+                        "Staff-Rolle",
 
                     value:
                         `<@&${SUPPORT_ROLE_ID}>`
@@ -2836,10 +4086,6 @@ client.on(
 
         try {
 
-            // --------------------------------------------------
-            // Bots ignorieren
-            // --------------------------------------------------
-
             if (
                 message.author.bot
             ) {
@@ -2847,10 +4093,6 @@ client.on(
                 return;
 
             }
-
-            // --------------------------------------------------
-            // Counting muss aktiv sein
-            // --------------------------------------------------
 
             if (
                 !countingActive
@@ -2860,10 +4102,6 @@ client.on(
 
             }
 
-            // --------------------------------------------------
-            // Nur Counting-Kanal
-            // --------------------------------------------------
-
             if (
                 message.channel.id !==
                 countingChannelId
@@ -2872,10 +4110,6 @@ client.on(
                 return;
 
             }
-
-            // --------------------------------------------------
-            // Nur Zahlen
-            // --------------------------------------------------
 
             if (
                 !/^\d+$/.test(
@@ -2892,9 +4126,9 @@ client.on(
                     message.content
                 );
 
-            // --------------------------------------------------
-            // Gleicher User zweimal
-            // --------------------------------------------------
+            // ==================================================
+            // NICHT ZWEIMAL HINTEREINANDER
+            // ==================================================
 
             if (
                 message.author.id ===
@@ -2908,17 +4142,19 @@ client.on(
 
                 );
 
-                currentNumber = 1;
+                currentNumber =
+                    1;
 
-                lastUserId = null;
+                lastUserId =
+                    null;
 
                 return;
 
             }
 
-            // --------------------------------------------------
-            // Richtige Zahl
-            // --------------------------------------------------
+            // ==================================================
+            // RICHTIGE ZAHL
+            // ==================================================
 
             if (
                 number ===
@@ -2926,7 +4162,9 @@ client.on(
             ) {
 
                 await message
-                    .react("✅")
+                    .react(
+                        "✅"
+                    )
                     .catch(
                         () => {}
                     );
@@ -2936,9 +4174,9 @@ client.on(
 
                 currentNumber++;
 
-                // --------------------------------------------------
-                // 100000 erreicht
-                // --------------------------------------------------
+                // ==================================================
+                // 100000 ERREICHT
+                // ==================================================
 
                 if (
                     currentNumber >
@@ -2952,17 +4190,19 @@ client.on(
 
                     );
 
-                    currentNumber = 1;
+                    currentNumber =
+                        1;
 
-                    lastUserId = null;
+                    lastUserId =
+                        null;
 
                 }
 
             } else {
 
-                // --------------------------------------------------
-                // Falsche Zahl
-                // --------------------------------------------------
+                // ==================================================
+                // FALSCHE ZAHL
+                // ==================================================
 
                 await message.reply(
 
@@ -2971,9 +4211,11 @@ client.on(
 
                 );
 
-                currentNumber = 1;
+                currentNumber =
+                    1;
 
-                lastUserId = null;
+                lastUserId =
+                    null;
 
             }
 
@@ -3005,7 +4247,10 @@ client.on(
                     WELCOME_CHANNEL_ID
                 );
 
-            if (!channel) {
+            if (
+                !channel ||
+                !channel.isTextBased()
+            ) {
 
                 return;
 
@@ -3014,7 +4259,9 @@ client.on(
             const embed =
                 new EmbedBuilder()
 
-                    .setColor("#FEE75C")
+                    .setColor(
+                        "#FEE75C"
+                    )
 
                     .setTitle(
                         "⚡ Willkommen ⚡"
@@ -3035,7 +4282,8 @@ ${member.guild.memberCount}`
 
                     .setThumbnail(
                         member.user.displayAvatarURL({
-                            dynamic: true
+                            dynamic:
+                                true
                         })
                     )
 
@@ -3091,9 +4339,13 @@ client.on(
 
             const embed =
                 baseEmbed(
+
                     "🟢 Mitglied beigetreten",
+
                     0x57f287,
+
                     "Ein neues Mitglied ist dem Server beigetreten."
+
                 );
 
             embed.setThumbnail(
@@ -3103,6 +4355,7 @@ client.on(
             embed.addFields(
 
                 {
+
                     name:
                         "👤 Nutzer",
 
@@ -3112,6 +4365,7 @@ client.on(
                 },
 
                 {
+
                     name:
                         "⏲️ Kontoalter",
 
@@ -3124,6 +4378,7 @@ client.on(
                 },
 
                 {
+
                     name:
                         "👥 Mitglieder",
 
@@ -3173,32 +4428,48 @@ client.on(
         try {
 
             await new Promise(
+
                 resolve =>
+
                     setTimeout(
                         resolve,
                         1000
                     )
+
             );
 
             const entry =
                 await getAuditExecutor(
+
                     member.guild,
+
                     AuditLogEvent.MemberKick,
+
                     member.id
+
                 );
+
+            // ==================================================
+            // KICK
+            // ==================================================
 
             if (entry) {
 
                 const embed =
                     baseEmbed(
+
                         "🥾 Mitglied gekickt",
+
                         0xfaa61a,
+
                         "Ein Mitglied wurde vom Server gekickt."
+
                     );
 
                 embed.addFields(
 
                     {
+
                         name:
                             "👤 Nutzer",
 
@@ -3208,6 +4479,7 @@ client.on(
                     },
 
                     {
+
                         name:
                             "🛡️ Verantwortlicher Moderator",
 
@@ -3219,6 +4491,7 @@ client.on(
                     },
 
                     {
+
                         name:
                             "📄 Grund",
 
@@ -3237,38 +4510,46 @@ client.on(
                     embed
                 );
 
-            } else {
-
-                const embed =
-                    baseEmbed(
-                        "🔴 Mitglied hat den Server verlassen",
-                        0xed4245,
-                        "Ein Mitglied hat den Server verlassen."
-                    );
-
-                embed.addFields({
-
-                    name:
-                        "👤 Nutzer",
-
-                    value:
-                        `${member.user.tag} (${member.id})`
-
-                });
-
-                embed.setFooter({
-
-                    text:
-                        `Aktuelle Memberanzahl: ${member.guild.memberCount}`
-
-                });
-
-                await sendLog(
-                    member.guild,
-                    embed
-                );
+                return;
 
             }
+
+            // ==================================================
+            // NORMAL VERLASSEN
+            // ==================================================
+
+            const embed =
+                baseEmbed(
+
+                    "🔴 Mitglied hat den Server verlassen",
+
+                    0xed4245,
+
+                    "Ein Mitglied hat den Server verlassen."
+
+                );
+
+            embed.addFields({
+
+                name:
+                    "👤 Nutzer",
+
+                value:
+                    `${member.user.tag} (${member.id})`
+
+            });
+
+            embed.setFooter({
+
+                text:
+                    `Aktuelle Memberanzahl: ${member.guild.memberCount}`
+
+            });
+
+            await sendLog(
+                member.guild,
+                embed
+            );
 
         } catch (error) {
 
@@ -3294,25 +4575,36 @@ client.on(
         try {
 
             await new Promise(
+
                 resolve =>
+
                     setTimeout(
                         resolve,
                         1000
                     )
+
             );
 
             const entry =
                 await getAuditExecutor(
+
                     ban.guild,
+
                     AuditLogEvent.MemberBanAdd,
+
                     ban.user.id
+
                 );
 
             const embed =
                 baseEmbed(
+
                     "⛔ Mitglied gebannt",
+
                     0x992d22,
+
                     "Ein Mitglied wurde gebannt."
+
                 );
 
             embed.addFields({
@@ -3330,6 +4622,7 @@ client.on(
                 embed.addFields(
 
                     {
+
                         name:
                             "🛡️ Verantwortlicher Moderator",
 
@@ -3341,6 +4634,7 @@ client.on(
                     },
 
                     {
+
                         name:
                             "📄 Grund",
 
@@ -3385,25 +4679,36 @@ client.on(
         try {
 
             await new Promise(
+
                 resolve =>
+
                     setTimeout(
                         resolve,
                         1000
                     )
+
             );
 
             const entry =
                 await getAuditExecutor(
+
                     ban.guild,
+
                     AuditLogEvent.MemberBanRemove,
+
                     ban.user.id
+
                 );
 
             const embed =
                 baseEmbed(
+
                     "✅ Mitglied entbannt",
+
                     0x57f287,
+
                     "Ein Mitglied wurde entbannt."
+
                 );
 
             embed.addFields({
@@ -3496,7 +4801,6 @@ client.on(
 
                         value:
                             `${after} (${after.id})`
-
                     },
 
                     {
@@ -3508,7 +4812,6 @@ client.on(
                                 before.nickname,
                                 before.user.username
                             )
-
                     },
 
                     {
@@ -3520,7 +4823,6 @@ client.on(
                                 after.nickname,
                                 after.user.username
                             )
-
                     }
 
                 );
@@ -3728,7 +5030,7 @@ client.on(
             }
 
             // ==================================================
-            // JOIN
+            // VOICE JOIN
             // ==================================================
 
             if (
@@ -3754,7 +5056,6 @@ client.on(
 
                         inline:
                             true
-
                     },
 
                     {
@@ -3762,13 +5063,10 @@ client.on(
                             "🔊 Kanal",
 
                         value:
-                            after.channel
-                                ? after.channel.toString()
-                                : "Unbekannt",
+                            after.channel.toString(),
 
                         inline:
                             true
-
                     }
 
                 );
@@ -3781,7 +5079,7 @@ client.on(
             }
 
             // ==================================================
-            // LEAVE
+            // VOICE LEAVE
             // ==================================================
 
             else if (
@@ -3807,7 +5105,6 @@ client.on(
 
                         inline:
                             true
-
                     },
 
                     {
@@ -3815,13 +5112,10 @@ client.on(
                             "🔊 Kanal",
 
                         value:
-                            before.channel
-                                ? before.channel.toString()
-                                : "Unbekannt",
+                            before.channel.toString(),
 
                         inline:
                             true
-
                     }
 
                 );
@@ -3834,7 +5128,7 @@ client.on(
             }
 
             // ==================================================
-            // MOVE
+            // VOICE MOVE
             // ==================================================
 
             else if (
@@ -3859,7 +5153,6 @@ client.on(
 
                         value:
                             member.toString()
-
                     },
 
                     {
@@ -3871,7 +5164,6 @@ client.on(
 
                         inline:
                             true
-
                     },
 
                     {
@@ -3883,7 +5175,6 @@ client.on(
 
                         inline:
                             true
-
                     }
 
                 );
@@ -3921,6 +5212,7 @@ client.on(
 
                 const embed =
                     baseEmbed(
+
                         after.serverMute
                             ? "🔇 Server-Stummschaltung aktiviert"
                             : "🔊 Server-Stummschaltung aufgehoben",
@@ -3930,6 +5222,7 @@ client.on(
                             : 0x57f287,
 
                         "Der Server-Mute-Status wurde geändert."
+
                     );
 
                 embed.addFields({
@@ -3991,6 +5284,7 @@ client.on(
 
                 const embed =
                     baseEmbed(
+
                         after.serverDeaf
                             ? "🔕 Server-Taubschaltung aktiviert"
                             : "🔔 Server-Taubschaltung aufgehoben",
@@ -4000,6 +5294,7 @@ client.on(
                             : 0x57f287,
 
                         "Der Server-Deaf-Status wurde geändert."
+
                     );
 
                 embed.addFields({
@@ -4046,6 +5341,7 @@ client.on(
 
                 const embed =
                     baseEmbed(
+
                         after.selfMute
                             ? "🎙️ Nutzer hat sich selbst stummgeschaltet"
                             : "🎙️ Nutzer ist nicht mehr stummgeschaltet",
@@ -4053,6 +5349,7 @@ client.on(
                         0x99aab5,
 
                         "Der Nutzer hat seinen Self-Mute-Status geändert."
+
                     );
 
                 embed.addFields(
@@ -4063,7 +5360,6 @@ client.on(
 
                         value:
                             member.toString()
-
                     },
 
                     {
@@ -4074,7 +5370,6 @@ client.on(
                             after.channel
                                 ? after.channel.toString()
                                 : "Keiner"
-
                     }
 
                 );
@@ -4097,6 +5392,7 @@ client.on(
 
                 const embed =
                     baseEmbed(
+
                         after.selfDeaf
                             ? "🎧 Nutzer hat sich selbst taubgeschaltet"
                             : "🎧 Nutzer ist nicht mehr taubgeschaltet",
@@ -4104,6 +5400,7 @@ client.on(
                         0x99aab5,
 
                         "Der Nutzer hat seinen Self-Deaf-Status geändert."
+
                     );
 
                 embed.addFields(
@@ -4114,7 +5411,6 @@ client.on(
 
                         value:
                             member.toString()
-
                     },
 
                     {
@@ -4125,7 +5421,6 @@ client.on(
                             after.channel
                                 ? after.channel.toString()
                                 : "Keiner"
-
                     }
 
                 );
@@ -4161,9 +5456,7 @@ client.on(
         try {
 
             if (!channel.guild) {
-
                 return;
-
             }
 
             await new Promise(
@@ -4196,7 +5489,6 @@ client.on(
 
                     value:
                         channel.toString()
-
                 },
 
                 {
@@ -4205,7 +5497,6 @@ client.on(
 
                     value:
                         channel.id
-
                 },
 
                 {
@@ -4214,13 +5505,12 @@ client.on(
 
                     value:
                         channel.type ===
-                        ChannelType.GuildText
+                            ChannelType.GuildText
                             ? "Textkanal"
                             : channel.type ===
                               ChannelType.GuildVoice
                                 ? "Sprachkanal"
                                 : "Sonstiger Kanal"
-
                 }
 
             );
@@ -4270,9 +5560,7 @@ client.on(
         try {
 
             if (!channel.guild) {
-
                 return;
-
             }
 
             await new Promise(
@@ -4308,7 +5596,6 @@ client.on(
                             channel.name,
                             "Unbekannt"
                         )}`
-
                 },
 
                 {
@@ -4317,7 +5604,6 @@ client.on(
 
                     value:
                         channel.id
-
                 }
 
             );
@@ -4489,7 +5775,6 @@ client.on(
                         message.author
                             ? `${message.author} (${message.author.id})`
                             : "Unbekannt"
-
                 },
 
                 {
@@ -4500,7 +5785,6 @@ client.on(
                         message.channel
                             ? message.channel.toString()
                             : "Unbekannt"
-
                 },
 
                 {
@@ -4515,7 +5799,6 @@ client.on(
                             0,
                             1024
                         )
-
                 }
 
             );
@@ -4556,18 +5839,14 @@ client.on(
                 before.author &&
                 before.author.bot
             ) {
-
                 return;
-
             }
 
             if (
                 before.content ===
                 after.content
             ) {
-
                 return;
-
             }
 
             const embed =
@@ -4587,7 +5866,6 @@ client.on(
                         before.author
                             ? `${before.author} (${before.author.id})`
                             : "Unbekannt"
-
                 },
 
                 {
@@ -4598,7 +5876,6 @@ client.on(
                         before.channel
                             ? before.channel.toString()
                             : "Unbekannt"
-
                 },
 
                 {
@@ -4613,7 +5890,6 @@ client.on(
                             0,
                             1024
                         )
-
                 },
 
                 {
@@ -4628,7 +5904,6 @@ client.on(
                             0,
                             1024
                         )
-
                 }
 
             );
@@ -4760,6 +6035,7 @@ if (!TOKEN) {
     console.error("");
 
     process.exit(1);
+
 }
 
 
