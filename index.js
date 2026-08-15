@@ -18,6 +18,7 @@ const {
     PermissionsBitField,
     ChannelType,
     SlashCommandBuilder,
+    MessageFlags,
     REST,
     Routes,
     UserSelectMenuBuilder,
@@ -1180,7 +1181,7 @@ if (existingTicket) {
         await interaction.reply({
             content:
                 `❌ Du hast bereits ein offenes Ticket: ${existingTicket}`,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
     }
@@ -2573,7 +2574,8 @@ client.on(
                             content:
                                 "❌ Nur Teammitglieder können Tickets weiterleiten.",
 
-                            ephemeral: true
+                            flags:
+                                MessageFlags.Ephemeral
 
                         });
 
@@ -2613,7 +2615,8 @@ client.on(
                             row
                         ],
 
-                        ephemeral: true
+                        flags:
+                            MessageFlags.Ephemeral
 
                     });
 
@@ -2759,7 +2762,8 @@ client.on(
                                 content:
                                     "❌ Das Ticket konnte nicht geschlossen werden.",
 
-                                ephemeral: true
+                                flags:
+                                    MessageFlags.Ephemeral
 
                             }).catch(
                                 () => {}
@@ -2793,7 +2797,8 @@ client.on(
                     content:
                         "❌ Es ist ein Fehler aufgetreten.",
 
-                    ephemeral: true
+                    flags:
+                        MessageFlags.Ephemeral
 
                 }).catch(
                     () => {}
