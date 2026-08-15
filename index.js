@@ -936,16 +936,16 @@ Erstelle dafür ein Giveaway-Ticket.
                                 menu
                             );
 
-                  await interaction.deferReply();
-
-await interaction.editReply({
-    embeds: [
-        embed
-    ],
-    components: [
-        row
-    ]
-});
+            if (!interaction.replied && !interaction.deferred) {
+    await interaction.reply({
+        embeds: [
+            embed
+        ],
+        components: [
+            row
+        ]
+    });
+}
 
                     return;
                 }
@@ -2511,9 +2511,15 @@ client.on(Events.InteractionCreate, async interaction => {
                 currentNumber = 1;
                 lastUserId = null;
 
-                await interaction.reply(
-                    "🛑 **Counting wurde gestoppt.**"
-                );
+               if (interaction.replied || interaction.deferred) {
+    await interaction.editReply({
+        content: "🛑 **Counting wurde gestoppt.**"
+    });
+} else {
+    await interaction.reply({
+        content: "🛑 **Counting wurde gestoppt.**"
+    });
+}
 
                 return;
             }
@@ -3043,14 +3049,18 @@ Mit "Weiterleiten" kann das Ticket an ein anderes Teammitglied übergeben werden
             // ANTWORT
             // ==================================================
 
-            await interaction.reply({
-
-                content:
-                    `✅ Dein Ticket wurde erstellt: ${channel}`,
-
-                flags: MessageFlags.Ephemeral
-
-            });
+           if (interaction.replied || interaction.deferred) {
+    await interaction.editReply({
+        content:
+            `✅ Dein Ticket wurde erstellt: ${channel}`
+    });
+} else {
+    await interaction.reply({
+        content:
+            `✅ Dein Ticket wurde erstellt: ${channel}`,
+        flags: MessageFlags.Ephemeral
+    });
+}
 
             // ==================================================
             // LOG
