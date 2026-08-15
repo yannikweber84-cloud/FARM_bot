@@ -3695,12 +3695,10 @@ ${interaction.user}
                     3000
                 );
 
-                return;
+                          return;
             }
 
-            } // Ende try
-
-    catch (error) {
+    } catch (error) {
 
         console.error(
             "❌ Interaction Fehler:",
@@ -3714,8 +3712,10 @@ ${interaction.user}
         ) {
 
             await interaction.reply({
-                content: "❌ Es ist ein Fehler aufgetreten.",
-                flags: MessageFlags.Ephemeral
+                content:
+                    "❌ Es ist ein Fehler aufgetreten.",
+                flags:
+                    MessageFlags.Ephemeral
             }).catch(() => {});
 
         }
