@@ -3668,7 +3668,7 @@ ${interaction.user}
                     logEmbed
                 );
 
-                setTimeout(
+                                setTimeout(
                     async () => {
 
                         try {
@@ -3697,7 +3697,6 @@ ${interaction.user}
 
                 return;
             }
-        }
 
     } catch (error) {
 
@@ -3722,7 +3721,6 @@ ${interaction.user}
         }
     }
 });
-
 
 // ======================================================
 // SUPPORT VOICE WARTERAUM
