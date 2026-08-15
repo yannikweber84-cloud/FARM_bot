@@ -3678,26 +3678,26 @@ if (interaction.customId === "close_ticket") {
     return;
 }
 
-} catch (error) {
+ } catch (error) {
 
-    console.error(
-        "❌ Interaction Fehler:",
-        error
-    );
+        console.error(
+            "❌ Interaction Fehler:",
+            error
+        );
 
-    if (
-        interaction.isRepliable() &&
-        !interaction.replied &&
-        !interaction.deferred
-    ) {
+        if (
+            interaction.isRepliable() &&
+            !interaction.replied &&
+            !interaction.deferred
+        ) {
 
-        await interaction.reply({
-            content: "❌ Es ist ein Fehler aufgetreten.",
-            flags: MessageFlags.Ephemeral
-        }).catch(() => {});
+            await interaction.reply({
+                content: "❌ Es ist ein Fehler aufgetreten.",
+                flags: MessageFlags.Ephemeral
+            }).catch(() => {});
 
+        }
     }
-}
 
 });
 
