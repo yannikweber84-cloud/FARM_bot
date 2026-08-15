@@ -2220,37 +2220,38 @@ await interaction.editReply({
                         3000
                     );
 
-                    return;
+                                       return;
                 }
+
+            } catch (error) {
+
+                console.error(
+                    "❌ Interaction Fehler:",
+                    error
+                );
+
+                if (
+                    interaction.isRepliable() &&
+                    !interaction.replied &&
+                    !interaction.deferred
+                ) {
+
+                    await interaction.reply({
+                        content: "❌ Es ist ein Fehler aufgetreten.",
+                        flags: 64
+                    }).catch(() => {});
+
+                }
+
             }
 
-               } catch (error) {
-
-            console.error(
-                "❌ Interaction Fehler:",
-                error
-            );
-
-            if (
-                interaction.isRepliable() &&
-                !interaction.replied &&
-                !interaction.deferred
-            ) {
-
-                await interaction.reply({
-                    content: "❌ Es ist ein Fehler aufgetreten.",
-                    flags: 64
-                }).catch(() => {});
-
-            }
         }
-
     }
 );
 
 // ======================================================
 // SUPPORT VOICE WARTERAUM
-// ======================================================
+// =======================================================
 
 client.on(
     Events.VoiceStateUpdate,
