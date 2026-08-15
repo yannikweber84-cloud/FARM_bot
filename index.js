@@ -2006,13 +2006,13 @@ ${selectedMember}
 
                         );
 
-                    await interaction.deferReply();
+                   await interaction.deferReply();
 
-                        embeds: [
-                            claimEmbed
-                        ]
-
-                    });
+await interaction.editReply({
+    embeds: [
+        claimEmbed
+    ]
+});
 
                     return;
                 }
