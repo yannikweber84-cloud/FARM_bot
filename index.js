@@ -588,12 +588,9 @@ client.once(
 // ======================================================
 // INTERACTIONS
 // ======================================================
+client.on(Events.InteractionCreate, async interaction => {
 
-client.on(
-    Events.InteractionCreate,
-    async interaction => {
-
-        try {
+    try 
 
             // ==================================================
             // SLASH COMMANDS
