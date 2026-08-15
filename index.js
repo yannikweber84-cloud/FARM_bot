@@ -933,20 +933,26 @@ Erstelle dafür ein Giveaway-Ticket.
                                 menu
                             );
 
-            if (!interaction.replied && !interaction.deferred) {
-    await interaction.reply({
-        embeds: [
-            embed
-        ],
-        components: [
-            row
-        ]
-    });
-}
+                           if (!interaction.replied && !interaction.deferred) {
 
-                    return;
+                    await interaction.reply({
+                        embeds: [embed],
+                        components: [row]
+                    });
+
+                } else if (interaction.deferred) {
+
+                    await interaction.editReply({
+                        embeds: [embed],
+                        components: [row]
+                    });
+
                 }
-            }
+
+                return;
+
+            } // <-- DIESE KLAMMER HAT GEFEHLT
+
 
             // ==================================================
             // TICKET SELECT MENU
@@ -954,8 +960,7 @@ Erstelle dafür ein Giveaway-Ticket.
 
             if (
                 interaction.isStringSelectMenu() &&
-                interaction.customId ===
-                    "ticket_menu"
+                interaction.customId === "ticket_menu"
             ) {
 
                 const selected =
@@ -3693,35 +3698,81 @@ if (interaction.customId === "close_ticket") {
     return;
 }
 
+client.once(Events.ClientReady, async () => {
+    // READY
+});
 
-// ==================================================
-// ENDE INTERACTION HANDLER
-// ==================================================
 
-} catch (error) {
+// ======================================================
+// EINZIGER INTERACTION HANDLER
+// ======================================================
 
-    console.error(
-        "❌ Interaction Fehler:",
-        error
-    );
+client.on(Events.InteractionCreate, async interaction => {
 
-    if (
-        interaction.isRepliable() &&
-        !interaction.replied &&
-        !interaction.deferred
-    ) {
+    try {
 
-        await interaction.reply({
-            content: "❌ Es ist ein Fehler aufgetreten.",
-            flags: MessageFlags.Ephemeral
-        }).catch(() => {});
+        // SLASH COMMANDS
+        if (interaction.isChatInputCommand()) {
+
+            // countingstart
+            // countingstop
+            // logtest
+            // ticketpanel
+
+        }
+
+        // TICKET SELECT MENU
+        if (
+            interaction.isStringSelectMenu() &&
+            interaction.customId === "ticket_menu"
+        ) {
+
+            // Ticket erstellen
+
+        }
+
+        // FORWARD USER SELECT
+        if (
+            interaction.isUserSelectMenu() &&
+            interaction.customId === "forward_ticket_user"
+        ) {
+
+            // Weiterleiten
+
+        }
+
+        // BUTTONS
+        if (interaction.isButton()) {
+
+            // claim_ticket
+            // forward_ticket
+            // close_ticket
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "❌ Interaction Fehler:",
+            error
+        );
+
+        if (
+            interaction.isRepliable() &&
+            !interaction.replied &&
+            !interaction.deferred
+        ) {
+
+            await interaction.reply({
+                content: "❌ Es ist ein Fehler aufgetreten.",
+                flags: MessageFlags.Ephemeral
+            }).catch(() => {});
+
+        }
 
     }
 
-}
-
 });
-
 // ======================================================
 // SUPPORT VOICE WARTERAUM
 // ======================================================
