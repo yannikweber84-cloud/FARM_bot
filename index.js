@@ -7,7 +7,6 @@ const {
     GatewayIntentBits,
     Partials,
     Events,
-    SlashCommandBuilder
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
@@ -18,6 +17,7 @@ const {
     TextInputStyle,
     PermissionsBitField,
     ChannelType,
+    SlashCommandBuilder,
     MessageFlags
 } = require('discord.js');
 
