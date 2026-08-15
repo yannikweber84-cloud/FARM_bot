@@ -2719,14 +2719,19 @@ Erstelle dafür ein Giveaway-Ticket.
                 const row = new ActionRowBuilder()
                     .addComponents(menu);
 
-                await interaction.reply({
-                    embeds: [embed],
-                    components: [row]
-                });
+              if (!interaction.replied && !interaction.deferred) {
+    await interaction.reply({
+        embeds: [embed],
+        components: [row]
+    });
+} else if (interaction.deferred) {
+    await interaction.editReply({
+        embeds: [embed],
+        components: [row]
+    });
+}
 
-                return;
-            }
-        }
+return;
 
         // ==================================================
         // TICKET SELECT MENU
