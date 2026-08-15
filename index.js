@@ -3621,7 +3621,7 @@ ${interaction.user}
                 return;
             }
 
-            // ==================================================
+                        // ==================================================
             // CLOSE
             // ==================================================
 
@@ -3633,12 +3633,12 @@ ${interaction.user}
                 const channel =
                     interaction.channel;
 
-              await interaction.deferReply();
+                await interaction.deferReply();
 
-await interaction.editReply({
-    content:
-        "🔒 Ticket wird in **3 Sekunden** geschlossen..."
-});
+                await interaction.editReply({
+                    content:
+                        "🔒 Ticket wird in **3 Sekunden** geschlossen..."
+                });
 
                 const logEmbed =
                     baseEmbed(
@@ -3713,13 +3713,10 @@ await interaction.editReply({
         ) {
 
             await interaction.reply({
-
                 content:
                     "❌ Es ist ein Fehler aufgetreten.",
-
                 flags:
                     MessageFlags.Ephemeral
-
             }).catch(() => {});
 
         }
