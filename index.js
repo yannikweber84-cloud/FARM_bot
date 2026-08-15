@@ -1352,136 +1352,149 @@ Dein Ticket wurde erfolgreich erstellt.
                 );
 
                 return;
-            }            // ==================================================
-            // TICKET USER SELECT MENU
-            // ==================================================
+           // ==================================================
+// TICKET USER SELECT MENU – WEITERLEITEN
+// ==================================================
 
-            if (
-                interaction.isUserSelectMenu() &&
-                interaction.customId ===
-                    "forward_ticket_user"
-            ) {
+if (
+    interaction.isUserSelectMenu() &&
+    interaction.customId === "forward_ticket_user"
+) {
 
-                // ==================================================
-                // STAFF PRÜFEN
-                // ==================================================
+    try {
 
-                if (
-                    !interaction.member.roles.cache.has(
-                        STAFF_ROLE_ID
-                    )
-                ) {
+        // ==================================================
+        // STAFF PRÜFEN
+        // ==================================================
 
-                    return interaction.reply({
+        if (
+            !interaction.member.roles.cache.has(
+                STAFF_ROLE_ID
+            )
+        ) {
 
-                        content:
-                            "❌ Nur Teammitglieder können Tickets weiterleiten.",
+            return await interaction.reply({
+                content:
+                    "❌ Nur Teammitglieder können Tickets weiterleiten.",
+                flags: 64
+            });
 
-                        flags: 64
+        }
 
-                    });
-                }
+        // ==================================================
+        // SOFORT AUF INTERACTION REAGIEREN
+        // ==================================================
 
-                const selectedUserId =
-                    interaction.values[0];
+        await interaction.deferUpdate();
 
-                // User/Member sicher laden
-                const selectedMember =
-                    await interaction.guild.members
-                        .fetch(selectedUserId)
-                        .catch(() => null);
+        // ==================================================
+        // AUSGEWÄHLTEN USER HOLEN
+        // ==================================================
 
-                if (!selectedMember) {
+        const selectedUserId =
+            interaction.values[0];
 
-                    return interaction.reply({
+        if (!selectedUserId) {
 
-                        content:
-                            "❌ Das ausgewählte Teammitglied wurde nicht gefunden.",
+            return await interaction.editReply({
+                content:
+                    "❌ Es wurde kein Teammitglied ausgewählt.",
+                components: []
+            });
 
-                        flags: 64
+        }
 
-                    });
-                }
+        // ==================================================
+        // MEMBER LADEN
+        // ==================================================
 
-                // ==================================================
-                // PRÜFEN OB TEAMLER
-                // ==================================================
+        const selectedMember =
+            await interaction.guild.members
+                .fetch(selectedUserId)
+                .catch(() => null);
 
-                if (
-                    !selectedMember.roles.cache.has(
-                        STAFF_ROLE_ID
-                    )
-                ) {
+        if (!selectedMember) {
 
-                    return interaction.reply({
+            return await interaction.editReply({
+                content:
+                    "❌ Das ausgewählte Teammitglied wurde nicht gefunden.",
+                components: []
+            });
 
-                        content:
-                            "❌ Du kannst das Ticket nur an ein Mitglied mit der Staff-Rolle weiterleiten.",
+        }
 
-                        flags: 64
+        // ==================================================
+        // STAFF ROLLE PRÜFEN
+        // ==================================================
 
-                    });
-                }
+        if (
+            !selectedMember.roles.cache.has(
+                STAFF_ROLE_ID
+            )
+        ) {
 
-                const channel =
-                    interaction.channel;
+            return await interaction.editReply({
+                content:
+                    "❌ Du kannst das Ticket nur an ein Mitglied mit der Staff-Rolle weiterleiten.",
+                components: []
+            });
 
-                if (!channel) {
+        }
 
-                    return interaction.reply({
+        // ==================================================
+        // TICKET CHANNEL
+        // ==================================================
 
-                        content:
-                            "❌ Der Ticket-Kanal wurde nicht gefunden.",
+        const channel =
+            interaction.channel;
 
-                        flags: 64
+        if (!channel) {
 
-                    });
-                }
+            return await interaction.editReply({
+                content:
+                    "❌ Der Ticket-Kanal wurde nicht gefunden.",
+                components: []
+            });
 
-                // ==================================================
-                // ZUGRIFF GEBEN
-                // ==================================================
+        }
 
-                await channel.permissionOverwrites.edit(
+        // ==================================================
+        // ZUGRIFF GEBEN
+        // ==================================================
 
-                    selectedMember,
+        await channel.permissionOverwrites.edit(
+            selectedMember.id,
+            {
+                ViewChannel: true,
+                SendMessages: true,
+                ReadMessageHistory: true
+            }
+        );
 
-                    {
+        // ==================================================
+        // SELECT-MENÜ ENTFERNEN
+        // ==================================================
 
-                        ViewChannel: true,
+        await interaction.editReply({
+            content:
+                `✅ Ticket wurde an ${selectedMember} weitergeleitet.`,
+            components: []
+        });
 
-                        SendMessages: true,
+        // ==================================================
+        // WEITERLEITUNG EMBED
+        // ==================================================
 
-                        ReadMessageHistory: true
+        const forwardEmbed =
+            new EmbedBuilder()
 
-                    }
+                .setColor("#5865F2")
 
-                );
+                .setTitle(
+                    "➡️ Ticket weitergeleitet"
+                )
 
-                // ==================================================
-                // AUSWAHLMENÜ ENTFERNEN
-                // ==================================================
-
-                await interaction.message
-                    .delete()
-                    .catch(() => {});
-
-                // ==================================================
-                // WEITERLEITUNG EMBED
-                // ==================================================
-
-                const forwardEmbed =
-                    new EmbedBuilder()
-
-                        .setColor(
-                            "#5865F2"
-                        )
-
-                        .setTitle(
-                            "➡️ Ticket weitergeleitet"
-                        )
-
-                        .setDescription(
+                .setDescription(
 `Dieses Ticket wurde weitergeleitet.
 
 👤 **Weitergeleitet von:**
@@ -1491,95 +1504,119 @@ ${interaction.user}
 ${selectedMember}
 
 🔓 Das ausgewählte Teammitglied hat jetzt Zugriff auf dieses Ticket.`
-                        )
+                )
 
-                        .setFooter({
+                .setFooter({
+                    text:
+                        "VIBE Ticket System"
+                })
 
-                            text:
-                                "VIBE Ticket System"
+                .setTimestamp();
 
-                        })
+        // ==================================================
+        // TEAMLER PINGEN
+        // ==================================================
 
-                        .setTimestamp();
+        await channel.send({
 
-                await channel.send({
+            content:
+                `${selectedMember}`,
 
-                    content:
-                        `${selectedMember}`,
+            allowedMentions: {
+                users: [
+                    selectedMember.id
+                ]
+            },
 
-                    allowedMentions: {
+            embeds: [
+                forwardEmbed
+            ]
 
-                        users: [
-                            selectedMember.id
-                        ]
+        });
 
-                    },
+        // ==================================================
+        // SERVER LOG
+        // ==================================================
 
-                    embeds: [
-                        forwardEmbed
-                    ]
+        const logEmbed =
+            baseEmbed(
+                "➡️ Ticket weitergeleitet",
+                0x5865f2,
+                "Ein Ticket wurde an ein anderes Teammitglied weitergeleitet."
+            );
 
-                });
+        logEmbed.addFields(
 
-                // ==================================================
-                // SERVER LOG
-                // ==================================================
+            {
+                name:
+                    "🎫 Ticket",
 
-                const logEmbed =
-                    baseEmbed(
+                value:
+                    channel.toString()
+            },
 
-                        "➡️ Ticket weitergeleitet",
+            {
+                name:
+                    "👤 Weitergeleitet von",
 
-                        0x5865f2,
+                value:
+                    `${interaction.user} (${interaction.user.id})`
+            },
 
-                        "Ein Ticket wurde an ein anderes Teammitglied weitergeleitet."
+            {
+                name:
+                    "🎯 Weitergeleitet an",
 
-                    );
-
-                logEmbed.addFields(
-
-                    {
-
-                        name:
-                            "🎫 Ticket",
-
-                        value:
-                            channel.toString()
-
-                    },
-
-                    {
-
-                        name:
-                            "👤 Weitergeleitet von",
-
-                        value:
-                            `${interaction.user} (${interaction.user.id})`
-
-                    },
-
-                    {
-
-                        name:
-                            "🎯 Weitergeleitet an",
-
-                        value:
-                            `${selectedMember} (${selectedMember.id})`
-
-                    }
-
-                );
-
-                await sendLog(
-
-                    interaction.guild,
-
-                    logEmbed
-
-                );
-
-                return;
+                value:
+                    `${selectedMember} (${selectedMember.id})`
             }
+
+        );
+
+        await sendLog(
+            interaction.guild,
+            logEmbed
+        );
+
+    } catch (error) {
+
+        console.error(
+            "❌ Ticket Weiterleitung Fehler:",
+            error
+        );
+
+        // Falls bereits deferUpdate/replied wurde:
+        if (
+            interaction.deferred ||
+            interaction.replied
+        ) {
+
+            await interaction.editReply({
+
+                content:
+                    "❌ Beim Weiterleiten des Tickets ist ein Fehler aufgetreten.",
+
+                components: []
+
+            }).catch(() => {});
+
+        } else {
+
+            await interaction.reply({
+
+                content:
+                    "❌ Beim Weiterleiten des Tickets ist ein Fehler aufgetreten.",
+
+                flags: 64
+
+            }).catch(() => {});
+
+        }
+
+    }
+
+    return;
+}
 
             // ==================================================
             // BUTTONS
