@@ -20,7 +20,9 @@ const {
     SlashCommandBuilder,
     MessageFlags,
     REST,
-    Routes
+    Routes,
+    UserSelectMenuBuilder,
+    AuditLogEvent
 } = require('discord.js');
 
 // ======================================================
@@ -934,7 +936,7 @@ Erstelle dafür ein Giveaway-Ticket.
                                 menu
                             );
 
-                    await interaction.reply({
+                   await interaction.deferReply();
 
                         embeds: [
                             embed
@@ -2005,7 +2007,7 @@ ${selectedMember}
 
                         );
 
-                    await interaction.reply({
+                    await interaction.deferReply();
 
                         embeds: [
                             claimEmbed
@@ -3592,7 +3594,7 @@ ${interaction.user}
                 const channel =
                     interaction.channel;
 
-                await interaction.reply({
+              await interaction.deferReply();
 
                     content:
                         "🔒 Ticket wird in **3 Sekunden** geschlossen..."
