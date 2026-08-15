@@ -9,6 +9,7 @@ const {
     ChannelType,
     ActionRowBuilder,
     StringSelectMenuBuilder,
+    UserSelectMenuBuilder,
     ButtonBuilder,
     ButtonStyle,
     Events,
@@ -49,28 +50,25 @@ app.listen(PORT, () => {
 const TOKEN = process.env.TOKEN;
 
 const CLIENT_ID = "1534585700408889466";
-const GUILD_ID = "1488581484565500157";
+const GUILD_ID = "1537927032066019470";
 
 // ======================================================
 // WELCOME
 // ======================================================
 
 const WELCOME_CHANNEL_ID =
-    "1488581808470757468";
+    "1537927035794489405";
 
 // ======================================================
 // TEAM / STAFF
 // ======================================================
 
 const STAFF_ROLE_ID =
-    "1488904093970858115";
+    "1537927034842517550";
 
 // ======================================================
 // SUPPORT ROLLE
 // ======================================================
-
-// Wenn die Staff-Rolle im Support gepingt werden soll,
-// benutzen wir hier absichtlich dieselbe Rolle.
 
 const SUPPORT_ROLE_ID =
     STAFF_ROLE_ID;
@@ -80,14 +78,14 @@ const SUPPORT_ROLE_ID =
 // ======================================================
 
 const SUPPORT_WARTE_RAUM_ID =
-    "1488584492628185293";
+    "1537927036293615635";
 
 // ======================================================
 // SUPPORT LOG
 // ======================================================
 
 const SUPPORT_LOG_CHANNEL_ID =
-    "1488584310385803416";
+    "1537927036293615633";
 
 // ======================================================
 // SERVER LOG
@@ -95,20 +93,35 @@ const SUPPORT_LOG_CHANNEL_ID =
 
 const SERVER_LOG_CHANNEL_ID =
     process.env.SERVER_LOG_CHANNEL_ID ||
-    "1488584374554460372";
+    "1537927036293615634";
 
 // ======================================================
 // TICKET KATEGORIEN
 // ======================================================
 
 const CLAN_CATEGORY_ID =
-    "1534287236407759040";
+    "1537927037627400232";
 
 const TEAM_CATEGORY_ID =
-    "1534287314464018655";
+    "1537927037627400233";
 
 const BAU_CATEGORY_ID =
-    "1534287374819917896";
+    "1537927037916942456";
+
+// ======================================================
+// GIVEAWAY TICKET KATEGORIE
+// ======================================================
+//
+// HIER DIE ID DER NEUEN GIVEAWAY-KATEGORIE EINTRAGEN
+//
+// Beispiel:
+// const GIVEAWAY_CATEGORY_ID =
+//     "123456789012345678";
+//
+// ======================================================
+
+const GIVEAWAY_CATEGORY_ID =
+    "1538095441940447294";
 
 // ======================================================
 // COUNTING
@@ -383,26 +396,6 @@ const commands = [
         .setDescription(
             "Testet das Server-Logging"
         )
-        .toJSON(),
-
-    new SlashCommandBuilder()
-        .setName("clear")
-        .setDescription(
-            "Löscht mehrere Nachrichten in diesem Channel"
-        )
-        .addIntegerOption(option =>
-            option
-                .setName("anzahl")
-                .setDescription(
-                    "Wie viele Nachrichten sollen gelöscht werden? (1-1000)"
-                )
-                .setMinValue(1)
-                .setMaxValue(1000)
-                .setRequired(true)
-        )
-        .setDefaultMemberPermissions(
-            PermissionsBitField.Flags.ManageMessages
-        )
         .toJSON()
 
 ];
@@ -489,6 +482,10 @@ client.once(
 
         console.log(
             `🎧 Support Rolle: ${SUPPORT_ROLE_ID}`
+        );
+
+        console.log(
+            `🎁 Giveaway Kategorie: ${GIVEAWAY_CATEGORY_ID}`
         );
 
         console.log(
@@ -682,195 +679,6 @@ client.on(
                 }
 
                 // ==================================================
-                // CLEAR
-                // ==================================================
-
-                if (
-                    interaction.commandName ===
-                    "clear"
-                ) {
-
-                    if (
-                        !interaction.member.permissions.has(
-                            PermissionsBitField.Flags.ManageMessages
-                        )
-                    ) {
-
-                        return interaction.reply({
-
-                            content:
-                                "❌ Du benötigst die Berechtigung **Nachrichten verwalten**.",
-
-                            ephemeral: true
-
-                        });
-                    }
-
-                    const channel =
-                        interaction.channel;
-
-                    if (
-                        !channel ||
-                        !channel.isTextBased()
-                    ) {
-
-                        return interaction.reply({
-
-                            content:
-                                "❌ Dieser Befehl funktioniert nur in Textkanälen.",
-
-                            ephemeral: true
-
-                        });
-                    }
-
-                    const amount =
-                        interaction.options.getInteger(
-                            "anzahl",
-                            true
-                        );
-
-                    await interaction.deferReply({
-                        ephemeral: true
-                    });
-
-                    let remaining =
-                        amount;
-
-                    let deletedTotal =
-                        0;
-
-                    let skippedOld =
-                        false;
-
-                    try {
-
-                        while (
-                            remaining > 0
-                        ) {
-
-                            const batchSize =
-                                Math.min(
-                                    remaining,
-                                    100
-                                );
-
-                            const deleted =
-                                await channel.bulkDelete(
-                                    batchSize,
-                                    true // filtert Nachrichten älter als 14 Tage automatisch raus
-                                );
-
-                            deletedTotal +=
-                                deleted.size;
-
-                            remaining -=
-                                batchSize;
-
-                            // Wenn weniger gelöscht wurden als angefragt,
-                            // gibt es entweder keine Nachrichten mehr
-                            // oder der Rest ist älter als 14 Tage.
-                            if (
-                                deleted.size <
-                                batchSize
-                            ) {
-
-                                if (
-                                    deleted.size <
-                                    batchSize
-                                ) {
-
-                                    skippedOld =
-                                        true;
-                                }
-
-                                break;
-                            }
-                        }
-
-                    } catch (error) {
-
-                        console.error(
-                            "❌ Clear Fehler:",
-                            error
-                        );
-
-                        await interaction.editReply({
-
-                            content:
-                                `❌ Es ist ein Fehler beim Löschen aufgetreten. Bisher gelöscht: **${deletedTotal}**.`
-
-                        });
-
-                        return;
-                    }
-
-                    await interaction.editReply({
-
-                        content:
-                            `🧹 **${deletedTotal}** Nachricht(en) in ${channel} gelöscht.` +
-                            (skippedOld
-                                ? "\n⚠️ Ein Teil der angefragten Nachrichten war älter als 14 Tage und konnte nicht per Bulk-Delete entfernt werden (Discord-Limit)."
-                                : "")
-
-                    });
-
-                    const logEmbed =
-                        baseEmbed(
-                            "🧹 Nachrichten gelöscht",
-                            0xed4245,
-                            `Es wurden Nachrichten mit /clear gelöscht.`
-                        );
-
-                    logEmbed.addFields(
-
-                        {
-                            name:
-                                "🛡️ Ausgeführt von",
-
-                            value:
-                                `${interaction.user} (${interaction.user.id})`
-                        },
-
-                        {
-                            name:
-                                "📍 Kanal",
-
-                            value:
-                                channel.toString()
-                        },
-
-                        {
-                            name:
-                                "🔢 Angefragt",
-
-                            value:
-                                `${amount}`,
-
-                            inline: true
-                        },
-
-                        {
-                            name:
-                                "✅ Gelöscht",
-
-                            value:
-                                `${deletedTotal}`,
-
-                            inline: true
-                        }
-
-                    );
-
-                    await sendLog(
-                        interaction.guild,
-                        logEmbed
-                    );
-
-                    return;
-                }
-
-                // ==================================================
                 // TICKET PANEL
                 // ==================================================
 
@@ -922,6 +730,7 @@ Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich, damit un
 • 🚨 Spieler melden
 • 🛠️ Allgemeine Hilfe
 • 🏗️ Bauprojekte & Aufträge
+• 🎁 Giveaway Anliegen
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -930,6 +739,14 @@ Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich, damit un
 Du möchtest Teil unseres Teams werden oder die Bau-Firma unterstützen?
 
 Egal ob Builder, Helfer oder für ein anderes Teammitglied – erstelle einfach ein Ticket.
+
+━━━━━━━━━━━━━━━━━━
+
+🎁 **Giveaway**
+
+Du hast Fragen zu einem Giveaway, einem Gewinn oder benötigst Hilfe bei einer Giveaway-Aktion?
+
+Erstelle dafür ein Giveaway-Ticket.
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -1006,6 +823,20 @@ Egal ob Builder, Helfer oder für ein anderes Teammitglied – erstelle einfach 
 
                                     value:
                                         "bau_firma"
+                                },
+
+                                {
+                                    label:
+                                        "Giveaway",
+
+                                    description:
+                                        "Fragen und Hilfe zu Giveaways",
+
+                                    emoji:
+                                        "🎁",
+
+                                    value:
+                                        "giveaway"
                                 }
 
                             ]);
@@ -1111,6 +942,25 @@ Egal ob Builder, Helfer oder für ein anderes Teammitglied – erstelle einfach 
                         BAU_CATEGORY_ID;
                 }
 
+                // ==================================================
+                // GIVEAWAY
+                // ==================================================
+
+                if (
+                    selected ===
+                    "giveaway"
+                ) {
+
+                    ticketName =
+                        `giveaway-${interaction.user.username.toLowerCase()}`;
+
+                    ticketTitle =
+                        "🎁 Giveaway";
+
+                    categoryID =
+                        GIVEAWAY_CATEGORY_ID;
+                }
+
                 if (
                     !ticketName ||
                     !ticketTitle ||
@@ -1121,6 +971,29 @@ Egal ob Builder, Helfer oder für ein anderes Teammitglied – erstelle einfach 
 
                         content:
                             "❌ Ungültige Ticket-Kategorie.",
+
+                        ephemeral: true
+
+                    });
+                }
+
+                // ==================================================
+                // GIVEAWAY KATEGORIE ID PRÜFEN
+                // ==================================================
+
+                if (
+                    selected === "giveaway" &&
+                    (
+                        !GIVEAWAY_CATEGORY_ID ||
+                        GIVEAWAY_CATEGORY_ID ===
+                            "HIER_GIVEAWAY_KATEGORIE_ID_EINTRAGEN"
+                    )
+                ) {
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Die Giveaway-Kategorie wurde noch nicht eingerichtet. Trage oben im index.js die Kategorie-ID ein.",
 
                         ephemeral: true
 
@@ -1237,6 +1110,29 @@ Egal ob Builder, Helfer oder für ein anderes Teammitglied – erstelle einfach 
                         );
 
                 // ==================================================
+                // FORWARD BUTTON
+                // ==================================================
+
+                const forwardButton =
+                    new ButtonBuilder()
+
+                        .setCustomId(
+                            "forward_ticket"
+                        )
+
+                        .setLabel(
+                            "Weiterleiten"
+                        )
+
+                        .setEmoji(
+                            "➡️"
+                        )
+
+                        .setStyle(
+                            ButtonStyle.Secondary
+                        );
+
+                // ==================================================
                 // CLOSE BUTTON
                 // ==================================================
 
@@ -1265,6 +1161,8 @@ Egal ob Builder, Helfer oder für ein anderes Teammitglied – erstelle einfach 
 
                             claimButton,
 
+                            forwardButton,
+
                             closeButton
 
                         );
@@ -1291,7 +1189,9 @@ Dein Ticket wurde erfolgreich erstellt.
 
 📌 Bitte beschreibe dein Anliegen möglichst genau, damit das Team dir schnell helfen kann.
 
-🛡️ Ein Teammitglied wird sich schnellstmöglich darum kümmern.`
+🛡️ Ein Teammitglied wird sich schnellstmöglich darum kümmern.
+
+➡️ **Weiterleiten:** Ein Teammitglied kann das Ticket bei Bedarf an einen anderen Teamler weiterleiten.`
                         )
 
                         .setFooter({
@@ -1384,6 +1284,237 @@ Dein Ticket wurde erfolgreich erstellt.
             }
 
             // ==================================================
+            // TICKET USER SELECT MENU
+            // ==================================================
+
+            if (
+                interaction.isUserSelectMenu() &&
+                interaction.customId ===
+                    "forward_ticket_user"
+            ) {
+
+                // ==================================================
+                // STAFF PRÜFEN
+                // ==================================================
+
+                if (
+                    !interaction.member.roles.cache.has(
+                        STAFF_ROLE_ID
+                    )
+                ) {
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Nur Teammitglieder können Tickets weiterleiten.",
+
+                        ephemeral: true
+
+                    });
+                }
+
+                const selectedUserId =
+                    interaction.values[0];
+
+                const selectedMember =
+                    await interaction.guild.members
+                        .fetch(
+                            selectedUserId
+                        )
+                        .catch(
+                            () => null
+                        );
+
+                if (!selectedMember) {
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Das ausgewählte Teammitglied wurde nicht gefunden.",
+
+                        ephemeral: true
+
+                    });
+                }
+
+                // ==================================================
+                // PRÜFEN OB TEAMLER
+                // ==================================================
+
+                if (
+                    !selectedMember.roles.cache.has(
+                        STAFF_ROLE_ID
+                    )
+                ) {
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Du kannst das Ticket nur an ein Mitglied mit der Staff-Rolle weiterleiten.",
+
+                        ephemeral: true
+
+                    });
+                }
+
+                const channel =
+                    interaction.channel;
+
+                if (!channel) {
+
+                    return interaction.reply({
+
+                        content:
+                            "❌ Der Ticket-Kanal wurde nicht gefunden.",
+
+                        ephemeral: true
+
+                    });
+                }
+
+                // ==================================================
+                // ZUGRIFF GEBEN
+                // ==================================================
+
+                await channel.permissionOverwrites.edit(
+
+                    selectedMember.id,
+
+                    {
+
+                        ViewChannel: true,
+
+                        SendMessages: true,
+
+                        ReadMessageHistory: true
+
+                    }
+
+                );
+
+                // ==================================================
+                // AUSWAHLMENÜ ENTFERNEN
+                // ==================================================
+
+                await interaction.message.delete()
+                    .catch(() => {});
+
+                // ==================================================
+                // WEITERLEITUNG EMBED
+                // ==================================================
+
+                const forwardEmbed =
+                    new EmbedBuilder()
+
+                        .setColor(
+                            "#5865F2"
+                        )
+
+                        .setTitle(
+                            "➡️ Ticket weitergeleitet"
+                        )
+
+                        .setDescription(
+`Dieses Ticket wurde weitergeleitet.
+
+👤 **Weitergeleitet von:**
+${interaction.user}
+
+🎯 **Weitergeleitet an:**
+${selectedMember}
+
+🔓 Das ausgewählte Teammitglied hat jetzt Zugriff auf dieses Ticket.`
+                        )
+
+                        .setFooter({
+
+                            text:
+                                "VIBE Ticket System"
+
+                        })
+
+                        .setTimestamp();
+
+                await channel.send({
+
+                    content:
+                        `${selectedMember}`,
+
+                    allowedMentions: {
+
+                        users: [
+                            selectedMember.id
+                        ]
+
+                    },
+
+                    embeds: [
+                        forwardEmbed
+                    ]
+
+                });
+
+                // ==================================================
+                // SERVER LOG
+                // ==================================================
+
+                const logEmbed =
+                    baseEmbed(
+
+                        "➡️ Ticket weitergeleitet",
+
+                        0x5865f2,
+
+                        "Ein Ticket wurde an ein anderes Teammitglied weitergeleitet."
+
+                    );
+
+                logEmbed.addFields(
+
+                    {
+
+                        name:
+                            "🎫 Ticket",
+
+                        value:
+                            channel.toString()
+
+                    },
+
+                    {
+
+                        name:
+                            "👤 Weitergeleitet von",
+
+                        value:
+                            `${interaction.user} (${interaction.user.id})`
+
+                    },
+
+                    {
+
+                        name:
+                            "🎯 Weitergeleitet an",
+
+                        value:
+                            `${selectedMember} (${selectedMember.id})`
+
+                    }
+
+                );
+
+                await sendLog(
+
+                    interaction.guild,
+
+                    logEmbed
+
+                );
+
+                return;
+            }
+
+            // ==================================================
             // BUTTONS
             // ==================================================
 
@@ -1439,6 +1570,25 @@ Dein Ticket wurde erfolgreich erstellt.
                                 true
                             );
 
+                    const forwardButton =
+                        new ButtonBuilder()
+
+                            .setCustomId(
+                                "forward_ticket"
+                            )
+
+                            .setLabel(
+                                "Weiterleiten"
+                            )
+
+                            .setEmoji(
+                                "➡️"
+                            )
+
+                            .setStyle(
+                                ButtonStyle.Secondary
+                            );
+
                     const closeButton =
                         new ButtonBuilder()
 
@@ -1464,6 +1614,8 @@ Dein Ticket wurde erfolgreich erstellt.
 
                                 claimedButton,
 
+                                forwardButton,
+
                                 closeButton
 
                             );
@@ -1488,6 +1640,76 @@ Dein Ticket wurde erfolgreich erstellt.
                         embeds: [
                             claimEmbed
                         ]
+
+                    });
+
+                    return;
+                }
+
+                // ==================================================
+                // FORWARD
+                // ==================================================
+
+                if (
+                    interaction.customId ===
+                    "forward_ticket"
+                ) {
+
+                    if (
+                        !interaction.member.roles.cache.has(
+                            STAFF_ROLE_ID
+                        )
+                    ) {
+
+                        return interaction.reply({
+
+                            content:
+                                "❌ Nur Teammitglieder können Tickets weiterleiten.",
+
+                            ephemeral: true
+
+                        });
+                    }
+
+                    // ==================================================
+                    // USER SELECT
+                    // ==================================================
+
+                    const userSelect =
+                        new UserSelectMenuBuilder()
+
+                            .setCustomId(
+                                "forward_ticket_user"
+                            )
+
+                            .setPlaceholder(
+                                "Wähle das Teammitglied aus..."
+                            )
+
+                            .setMinValues(
+                                1
+                            )
+
+                            .setMaxValues(
+                                1
+                            );
+
+                    const row =
+                        new ActionRowBuilder()
+                            .addComponents(
+                                userSelect
+                            );
+
+                    await interaction.reply({
+
+                        content:
+                            "➡️ **Ticket weiterleiten**\n\nWähle unten das Teammitglied aus, an das dieses Ticket weitergeleitet werden soll.",
+
+                        components: [
+                            row
+                        ],
+
+                        ephemeral: true
 
                     });
 
@@ -1522,14 +1744,17 @@ Dein Ticket wurde erfolgreich erstellt.
                     logEmbed.addFields(
 
                         {
+
                             name:
                                 "Geschlossen von",
 
                             value:
                                 `${interaction.user} (${interaction.user.id})`
+
                         },
 
                         {
+
                             name:
                                 "Ticket",
 
@@ -1537,6 +1762,7 @@ Dein Ticket wurde erfolgreich erstellt.
                                 channel
                                     ? `#${channel.name}`
                                     : "Unbekannt"
+
                         }
 
                     );
@@ -1796,14 +2022,17 @@ client.on(
             serverLog.addFields(
 
                 {
+
                     name:
                         "Nutzer",
 
                     value:
                         `${member} (${member.id})`
+
                 },
 
                 {
+
                     name:
                         "Kanal",
 
@@ -1811,14 +2040,17 @@ client.on(
                         newState.channel
                             ? newState.channel.toString()
                             : "Unbekannt"
+
                 },
 
                 {
+
                     name:
                         "Staff-Rolle",
 
                     value:
                         `<@&${SUPPORT_ROLE_ID}>`
+
                 }
 
             );
@@ -2075,14 +2307,17 @@ client.on(
             embed.addFields(
 
                 {
+
                     name:
                         "👤 Nutzer",
 
                     value:
                         `${member} (${member.user.tag})`
+
                 },
 
                 {
+
                     name:
                         "⏲️ Kontoalter",
 
@@ -2090,9 +2325,11 @@ client.on(
                         `${days} Tage`,
 
                     inline: true
+
                 },
 
                 {
+
                     name:
                         "👥 Mitglieder",
 
@@ -2100,6 +2337,7 @@ client.on(
                         `${member.guild.memberCount}`,
 
                     inline: true
+
                 }
 
             );
@@ -2167,14 +2405,17 @@ client.on(
                 embed.addFields(
 
                     {
+
                         name:
                             "👤 Nutzer",
 
                         value:
                             `${member.user.tag} (${member.id})`
+
                     },
 
                     {
+
                         name:
                             "🛡️ Verantwortlicher Moderator",
 
@@ -2182,9 +2423,11 @@ client.on(
                             entry.executor
                                 ? entry.executor.toString()
                                 : "Unbekannt"
+
                     },
 
                     {
+
                         name:
                             "📄 Grund",
 
@@ -2193,6 +2436,7 @@ client.on(
                                 entry.reason,
                                 "Kein Grund angegeben"
                             )
+
                     }
 
                 );
@@ -2295,6 +2539,7 @@ client.on(
                 embed.addFields(
 
                     {
+
                         name:
                             "🛡️ Verantwortlicher Moderator",
 
@@ -2302,9 +2547,11 @@ client.on(
                             entry.executor
                                 ? entry.executor.toString()
                                 : "Unbekannt"
+
                     },
 
                     {
+
                         name:
                             "📄 Grund",
 
@@ -2313,6 +2560,7 @@ client.on(
                                 entry.reason,
                                 "Kein Grund angegeben"
                             )
+
                     }
 
                 );
@@ -2457,14 +2705,17 @@ client.on(
                 embed.addFields(
 
                     {
+
                         name:
                             "👤 Nutzer",
 
                         value:
                             `${after} (${after.id})`
+
                     },
 
                     {
+
                         name:
                             "Vorher",
 
@@ -2473,9 +2724,11 @@ client.on(
                                 before.nickname,
                                 before.user.username
                             )
+
                     },
 
                     {
+
                         name:
                             "Nachher",
 
@@ -2484,6 +2737,7 @@ client.on(
                                 after.nickname,
                                 after.user.username
                             )
+
                     }
 
                 );
@@ -2701,6 +2955,7 @@ client.on(
                 embed.addFields(
 
                     {
+
                         name:
                             "👤 Nutzer",
 
@@ -2711,6 +2966,7 @@ client.on(
                     },
 
                     {
+
                         name:
                             "🔊 Kanal",
 
@@ -2749,6 +3005,7 @@ client.on(
                 embed.addFields(
 
                     {
+
                         name:
                             "👤 Nutzer",
 
@@ -2759,6 +3016,7 @@ client.on(
                     },
 
                     {
+
                         name:
                             "🔊 Kanal",
 
@@ -2799,14 +3057,17 @@ client.on(
                 embed.addFields(
 
                     {
+
                         name:
                             "👤 Nutzer",
 
                         value:
                             member.toString()
+
                     },
 
                     {
+
                         name:
                             "Von",
 
@@ -2817,6 +3078,7 @@ client.on(
                     },
 
                     {
+
                         name:
                             "Zu",
 
@@ -3007,6 +3269,7 @@ client.on(
                 embed.addFields(
 
                     {
+
                         name:
                             "👤 Nutzer",
 
@@ -3015,6 +3278,7 @@ client.on(
                     },
 
                     {
+
                         name:
                             "🔊 Kanal",
 
@@ -3022,6 +3286,7 @@ client.on(
                             after.channel
                                 ? after.channel.toString()
                                 : "Keiner"
+
                     }
 
                 );
@@ -3057,6 +3322,7 @@ client.on(
                 embed.addFields(
 
                     {
+
                         name:
                             "👤 Nutzer",
 
@@ -3065,6 +3331,7 @@ client.on(
                     },
 
                     {
+
                         name:
                             "🔊 Kanal",
 
@@ -3072,6 +3339,7 @@ client.on(
                             after.channel
                                 ? after.channel.toString()
                                 : "Keiner"
+
                     }
 
                 );
@@ -3135,22 +3403,27 @@ client.on(
             embed.addFields(
 
                 {
+
                     name:
                         "📁 Kanal",
 
                     value:
                         channel.toString()
+
                 },
 
                 {
+
                     name:
                         "🆔 ID",
 
                     value:
                         channel.id
+
                 },
 
                 {
+
                     name:
                         "Typ",
 
@@ -3244,6 +3517,7 @@ client.on(
             embed.addFields(
 
                 {
+
                     name:
                         "📁 Kanal",
 
@@ -3252,14 +3526,17 @@ client.on(
                             channel.name,
                             "Unbekannt"
                         )}`
+
                 },
 
                 {
+
                     name:
                         "🆔 ID",
 
                     value:
                         channel.id
+
                 }
 
             );
@@ -3419,6 +3696,7 @@ client.on(
             embed.addFields(
 
                 {
+
                     name:
                         "👤 Autor",
 
@@ -3426,9 +3704,11 @@ client.on(
                         message.author
                             ? `${message.author} (${message.author.id})`
                             : "Unbekannt"
+
                 },
 
                 {
+
                     name:
                         "📍 Kanal",
 
@@ -3436,9 +3716,11 @@ client.on(
                         message.channel
                             ? message.channel.toString()
                             : "Unbekannt"
+
                 },
 
                 {
+
                     name:
                         "💬 Inhalt",
 
@@ -3450,6 +3732,7 @@ client.on(
                             0,
                             1024
                         )
+
                 }
 
             );
@@ -3507,6 +3790,7 @@ client.on(
             embed.addFields(
 
                 {
+
                     name:
                         "👤 Autor",
 
@@ -3514,9 +3798,11 @@ client.on(
                         before.author
                             ? `${before.author} (${before.author.id})`
                             : "Unbekannt"
+
                 },
 
                 {
+
                     name:
                         "📍 Kanal",
 
@@ -3524,9 +3810,11 @@ client.on(
                         before.channel
                             ? before.channel.toString()
                             : "Unbekannt"
+
                 },
 
                 {
+
                     name:
                         "Vorher",
 
@@ -3538,9 +3826,11 @@ client.on(
                             0,
                             1024
                         )
+
                 },
 
                 {
+
                     name:
                         "Nachher",
 
@@ -3552,6 +3842,7 @@ client.on(
                             0,
                             1024
                         )
+
                 }
 
             );
