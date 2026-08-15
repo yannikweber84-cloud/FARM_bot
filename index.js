@@ -3621,105 +3621,84 @@ ${interaction.user}
                 return;
             }
 
-                        // ==================================================
-            // CLOSE
             // ==================================================
+// CLOSE
+// ==================================================
 
-            if (
-                interaction.customId ===
-                "close_ticket"
-            ) {
+if (interaction.customId === "close_ticket") {
 
-                const channel =
-                    interaction.channel;
+    const channel = interaction.channel;
 
-                await interaction.deferReply();
+    await interaction.deferReply();
 
-                await interaction.editReply({
-                    content:
-                        "🔒 Ticket wird in **3 Sekunden** geschlossen..."
-                });
+    await interaction.editReply({
+        content: "🔒 Ticket wird in **3 Sekunden** geschlossen..."
+    });
 
-                const logEmbed =
-                    baseEmbed(
-                        "🔒 Ticket geschlossen",
-                        0xed4245
-                    );
+    const logEmbed = baseEmbed(
+        "🔒 Ticket geschlossen",
+        0xed4245
+    );
 
-                logEmbed.addFields(
-                    {
-                        name:
-                            "Geschlossen von",
-                        value:
-                            `${interaction.user} (${interaction.user.id})`
-                    },
-                    {
-                        name:
-                            "Ticket",
-                        value:
-                            channel
-                                ? `#${channel.name}`
-                                : "Unbekannt"
-                    }
-                );
+    logEmbed.addFields(
+        {
+            name: "Geschlossen von",
+            value: `${interaction.user} (${interaction.user.id})`
+        },
+        {
+            name: "Ticket",
+            value: channel ? `#${channel.name}` : "Unbekannt"
+        }
+    );
 
-                await sendLog(
-                    interaction.guild,
-                    logEmbed
-                );
+    await sendLog(
+        interaction.guild,
+        logEmbed
+    );
 
-                                setTimeout(
-                    async () => {
+    setTimeout(async () => {
 
-                        try {
+        try {
 
-                            if (
-                                channel &&
-                                channel.deletable
-                            ) {
-
-                                await channel.delete();
-
-                            }
-
-                        } catch (error) {
-
-                            console.error(
-                                "❌ Ticket Delete Fehler:",
-                                error
-                            );
-
-                        }
-
-                    },
-                    3000
-                );
-
-                          return;
+            if (channel && channel.deletable) {
+                await channel.delete();
             }
 
-    } catch (error) {
+        } catch (error) {
 
-        console.error(
-            "❌ Interaction Fehler:",
-            error
-        );
-
-        if (
-            interaction.isRepliable() &&
-            !interaction.replied &&
-            !interaction.deferred
-        ) {
-
-            await interaction.reply({
-                content:
-                    "❌ Es ist ein Fehler aufgetreten.",
-                flags:
-                    MessageFlags.Ephemeral
-            }).catch(() => {});
+            console.error(
+                "❌ Ticket Delete Fehler:",
+                error
+            );
 
         }
+
+    }, 3000);
+
+    return;
+}
+
+} catch (error) {
+
+    console.error(
+        "❌ Interaction Fehler:",
+        error
+    );
+
+    if (
+        interaction.isRepliable() &&
+        !interaction.replied &&
+        !interaction.deferred
+    ) {
+
+        await interaction.reply({
+            content: "❌ Es ist ein Fehler aufgetreten.",
+            flags: MessageFlags.Ephemeral
+        }).catch(() => {});
+
     }
+}
+
 });
 
 // ======================================================
