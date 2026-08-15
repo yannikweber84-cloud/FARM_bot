@@ -18,7 +18,9 @@ const {
     PermissionsBitField,
     ChannelType,
     SlashCommandBuilder,
-    MessageFlags
+    MessageFlags,
+    REST,
+    Routes
 } = require('discord.js');
 
 // ======================================================
