@@ -1,0 +1,64 @@
+VIBE BOT DASHBOARD – SETUP
+===========================
+
+1. Ersetze deine bisherige index.js durch die Datei index.js aus diesem Paket.
+
+2. Render Environment Variables:
+   TOKEN=dein_discord_bot_token
+   DASHBOARD_USER=admin
+   DASHBOARD_PASSWORD=DEIN_SICHERES_PASSWORT
+
+   Optional:
+   SERVER_LOG_CHANNEL_ID=deine_log_channel_id
+
+3. Deploy/Restart auf Render.
+
+4. Öffne die normale Render-URL deines Bots.
+   Beispiel: https://dein-bot.onrender.com
+   Dort erscheint jetzt der Dashboard-Login.
+
+5. Standard-Login, FALLS du keine Dashboard-Variablen gesetzt hast:
+   Benutzer: admin
+   Passwort: VIBE-2026
+
+   WICHTIG: Diesen Standard nicht öffentlich verwenden. Setze auf Render unbedingt
+   DASHBOARD_USER und DASHBOARD_PASSWORD.
+
+DASHBOARD FUNKTIONEN
+====================
+- Live Bot-Status
+- Ping
+- Mitgliederzahl
+- Channelzahl
+- offene Tickets
+- aktive Giveaways
+- Uptime und RAM
+- Ticket-System an/aus
+- Giveaway-System an/aus
+- Counting an/aus
+- Welcome an/aus
+- Support-Voice an/aus
+- /clear an/aus
+- Server-Logs Master-Schalter
+- Member-Logs an/aus
+- Moderation-Logs an/aus
+- Voice-Logs an/aus
+- Channel-Logs an/aus
+- Message-Logs an/aus
+- Discord Channel-/Rollen-/Kategorie-IDs bearbeiten
+- Bot-Status/Presence ändern
+- Announcement an einen Channel senden
+- Counting über Webseite starten/stoppen
+- Slash-Commands neu registrieren
+- Bot-Prozess neu starten
+- Dashboard-Aktivitätslog
+
+HINWEIS ZU RENDER
+=================
+Die Webseite läuft im selben Express-Prozess und auf demselben PORT wie der Bot.
+Wenn dein Render-Service läuft, ist auch das Dashboard erreichbar.
+
+Die Dashboard-Einstellungen werden zusätzlich in dashboard-config.json gespeichert.
+Bei Render kann das normale Dateisystem bei einem neuen Deploy/Instance-Wechsel zurückgesetzt
+werden. Für dauerhaft gespeicherte Einstellungen über Deploys hinweg kann später z.B. Supabase
+oder eine Render Persistent Disk angebunden werden.
