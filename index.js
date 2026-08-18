@@ -48,12 +48,12 @@ app.use(express.urlencoded({ extended: false }));
 const DASHBOARD_CONFIG_FILE =
     path.join(process.cwd(), "dashboard-config.json");
 
-const DASHBOARD_USER =kqwii
-    process.env.DASHBOARD_USER ||
+const DASHBOARD_USER =
+    process.env.DASHBOARD_USER || "kqwii";
     "admin";
 
-const DASHBOARD_PASSWORD =yannikweber123
-    process.env.DASHBOARD_PASSWORD ||
+const DASHBOARD_PASSWORD =
+    process.env.DASHBOARD_PASSWORD || "Vibeownewr123";
     "VIBE-2026";
 
 const defaultDashboardConfig = {
