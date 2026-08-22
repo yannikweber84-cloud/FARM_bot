@@ -1,9 +1,6 @@
 require("dotenv").config();
 
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
-const crypto = require("crypto");
 
 const {
     Client,
@@ -28,2037 +25,41 @@ const {
 } = require("discord.js");
 
 // ======================================================
-// WEB SERVER + DASHBOARD
+// KLEINER WEB SERVER NUR FÜR RENDER / HEALTHCHECK
+// KEINE ADMIN-WEBSEITE, KEIN LOGIN
 // ======================================================
 
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 
-app.set("trust proxy", 1);
-
-app.use(express.json());
-app.use(
-    express.urlencoded({
-        extended: false
-    })
-);
-
-// ======================================================
-// DASHBOARD LOGIN
-// ======================================================
-
-const DASHBOARD_USER =
-    process.env.DASHBOARD_USER || "kqwii";
-
-const DASHBOARD_PASSWORD =
-    process.env.DASHBOARD_PASSWORD || "VIBE-2026";
-
-const dashboardSessions = new Map();
-
-// ======================================================
-// COOKIES LESEN
-// ======================================================
-
-function parseCookies(req) {
-
-    const cookies = {};
-
-    const cookieHeader =
-        req.headers.cookie || "";
-
-    cookieHeader
-        .split(";")
-        .forEach(cookie => {
-
-            const parts =
-                cookie.split("=");
-
-            const key =
-                parts.shift()?.trim();
-
-            const value =
-                parts.join("=");
-
-            if (key) {
-
-                cookies[key] =
-                    decodeURIComponent(
-                        value || ""
-                    );
-
-            }
-
-        });
-
-    return cookies;
-
-}
-
-// ======================================================
-// LOGIN PRÜFEN
-// ======================================================
-
-function isDashboardAuthenticated(req) {
-
-    const cookies =
-        parseCookies(req);
-
-    const token =
-        cookies.vibe_dashboard_session;
-
-    if (!token) {
-        return false;
-    }
-
-    const expires =
-        dashboardSessions.get(token);
-
-    if (!expires) {
-        return false;
-    }
-
-    if (Date.now() > expires) {
-
-        dashboardSessions.delete(token);
-
-        return false;
-
-    }
-
+// Alle Bot-Funktionen sind dauerhaft aktiv.
+function isFeatureEnabled() {
     return true;
-
 }
-
-// ======================================================
-// LOGIN SEITE
-// ======================================================
-
-function dashboardLoginHtml(error = "") {
-
-    return `
-<!DOCTYPE html>
-
-<html lang="de">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>VIBE Bot Login</title>
-
-    <style>
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-
-            margin: 0;
-
-            min-height: 100vh;
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-
-            background:
-                #080b12;
-
-            color:
-                white;
-
-        }
-
-        .login {
-
-            width:
-                400px;
-
-            max-width:
-                calc(100% - 30px);
-
-            padding:
-                35px;
-
-            border-radius:
-                20px;
-
-            background:
-                #111722;
-
-            border:
-                1px solid #242d3d;
-
-        }
-
-        .logo {
-
-            width:
-                55px;
-
-            height:
-                55px;
-
-            margin-bottom:
-                20px;
-
-            display:
-                flex;
-
-            align-items:
-                center;
-
-            justify-content:
-                center;
-
-            border-radius:
-                15px;
-
-            background:
-                #5865f2;
-
-            font-size:
-                24px;
-
-            font-weight:
-                bold;
-
-        }
-
-        h1 {
-
-            margin:
-                0 0 5px;
-
-        }
-
-        .description {
-
-            margin-bottom:
-                25px;
-
-            color:
-                #8f9bb0;
-
-        }
-
-        label {
-
-            display:
-                block;
-
-            margin-top:
-                16px;
-
-            margin-bottom:
-                7px;
-
-            font-size:
-                14px;
-
-            color:
-                #c3cada;
-
-        }
-
-        input {
-
-            width:
-                100%;
-
-            padding:
-                13px;
-
-            border:
-                1px solid #2d3749;
-
-            border-radius:
-                10px;
-
-            outline:
-                none;
-
-            background:
-                #090e17;
-
-            color:
-                white;
-
-            font-size:
-                15px;
-
-        }
-
-        input:focus {
-
-            border-color:
-                #5865f2;
-
-        }
-
-        button {
-
-            width:
-                100%;
-
-            margin-top:
-                22px;
-
-            padding:
-                13px;
-
-            border:
-                none;
-
-            border-radius:
-                10px;
-
-            cursor:
-                pointer;
-
-            background:
-                #5865f2;
-
-            color:
-                white;
-
-            font-size:
-                15px;
-
-            font-weight:
-                bold;
-
-        }
-
-        button:hover {
-
-            background:
-                #4752c4;
-
-        }
-
-        .error {
-
-            margin-top:
-                15px;
-
-            padding:
-                10px;
-
-            border-radius:
-                8px;
-
-            background:
-                #3b171d;
-
-            color:
-                #ff98a5;
-
-        }
-
-    </style>
-
-</head>
-
-<body>
-
-    <div class="login">
-
-        <div class="logo">
-            V
-        </div>
-
-        <h1>
-            VIBE Bot
-        </h1>
-
-        <div class="description">
-            Admin Dashboard
-        </div>
-
-        ${
-            error
-                ? `<div class="error">${error}</div>`
-                : ""
-        }
-
-        <form
-            method="POST"
-            action="/dashboard/login"
-        >
-
-            <label>
-                Benutzername
-            </label>
-
-            <input
-                type="text"
-                name="username"
-                autocomplete="username"
-                required
-            >
-
-            <label>
-                Passwort
-            </label>
-
-            <input
-                type="password"
-                name="password"
-                autocomplete="current-password"
-                required
-            >
-
-            <button type="submit">
-                Einloggen
-            </button>
-
-        </form>
-
-    </div>
-
-</body>
-
-</html>
-`;
-
-}
-
-// ======================================================
-// DASHBOARD SEITE
-// ======================================================
-
-function dashboardHtml() {
-
-    return `
-<!DOCTYPE html>
-
-<html lang="de">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
-
-    <title>
-        VIBE Bot Dashboard
-    </title>
-
-    <style>
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-
-            margin: 0;
-
-            background:
-                #080b12;
-
-            color:
-                white;
-
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-
-        }
-
-        header {
-
-            height:
-                70px;
-
-            padding:
-                0 30px;
-
-            display:
-                flex;
-
-            align-items:
-                center;
-
-            justify-content:
-                space-between;
-
-            background:
-                #0d121c;
-
-            border-bottom:
-                1px solid #222b3b;
-
-        }
-
-        .brand {
-
-            display:
-                flex;
-
-            align-items:
-                center;
-
-            gap:
-                12px;
-
-        }
-
-        .logo {
-
-            width:
-                42px;
-
-            height:
-                42px;
-
-            display:
-                flex;
-
-            align-items:
-                center;
-
-            justify-content:
-                center;
-
-            border-radius:
-                12px;
-
-            background:
-                #5865f2;
-
-            font-weight:
-                bold;
-
-        }
-
-        .online {
-
-            color:
-                #57f287;
-
-        }
-
-        main {
-
-            max-width:
-                1400px;
-
-            margin:
-                auto;
-
-            padding:
-                30px;
-
-        }
-
-        h1 {
-
-            margin-top:
-                0;
-
-        }
-
-        .cards {
-
-            display:
-                grid;
-
-            grid-template-columns:
-                repeat(
-                    auto-fit,
-                    minmax(
-                        210px,
-                        1fr
-                    )
-                );
-
-            gap:
-                16px;
-
-            margin-top:
-                25px;
-
-        }
-
-        .card {
-
-            padding:
-                20px;
-
-            border-radius:
-                15px;
-
-            border:
-                1px solid #222b3b;
-
-            background:
-                #111722;
-
-        }
-
-        .card-title {
-
-            color:
-                #8d99ad;
-
-            font-size:
-                13px;
-
-            margin-bottom:
-                10px;
-
-        }
-
-        .value {
-
-            font-size:
-                24px;
-
-            font-weight:
-                bold;
-
-        }
-
-        .section {
-
-            margin-top:
-                25px;
-
-            padding:
-                20px;
-
-            border:
-                1px solid #222b3b;
-
-            border-radius:
-                15px;
-
-            background:
-                #111722;
-
-        }
-
-        .modules {
-
-            display:
-                grid;
-
-            grid-template-columns:
-                repeat(
-                    auto-fit,
-                    minmax(
-                        240px,
-                        1fr
-                    )
-                );
-
-            gap:
-                12px;
-
-        }
-
-        .module {
-
-            display:
-                flex;
-
-            align-items:
-                center;
-
-            justify-content:
-                space-between;
-
-            padding:
-                15px;
-
-            background:
-                #0b1019;
-
-            border:
-                1px solid #252e40;
-
-            border-radius:
-                10px;
-
-        }
-
-        .switch {
-
-            position:
-                relative;
-
-            width:
-                50px;
-
-            height:
-                27px;
-
-        }
-
-        .switch input {
-
-            display:
-                none;
-
-        }
-
-        .slider {
-
-            position:
-                absolute;
-
-            inset:
-                0;
-
-            cursor:
-                pointer;
-
-            border-radius:
-                50px;
-
-            background:
-                #343d4d;
-
-            transition:
-                0.2s;
-
-        }
-
-        .slider:before {
-
-            content:
-                "";
-
-            position:
-                absolute;
-
-            width:
-                21px;
-
-            height:
-                21px;
-
-            left:
-                3px;
-
-            top:
-                3px;
-
-            border-radius:
-                50%;
-
-            background:
-                white;
-
-            transition:
-                0.2s;
-
-        }
-
-        input:checked + .slider {
-
-            background:
-                #5865f2;
-
-        }
-
-        input:checked + .slider:before {
-
-            transform:
-                translateX(
-                    23px
-                );
-
-        }
-
-        button {
-
-            border:
-                none;
-
-            padding:
-                11px 16px;
-
-            border-radius:
-                9px;
-
-            cursor:
-                pointer;
-
-            color:
-                white;
-
-            background:
-                #5865f2;
-
-        }
-
-        button:hover {
-
-            background:
-                #4752c4;
-
-        }
-
-        input[type="text"] {
-
-            width:
-                100%;
-
-            padding:
-                11px;
-
-            margin-top:
-                7px;
-
-            color:
-                white;
-
-            background:
-                #090e17;
-
-            border:
-                1px solid #2a3445;
-
-            border-radius:
-                8px;
-
-        }
-
-        .logout {
-
-            color:
-                #ff7b8d;
-
-            text-decoration:
-                none;
-
-        }
-
-        .message {
-
-            margin-top:
-                10px;
-
-            color:
-                #57f287;
-
-        }
-
-    </style>
-
-</head>
-
-<body>
-
-<header>
-
-    <div class="brand">
-
-        <div class="logo">
-            V
-        </div>
-
-        <div>
-
-            <b>
-                VIBE Bot
-            </b>
-
-            <div class="online">
-                ● Online
-            </div>
-
-        </div>
-
-    </div>
-
-    <a
-        href="/logout"
-        class="logout"
-    >
-        Ausloggen
-    </a>
-
-</header>
-
-<main>
-
-    <h1>
-        Dashboard
-    </h1>
-
-    <div>
-        Bot Verwaltung & Einstellungen
-    </div>
-
-    <div class="cards">
-
-        <div class="card">
-
-            <div class="card-title">
-                BOT STATUS
-            </div>
-
-            <div
-                class="value"
-                id="botStatus"
-            >
-                Laden...
-            </div>
-
-        </div>
-
-        <div class="card">
-
-            <div class="card-title">
-                PING
-            </div>
-
-            <div
-                class="value"
-                id="ping"
-            >
-                -
-            </div>
-
-        </div>
-
-        <div class="card">
-
-            <div class="card-title">
-                MITGLIEDER
-            </div>
-
-            <div
-                class="value"
-                id="members"
-            >
-                -
-            </div>
-
-        </div>
-
-        <div class="card">
-
-            <div class="card-title">
-                CHANNELS
-            </div>
-
-            <div
-                class="value"
-                id="channels"
-            >
-                -
-            </div>
-
-        </div>
-
-        <div class="card">
-
-            <div class="card-title">
-                UPTIME
-            </div>
-
-            <div
-                class="value"
-                id="uptime"
-            >
-                -
-            </div>
-
-        </div>
-
-        <div class="card">
-
-            <div class="card-title">
-                RAM
-            </div>
-
-            <div
-                class="value"
-                id="ram"
-            >
-                -
-            </div>
-
-        </div>
-
-    </div>
-
-    <div class="section">
-
-        <h2>
-            Bot Funktionen
-        </h2>
-
-        <div class="modules">
-
-            ${createSwitch(
-                "tickets",
-                "Ticket System"
-            )}
-
-            ${createSwitch(
-                "giveaways",
-                "Giveaways"
-            )}
-
-            ${createSwitch(
-                "counting",
-                "Counting"
-            )}
-
-            ${createSwitch(
-                "welcome",
-                "Welcome System"
-            )}
-
-            ${createSwitch(
-                "supportVoice",
-                "Support Warteraum"
-            )}
-
-            ${createSwitch(
-                "clear",
-                "/clear"
-            )}
-
-            ${createSwitch(
-                "serverLogs",
-                "Server Logs"
-            )}
-
-            ${createSwitch(
-                "memberLogs",
-                "Member Logs"
-            )}
-
-            ${createSwitch(
-                "moderationLogs",
-                "Moderation Logs"
-            )}
-
-            ${createSwitch(
-                "voiceLogs",
-                "Voice Logs"
-            )}
-
-            ${createSwitch(
-                "channelLogs",
-                "Channel Logs"
-            )}
-
-            ${createSwitch(
-                "messageLogs",
-                "Message Logs"
-            )}
-
-        </div>
-
-        <div
-            class="message"
-            id="saveMessage"
-        ></div>
-
-    </div>
-
-    <div class="section">
-
-        <h2>
-            Nachricht senden
-        </h2>
-
-        <label>
-            Discord Channel-ID
-        </label>
-
-        <input
-            id="announcementChannel"
-            type="text"
-            placeholder="148858..."
-        >
-
-        <br><br>
-
-        <label>
-            Nachricht
-        </label>
-
-        <input
-            id="announcementText"
-            type="text"
-            placeholder="Deine Nachricht..."
-        >
-
-        <br><br>
-
-        <button id="sendAnnouncement">
-            Nachricht senden
-        </button>
-
-        <div
-            class="message"
-            id="announcementMessage"
-        ></div>
-
-    </div>
-
-    <div class="section">
-
-        <h2>
-            Bot Aktionen
-        </h2>
-
-        <button id="reloadCommands">
-            Slash Commands neu laden
-        </button>
-
-    </div>
-
-</main>
-
-<script>
-
-const switches =
-    document.querySelectorAll(
-        "[data-feature]"
-    );
-
-async function loadStatus() {
-
-    try {
-
-        const response =
-            await fetch(
-                "/api/dashboard/status"
-            );
-
-        if (!response.ok) {
-            return;
-        }
-
-        const data =
-            await response.json();
-
-        document.getElementById(
-            "botStatus"
-        ).textContent =
-            data.bot.ready
-                ? "Online"
-                : "Offline";
-
-        document.getElementById(
-            "ping"
-        ).textContent =
-            data.bot.ping >= 0
-                ? data.bot.ping + " ms"
-                : "-";
-
-        document.getElementById(
-            "members"
-        ).textContent =
-            data.guild.members ?? "-";
-
-        document.getElementById(
-            "channels"
-        ).textContent =
-            data.guild.channels ?? "-";
-
-        document.getElementById(
-            "ram"
-        ).textContent =
-            data.system.memoryMb +
-            " MB";
-
-        const seconds =
-            Math.floor(
-                data.system.uptime
-            );
-
-        const hours =
-            Math.floor(
-                seconds / 3600
-            );
-
-        const minutes =
-            Math.floor(
-                (
-                    seconds % 3600
-                ) / 60
-            );
-
-        document.getElementById(
-            "uptime"
-        ).textContent =
-            hours +
-            "h " +
-            minutes +
-            "m";
-
-        for (
-            const feature
-            of switches
-        ) {
-
-            const name =
-                feature.dataset.feature;
-
-            feature.checked =
-                data.config.features[
-                    name
-                ] !== false;
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            error
-        );
-
-    }
-
-}
-
-async function saveFeatures() {
-
-    const features = {};
-
-    for (
-        const feature
-        of switches
-    ) {
-
-        features[
-            feature.dataset.feature
-        ] =
-            feature.checked;
-
-    }
-
-    const response =
-        await fetch(
-            "/api/dashboard/config",
-            {
-
-                method:
-                    "POST",
-
-                headers: {
-
-                    "Content-Type":
-                        "application/json"
-
-                },
-
-                body:
-                    JSON.stringify({
-                        features
-                    })
-
-            }
-        );
-
-    const result =
-        await response.json();
-
-    const message =
-        document.getElementById(
-            "saveMessage"
-        );
-
-    if (result.ok) {
-
-        message.textContent =
-            "✅ Einstellungen gespeichert.";
-
-    } else {
-
-        message.textContent =
-            "❌ " +
-            (
-                result.error ||
-                "Fehler"
-            );
-
-    }
-
-}
-
-for (
-    const feature
-    of switches
-) {
-
-    feature.addEventListener(
-        "change",
-        saveFeatures
-    );
-
-}
-
-document
-    .getElementById(
-        "sendAnnouncement"
-    )
-    .addEventListener(
-        "click",
-        async () => {
-
-            const channelId =
-                document
-                    .getElementById(
-                        "announcementChannel"
-                    )
-                    .value
-                    .trim();
-
-            const message =
-                document
-                    .getElementById(
-                        "announcementText"
-                    )
-                    .value
-                    .trim();
-
-            const response =
-                await fetch(
-                    "/api/dashboard/action/announcement",
-                    {
-
-                        method:
-                            "POST",
-
-                        headers: {
-
-                            "Content-Type":
-                                "application/json"
-
-                        },
-
-                        body:
-                            JSON.stringify({
-                                channelId,
-                                message
-                            })
-
-                    }
-                );
-
-            const result =
-                await response.json();
-
-            document
-                .getElementById(
-                    "announcementMessage"
-                )
-                .textContent =
-                    result.ok
-                        ? "✅ Nachricht gesendet."
-                        : "❌ " +
-                            (
-                                result.error ||
-                                "Fehler"
-                            );
-
-        }
-    );
-
-document
-    .getElementById(
-        "reloadCommands"
-    )
-    .addEventListener(
-        "click",
-        async () => {
-
-            const response =
-                await fetch(
-                    "/api/dashboard/action/register-commands",
-                    {
-                        method:
-                            "POST"
-                    }
-                );
-
-            const result =
-                await response.json();
-
-            alert(
-                result.ok
-                    ? "✅ Commands neu geladen."
-                    : "❌ " +
-                        (
-                            result.error ||
-                            "Fehler"
-                        )
-            );
-
-        }
-    );
-
-loadStatus();
-
-setInterval(
-    loadStatus,
-    5000
-);
-
-</script>
-
-</body>
-
-</html>
-`;
-
-}
-
-// ======================================================
-// SWITCH HTML
-// ======================================================
-
-function createSwitch(
-    id,
-    name
-) {
-
-    return `
-
-<div class="module">
-
-    <span>
-        ${name}
-    </span>
-
-    <label class="switch">
-
-        <input
-            type="checkbox"
-            data-feature="${id}"
-            checked
-        >
-
-        <span class="slider">
-        </span>
-
-    </label>
-
-</div>
-
-`;
-
-}
-
-// ======================================================
-// DASHBOARD KONFIG
-// ======================================================
-
-const dashboardConfig = {
-
-    features: {
-
-        tickets:
-            true,
-
-        giveaways:
-            true,
-
-        counting:
-            true,
-
-        welcome:
-            true,
-
-        supportVoice:
-            true,
-
-        clear:
-            true,
-
-        serverLogs:
-            true,
-
-        memberLogs:
-            true,
-
-        moderationLogs:
-            true,
-
-        voiceLogs:
-            true,
-
-        channelLogs:
-            true,
-
-        messageLogs:
-            true
-
-    }
-
-};
-
-function isFeatureEnabled(
-    name
-) {
-
-    return (
-        dashboardConfig.features[
-            name
-        ] !== false
-    );
-
-}
-
-// ======================================================
-// LOGIN POST
-// ======================================================
-
-app.post(
-    "/dashboard/login",
-    (req, res) => {
-
-        const username =
-            String(
-                req.body.username ||
-                ""
-            );
-
-        const password =
-            String(
-                req.body.password ||
-                ""
-            );
-
-        if (
-            username !==
-                DASHBOARD_USER ||
-            password !==
-                DASHBOARD_PASSWORD
-        ) {
-
-            return res
-                .status(401)
-                .send(
-                    dashboardLoginHtml(
-                        "Benutzername oder Passwort falsch."
-                    )
-                );
-
-        }
-
-        const token =
-            crypto
-                .randomBytes(32)
-                .toString("hex");
-
-        dashboardSessions.set(
-
-            token,
-
-            Date.now() +
-            24 *
-            60 *
-            60 *
-            1000
-
-        );
-
-        res.setHeader(
-
-            "Set-Cookie",
-
-            `vibe_dashboard_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`
-
-        );
-
-        console.log(
-            "🔐 Dashboard Login erfolgreich."
-        );
-
-        return res.redirect("/");
-
-    }
-);
-
-// ======================================================
-// LOGOUT
-// ======================================================
-
-app.get(
-    "/logout",
-    (req, res) => {
-
-        const cookies =
-            parseCookies(req);
-
-        if (
-            cookies
-                .vibe_dashboard_session
-        ) {
-
-            dashboardSessions.delete(
-
-                cookies
-                    .vibe_dashboard_session
-
-            );
-
-        }
-
-        res.setHeader(
-
-            "Set-Cookie",
-
-            "vibe_dashboard_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
-
-        );
-
-        res.redirect("/");
-
-    }
-);
-
-// ======================================================
-// HAUPTSEITE
-// DAS IST DIE WICHTIGE ROUTE FÜR:
-// https://farm-bot-sx00.onrender.com/
-// ======================================================
 
 app.get(
     "/",
     (req, res) => {
-
-        if (
-            !isDashboardAuthenticated(
-                req
-            )
-        ) {
-
-            return res
-                .status(200)
-                .send(
-                    dashboardLoginHtml()
-                );
-
-        }
-
-        return res
-            .status(200)
-            .send(
-                dashboardHtml()
-            );
-
+        res.status(200).send("VIBE Bot ist online.");
     }
 );
-
-// ======================================================
-// /LOGIN AUCH ERLAUBEN
-// ======================================================
-
-app.get(
-    "/login",
-    (req, res) => {
-
-        return res.redirect(
-            "/"
-        );
-
-    }
-);
-
-// ======================================================
-// /DASHBOARD AUCH ERLAUBEN
-// ======================================================
-
-app.get(
-    "/dashboard",
-    (req, res) => {
-
-        return res.redirect(
-            "/"
-        );
-
-    }
-);
-
-// ======================================================
-// DASHBOARD AUTH FÜR API
-// ======================================================
-
-function requireDashboardAuth(
-    req,
-    res,
-    next
-) {
-
-    if (
-        !isDashboardAuthenticated(
-            req
-        )
-    ) {
-
-        return res
-            .status(401)
-            .json({
-
-                ok:
-                    false,
-
-                error:
-                    "Nicht eingeloggt"
-
-            });
-
-    }
-
-    next();
-
-}
-
-// ======================================================
-// HEALTH
-// ======================================================
 
 app.get(
     "/health",
     (req, res) => {
-
         res.status(200).json({
-
-            status:
-                "online",
-
-            bot:
-                typeof client !==
-                    "undefined" &&
-                client?.user?.tag
-                    ? client.user.tag
-                    : "starting"
-
+            status: "online",
+            service: "VIBE Bot"
         });
-
     }
 );
-
-// ======================================================
-// STATUS API
-// ======================================================
-
-app.get(
-    "/api/dashboard/status",
-    requireDashboardAuth,
-    async (req, res) => {
-
-        try {
-
-            const ready =
-                client.isReady();
-
-            const guild =
-                client.guilds.cache.get(
-                    GUILD_ID
-                );
-
-            return res.json({
-
-                ok:
-                    true,
-
-                bot: {
-
-                    ready,
-
-                    tag:
-                        client.user?.tag ||
-                        "starting",
-
-                    ping:
-                        ready
-                            ? Math.round(
-                                client.ws.ping
-                            )
-                            : -1
-
-                },
-
-                guild: {
-
-                    members:
-                        guild?.memberCount ??
-                        0,
-
-                    channels:
-                        guild?.channels
-                            ?.cache
-                            ?.size ??
-                        0
-
-                },
-
-                system: {
-
-                    uptime:
-                        process.uptime(),
-
-                    memoryMb:
-                        Math.round(
-
-                            process
-                                .memoryUsage()
-                                .rss /
-
-                            1024 /
-
-                            1024
-
-                        )
-
-                },
-
-                config:
-                    dashboardConfig
-
-            });
-
-        } catch (error) {
-
-            console.error(
-                "Dashboard Status Fehler:",
-                error
-            );
-
-            return res
-                .status(500)
-                .json({
-
-                    ok:
-                        false,
-
-                    error:
-                        "Status konnte nicht geladen werden."
-
-                });
-
-        }
-
-    }
-);
-
-// ======================================================
-// FUNKTIONEN AN/AUS
-// ======================================================
-
-app.post(
-    "/api/dashboard/config",
-    requireDashboardAuth,
-    (req, res) => {
-
-        if (
-            req.body &&
-            req.body.features
-        ) {
-
-            for (
-                const feature
-                of Object.keys(
-                    dashboardConfig.features
-                )
-            ) {
-
-                if (
-                    typeof req.body
-                        .features[
-                            feature
-                        ] ===
-                    "boolean"
-                ) {
-
-                    dashboardConfig
-                        .features[
-                            feature
-                        ] =
-                        req.body
-                            .features[
-                                feature
-                            ];
-
-                }
-
-            }
-
-        }
-
-        console.log(
-            "⚙️ Dashboard Einstellungen geändert:",
-            dashboardConfig.features
-        );
-
-        return res.json({
-
-            ok:
-                true,
-
-            config:
-                dashboardConfig
-
-        });
-
-    }
-);
-
-// ======================================================
-// ANNOUNCEMENT
-// ======================================================
-
-app.post(
-    "/api/dashboard/action/announcement",
-    requireDashboardAuth,
-    async (req, res) => {
-
-        try {
-
-            const channelId =
-                String(
-                    req.body.channelId ||
-                    ""
-                ).trim();
-
-            const message =
-                String(
-                    req.body.message ||
-                    ""
-                ).trim();
-
-            if (
-                !channelId ||
-                !message
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        ok:
-                            false,
-
-                        error:
-                            "Channel-ID und Nachricht fehlen."
-
-                    });
-
-            }
-
-            const channel =
-                await client.channels
-                    .fetch(
-                        channelId
-                    )
-                    .catch(
-                        () => null
-                    );
-
-            if (
-                !channel ||
-                !channel.isTextBased()
-            ) {
-
-                return res
-                    .status(404)
-                    .json({
-
-                        ok:
-                            false,
-
-                        error:
-                            "Channel nicht gefunden."
-
-                    });
-
-            }
-
-            await channel.send({
-
-                content:
-                    message,
-
-                allowedMentions: {
-
-                    parse:
-                        []
-
-                }
-
-            });
-
-            return res.json({
-
-                ok:
-                    true
-
-            });
-
-        } catch (error) {
-
-            console.error(
-                "Announcement Fehler:",
-                error
-            );
-
-            return res
-                .status(500)
-                .json({
-
-                    ok:
-                        false,
-
-                    error:
-                        "Nachricht konnte nicht gesendet werden."
-
-                });
-
-        }
-
-    }
-);
-
-// ======================================================
-// WICHTIG:
-// app.listen ERST NACH DEN ROUTES
-// ======================================================
 
 app.listen(
     PORT,
     () => {
-
         console.log(
-            `🌐 Dashboard/Webserver läuft auf Port ${PORT}`
+            `🌐 Health-Webserver läuft auf Port ${PORT}`
         );
-
-        console.log(
-            `🌐 Dashboard: https://farm-bot-sx00.onrender.com/`
-        );
-
     }
 );
 
@@ -2073,21 +74,21 @@ const CLIENT_ID =
     "1534585700408889466";
 
 const GUILD_ID =
-    "1488581484565500157";
+    "1540814913222746112";
 
 // ======================================================
 // WELCOME
 // ======================================================
 
 const WELCOME_CHANNEL_ID =
-    "1488581808470757468";
+    "1540814913755156532";
 
 // ======================================================
 // STAFF
 // ======================================================
 
 const STAFF_ROLE_ID =
-    "1488904093970858115";
+    "1540814913243586708";
 
 // ======================================================
 // SUPPORT
@@ -2097,10 +98,10 @@ const SUPPORT_ROLE_ID =
     STAFF_ROLE_ID;
 
 const SUPPORT_WARTE_RAUM_ID =
-    "1488584492628185293";
+    "1540814913985970306";
 
 const SUPPORT_LOG_CHANNEL_ID =
-    "1488584310385803416";
+    "1540814913985970305";
 
 // ======================================================
 // SERVER LOG
@@ -2108,23 +109,133 @@ const SUPPORT_LOG_CHANNEL_ID =
 
 const SERVER_LOG_CHANNEL_ID =
     process.env.SERVER_LOG_CHANNEL_ID ||
-    "1488584374554460372";
+    "1540814913985970304";
+
+// ======================================================
+// TEAM-ROLLEN NACHRICHTEN
+// HIER DIE ECHTEN DISCORD-IDs EINTRAGEN
+// ======================================================
+
+// Channel, in den die Team-Nachrichten gesendet werden:
+const TEAM_ROLE_MESSAGE_CHANNEL_ID =
+    "1540814913755156540";
+
+// Rollen:
+const CO_ANFUEHRER_ROLE_ID =
+    "1540814913264680961";
+
+const CLAN_MANAGER_ROLE_ID =
+    "1540814913264680960";
+
+const ADMIN_ROLE_ID =
+    "1540814913251836013";
+
+const DEV_ROLE_ID =
+    "1540814913251836012";
+
+const TEST_ADMIN_ROLE_ID =
+    "1540814913251836011";
+
+const MOD_ROLE_ID =
+    "1540814913251836009";
+
+const SUP_LEITUNG_ROLE_ID =
+    "1540814913251836007";
+
+const SUP_ROLE_ID =
+    "1540814913251836006";
+
+const BUILDER_LEITUNG_ROLE_ID =
+    "HIER_BUILDER_LEITUNG_ROLE_ID";
+
+const BUILDER_ROLE_ID =
+    "1540814913243586710";
+
+const FARMERLEITUNG_ROLE_ID =
+    "1540814913243586709";
+
+const FARMER_ROLE_ID =
+    "1540814913243586702";
+
+// Reihenfolge = Priorität, falls ein Mitglied mehrere Team-Rollen hat.
+const TEAM_ROLE_CONFIG = [
+    {
+        id: CO_ANFUEHRER_ROLE_ID,
+        name: "Co - Anführer",
+        placeText: "beim **VIBE Clan**"
+    },
+    {
+        id: CLAN_MANAGER_ROLE_ID,
+        name: "Clan Manager",
+        placeText: "beim **VIBE Clan**"
+    },
+    {
+        id: ADMIN_ROLE_ID,
+        name: "Admin",
+        placeText: "beim **VIBE Clan**"
+    },
+    {
+        id: DEV_ROLE_ID,
+        name: "Dev",
+        placeText: "beim **VIBE Clan**"
+    },
+    {
+        id: TEST_ADMIN_ROLE_ID,
+        name: "test Admin",
+        placeText: "beim **VIBE Clan**"
+    },
+    {
+        id: MOD_ROLE_ID,
+        name: "Mod",
+        placeText: "beim **VIBE Clan**"
+    },
+    {
+        id: SUP_LEITUNG_ROLE_ID,
+        name: "Sup leitung",
+        placeText: "beim **VIBE Clan**"
+    },
+    {
+        id: SUP_ROLE_ID,
+        name: "Sup",
+        placeText: "beim **VIBE Clan**"
+    },
+    {
+        id: BUILDER_LEITUNG_ROLE_ID,
+        name: "Builder leitung",
+        placeText: "bei der **VIBE Baufirma**"
+    },
+    {
+        id: BUILDER_ROLE_ID,
+        name: "Builder",
+        placeText: "bei der **VIBE Baufirma**"
+    },
+    {
+        id: FARMERLEITUNG_ROLE_ID,
+        name: "Farmerleitung",
+        placeText: "beim **VIBE Clan**"
+    },
+    {
+        id: FARMER_ROLE_ID,
+        name: "Farmer",
+        placeText: "beim **VIBE Clan**"
+    }
+];
 
 // ======================================================
 // TICKET KATEGORIEN
 // ======================================================
 
 const CLAN_CATEGORY_ID =
-    "1534287236407759040";
+    "1540814914719977547";
 
 const TEAM_CATEGORY_ID =
-    "1534287314464018655";
+    "1540814914719977548";
 
 const BAU_CATEGORY_ID =
-    "1534287374819917896";
+    "1540814914719977549";
 
 const GIVEAWAY_CATEGORY_ID =
-    "1538095441940447294";
+    "1540814914719977551";
 
 // ======================================================
 // COUNTING
@@ -2312,7 +423,7 @@ function getLogChannel(
 
 // ======================================================
 // LOG SENDEN
-// DASHBOARD SCHALTER WIRD BEACHTET
+// SERVER-LOGGING
 // ======================================================
 
 async function sendLog(
@@ -3103,70 +1214,6 @@ async function registerCommands() {
 }
 
 // ======================================================
-// DASHBOARD:
-// SLASH COMMANDS NEU LADEN
-// ======================================================
-
-app.post(
-    "/api/dashboard/action/register-commands",
-    requireDashboardAuth,
-    async (req, res) => {
-
-        try {
-
-            const success =
-                await registerCommands();
-
-            if (
-                !success
-            ) {
-
-                return res
-                    .status(500)
-                    .json({
-
-                        ok:
-                            false,
-
-                        error:
-                            "Commands konnten nicht registriert werden."
-
-                    });
-
-            }
-
-            return res.json({
-
-                ok:
-                    true
-
-            });
-
-        } catch (error) {
-
-            console.error(
-                "Dashboard Command Fehler:",
-                error
-            );
-
-            return res
-                .status(500)
-                .json({
-
-                    ok:
-                        false,
-
-                    error:
-                        "Fehler beim Neuladen der Commands."
-
-                });
-
-        }
-
-    }
-);
-
-// ======================================================
 // BOT READY
 // ======================================================
 
@@ -3192,10 +1239,6 @@ client.once(
 
         console.log(
             `🌐 Port: ${PORT}`
-        );
-
-        console.log(
-            `🌐 Dashboard: https://farm-bot-sx00.onrender.com/`
         );
 
         console.log(
@@ -3251,7 +1294,9 @@ client.login(
         );
 
     }
-);// ======================================================
+);
+
+// ======================================================
 // INTERACTIONS
 // ======================================================
 
@@ -3474,14 +1519,13 @@ client.on(
 
                     if (
                         !isFeatureEnabled(
-                            "counting"
-                        )
+                            "counting"                        )
                     ) {
 
                         return interaction.reply({
 
                             content:
-                                "❌ Das Counting-System ist im Dashboard deaktiviert.",
+                                "❌ Das Counting-System ist derzeit deaktiviert.",
 
                             flags:
                                 MessageFlags.Ephemeral
@@ -3617,7 +1661,7 @@ client.on(
                         return interaction.reply({
 
                             content:
-                                "❌ Das Logging ist im Dashboard deaktiviert.",
+                                "❌ Das Logging ist derzeit deaktiviert.",
 
                             flags:
                                 MessageFlags.Ephemeral
@@ -3716,7 +1760,7 @@ client.on(
                         return interaction.reply({
 
                             content:
-                                "❌ `/clear` ist im Dashboard deaktiviert.",
+                                "❌ `/clear` ist derzeit deaktiviert.",
 
                             flags:
                                 MessageFlags.Ephemeral
@@ -4974,7 +3018,7 @@ Dein Ticket wurde erfolgreich erstellt.
 
             // ==================================================
             // BUTTONS
-            // ==================================================
+            // ==================================================            // ==================================================
 
             if (
                 interaction.isButton()
@@ -5753,9 +3797,7 @@ async function endGiveaway(
             allowedMentions: {
 
                 users:
-                    winners
-
-            }
+                    winners            }
 
         });
 
@@ -5861,7 +3903,9 @@ function scheduleGiveawayEnd(
 
     scheduleNext();
 
-}// ======================================================
+}
+
+// ======================================================
 // SUPPORT VOICE WARTERAUM
 // ======================================================
 
@@ -5993,7 +4037,6 @@ client.on(
     }
 );
 
-
 // ======================================================
 // WELCOME SYSTEM
 // ======================================================
@@ -6078,7 +4121,6 @@ ${member.guild.memberCount}`
 
     }
 );
-
 
 // ======================================================
 // MEMBER JOIN LOG
@@ -6171,7 +4213,6 @@ client.on(
     }
 );
 
-
 // ======================================================
 // MEMBER LEAVE / KICK
 // ======================================================
@@ -6207,10 +4248,6 @@ client.on(
                     AuditLogEvent.MemberKick,
                     member.id
                 );
-
-            // ==================================================
-            // KICK
-            // ==================================================
 
             if (
                 entry
@@ -6268,10 +4305,6 @@ client.on(
                 return;
             }
 
-            // ==================================================
-            // NORMAL VERLASSEN
-            // ==================================================
-
             if (
                 !isFeatureEnabled(
                     "memberLogs"
@@ -6316,7 +4349,6 @@ client.on(
 
     }
 );
-
 
 // ======================================================
 // BAN
@@ -6411,7 +4443,6 @@ client.on(
     }
 );
 
-
 // ======================================================
 // UNBAN
 // ======================================================
@@ -6493,6 +4524,413 @@ client.on(
     }
 );
 
+// ======================================================
+// TEAM-ROLLEN: WILLKOMMEN / POSITION / VERLASSEN
+// ======================================================
+
+const pendingTeamRoleUpdates =
+    new Map();
+
+function getTrackedTeamRoleIds(
+    member
+) {
+
+    const roleIds =
+        new Set();
+
+    for (
+        const roleConfig
+        of TEAM_ROLE_CONFIG
+    ) {
+
+        if (
+            member.roles.cache.has(
+                roleConfig.id
+            )
+        ) {
+
+            roleIds.add(
+                roleConfig.id
+            );
+
+        }
+
+    }
+
+    return roleIds;
+
+}
+
+function setsEqual(
+    first,
+    second
+) {
+
+    if (
+        first.size !==
+        second.size
+    ) {
+        return false;
+    }
+
+    for (
+        const value
+        of first
+    ) {
+
+        if (
+            !second.has(
+                value
+            )
+        ) {
+            return false;
+        }
+
+    }
+
+    return true;
+
+}
+
+function getPrimaryTeamRole(
+    roleIds
+) {
+
+    return (
+        TEAM_ROLE_CONFIG.find(
+            role =>
+                roleIds.has(
+                    role.id
+                )
+        ) ||
+        null
+    );
+
+}
+
+async function sendTeamRoleMessage(
+    guild,
+    memberId,
+    type,
+    roleConfig = null
+) {
+
+    try {
+
+        const channel =
+            guild.channels.cache.get(
+                TEAM_ROLE_MESSAGE_CHANNEL_ID
+            ) ||
+            await guild.channels
+                .fetch(
+                    TEAM_ROLE_MESSAGE_CHANNEL_ID
+                )
+                .catch(
+                    () => null
+                );
+
+        if (
+            !channel ||
+            !channel.isTextBased()
+        ) {
+
+            console.log(
+                `⚠️ Team-Nachrichten-Channel nicht gefunden: ${TEAM_ROLE_MESSAGE_CHANNEL_ID}`
+            );
+
+            return;
+
+        }
+
+        let content =
+            "";
+
+        if (
+            type ===
+            "welcome" &&
+            roleConfig
+        ) {
+
+            content =
+`🎉 **Willkommen im Team!**
+
+<@${memberId}> ist ab sofort <@&${roleConfig.id}> ${roleConfig.placeText}.
+
+Wir freuen uns, dich im Team zu haben und wünschen dir viel Erfolg und vor allem viel Spaß bei deinen neuen Aufgaben! 🤝`;
+
+        } else if (
+            type ===
+            "position" &&
+            roleConfig
+        ) {
+
+            content =
+`🔄 **Neue Position!**
+
+<@${memberId}> übernimmt ab sofort die Position <@&${roleConfig.id}> ${roleConfig.placeText}.
+
+Wir wünschen dir viel Erfolg und vor allem viel Spaß bei deinen neuen Aufgaben! 🤝`;
+
+        } else if (
+            type ===
+            "leave"
+        ) {
+
+            content =
+`👋 **Danke für deine Zeit!**
+
+<@${memberId}> verlässt ab sofort das Team des **VIBE Clans**.
+
+Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren Weg alles Gute und viel Erfolg! 🤝`;
+
+        }
+
+        if (
+            !content
+        ) {
+            return;
+        }
+
+        await channel.send({
+            content,
+            allowedMentions: {
+                users: [
+                    memberId
+                ],
+                roles: []
+            }
+        });
+
+    } catch (error) {
+
+        console.error(
+            "❌ Team-Rollen-Nachricht Fehler:",
+            error
+        );
+
+    }
+
+}
+
+async function processTeamRoleUpdate(
+    key
+) {
+
+    const update =
+        pendingTeamRoleUpdates.get(
+            key
+        );
+
+    if (
+        !update
+    ) {
+        return;
+    }
+
+    pendingTeamRoleUpdates.delete(
+        key
+    );
+
+    const beforeRoleIds =
+        update.beforeRoleIds;
+
+    const afterRoleIds =
+        update.afterRoleIds;
+
+    if (
+        setsEqual(
+            beforeRoleIds,
+            afterRoleIds
+        )
+    ) {
+        return;
+    }
+
+    const addedRoleIds =
+        new Set(
+            [
+                ...afterRoleIds
+            ].filter(
+                id =>
+                    !beforeRoleIds.has(
+                        id
+                    )
+            )
+        );
+
+    const removedRoleIds =
+        new Set(
+            [
+                ...beforeRoleIds
+            ].filter(
+                id =>
+                    !afterRoleIds.has(
+                        id
+                    )
+            )
+        );
+
+    if (
+        beforeRoleIds.size === 0 &&
+        afterRoleIds.size > 0
+    ) {
+
+        const roleConfig =
+            getPrimaryTeamRole(
+                addedRoleIds.size > 0
+                    ? addedRoleIds
+                    : afterRoleIds
+            );
+
+        await sendTeamRoleMessage(
+            update.guild,
+            update.memberId,
+            "welcome",
+            roleConfig
+        );
+
+        return;
+
+    }
+
+    if (
+        beforeRoleIds.size > 0 &&
+        afterRoleIds.size === 0
+    ) {
+
+        await sendTeamRoleMessage(
+            update.guild,
+            update.memberId,
+            "leave"
+        );
+
+        return;
+
+    }
+
+    if (
+        addedRoleIds.size > 0 ||
+        removedRoleIds.size > 0
+    ) {
+
+        const roleConfig =
+            getPrimaryTeamRole(
+                addedRoleIds.size > 0
+                    ? addedRoleIds
+                    : afterRoleIds
+            );
+
+        if (
+            roleConfig
+        ) {
+
+            await sendTeamRoleMessage(
+                update.guild,
+                update.memberId,
+                "position",
+                roleConfig
+            );
+
+        }
+
+    }
+
+}
+
+client.on(
+    Events.GuildMemberUpdate,
+    (before, after) => {
+
+        const beforeRoleIds =
+            getTrackedTeamRoleIds(
+                before
+            );
+
+        const afterRoleIds =
+            getTrackedTeamRoleIds(
+                after
+            );
+
+        if (
+            setsEqual(
+                beforeRoleIds,
+                afterRoleIds
+            )
+        ) {
+            return;
+        }
+
+        const key =
+            `${after.guild.id}:${after.id}`;
+
+        const existing =
+            pendingTeamRoleUpdates.get(
+                key
+            );
+
+        if (
+            existing
+        ) {
+
+            clearTimeout(
+                existing.timer
+            );
+
+            existing.afterRoleIds =
+                afterRoleIds;
+
+            existing.guild =
+                after.guild;
+
+            existing.memberId =
+                after.id;
+
+            existing.timer =
+                setTimeout(
+                    () => {
+                        processTeamRoleUpdate(
+                            key
+                        );
+                    },
+                    1500
+                );
+
+            return;
+
+        }
+
+        const update = {
+            guild:
+                after.guild,
+
+            memberId:
+                after.id,
+
+            beforeRoleIds,
+
+            afterRoleIds,
+
+            timer:
+                null
+        };
+
+        update.timer =
+            setTimeout(
+                () => {
+                    processTeamRoleUpdate(
+                        key
+                    );
+                },
+                1500
+            );
+
+        pendingTeamRoleUpdates.set(
+            key,
+            update
+        );
+
+    }
+);
 
 // ======================================================
 // NICKNAME + ROLLEN LOGGING
@@ -6511,10 +4949,6 @@ client.on(
             ) {
                 return;
             }
-
-            // ==================================================
-            // NICKNAME
-            // ==================================================
 
             if (
                 before.nickname !==
@@ -6595,10 +5029,6 @@ client.on(
                 );
 
             }
-
-            // ==================================================
-            // ROLLEN
-            // ==================================================
 
             const beforeRoles =
                 new Set(
@@ -6748,7 +5178,6 @@ client.on(
     }
 );
 
-
 // ======================================================
 // VOICE LOGGING
 // ======================================================
@@ -6776,10 +5205,6 @@ client.on(
             ) {
                 return;
             }
-
-            // ==================================================
-            // VOICE JOIN
-            // ==================================================
 
             if (
                 !before.channel &&
@@ -6817,10 +5242,6 @@ client.on(
 
             }
 
-            // ==================================================
-            // VOICE LEAVE
-            // ==================================================
-
             else if (
                 before.channel &&
                 !after.channel
@@ -6856,10 +5277,6 @@ client.on(
                 );
 
             }
-
-            // ==================================================
-            // VOICE MOVE
-            // ==================================================
 
             else if (
                 before.channel &&
@@ -6906,10 +5323,6 @@ client.on(
 
             }
 
-            // ==================================================
-            // SERVER MUTE
-            // ==================================================
-
             if (
                 before.serverMute !==
                 after.serverMute
@@ -6942,10 +5355,6 @@ client.on(
                 );
 
             }
-
-            // ==================================================
-            // SERVER DEAF
-            // ==================================================
 
             if (
                 before.serverDeaf !==
@@ -6991,7 +5400,6 @@ client.on(
 
     }
 );
-
 
 // ======================================================
 // CHANNEL CREATE
@@ -7088,7 +5496,6 @@ client.on(
 
     }
 );
-
 
 // ======================================================
 // CHANNEL DELETE
@@ -7189,7 +5596,6 @@ client.on(
     }
 );
 
-
 // ======================================================
 // CHANNEL UPDATE
 // ======================================================
@@ -7213,10 +5619,6 @@ client.on(
             ) {
                 return;
             }
-
-            // ==================================================
-            // CHANNEL NAME
-            // ==================================================
 
             if (
                 before.name !==
@@ -7265,10 +5667,6 @@ client.on(
 
             }
 
-            // ==================================================
-            // CHANNEL PERMISSIONS
-            // ==================================================
-
             if (
                 before.permissionOverwrites &&
                 after.permissionOverwrites &&
@@ -7310,7 +5708,6 @@ client.on(
 
     }
 );
-
 
 // ======================================================
 // MESSAGE DELETE LOG
@@ -7410,7 +5807,6 @@ client.on(
 
     }
 );
-
 
 // ======================================================
 // MESSAGE EDIT LOG
@@ -7535,7 +5931,6 @@ client.on(
     }
 );
 
-
 // ======================================================
 // DISCORD CLIENT ERROR
 // ======================================================
@@ -7551,7 +5946,6 @@ client.on(
 
     }
 );
-
 
 // ======================================================
 // DISCORD WARN
@@ -7569,7 +5963,6 @@ client.on(
     }
 );
 
-
 // ======================================================
 // UNHANDLED PROMISE REJECTION
 // ======================================================
@@ -7585,7 +5978,6 @@ process.on(
 
     }
 );
-
 
 // ======================================================
 // UNCAUGHT EXCEPTION
@@ -7603,15 +5995,14 @@ process.on(
     }
 );
 
-
 // ======================================================
 // START MELDUNG
 // ======================================================
 
 console.log(
-    "✅ VIBE Dashboard Systeme geladen."
+    "✅ VIBE Bot Systeme geladen."
 );
 
 console.log(
-    "🌐 Webseite: https://farm-bot-sx00.onrender.com/"
+    "✅ Team-Rollen-Nachrichten System geladen."
 );
