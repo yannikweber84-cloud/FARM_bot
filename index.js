@@ -981,9 +981,7 @@ function createGiveawayEmbed(
 
     return embed;
 
-}
-
-// ======================================================
+}// ======================================================
 // GEWINNER ZIEHEN
 // ======================================================
 
@@ -1519,7 +1517,8 @@ client.on(
 
                     if (
                         !isFeatureEnabled(
-                            "counting"                        )
+                            "counting"
+                        )
                     ) {
 
                         return interaction.reply({
@@ -2868,9 +2867,7 @@ Dein Ticket wurde erfolgreich erstellt.
 
                 return;
 
-            }
-
-            // ==================================================
+            }            // ==================================================
             // FORWARD USER SELECT
             // ==================================================
 
@@ -3018,7 +3015,7 @@ Dein Ticket wurde erfolgreich erstellt.
 
             // ==================================================
             // BUTTONS
-            // ==================================================            // ==================================================
+            // ==================================================
 
             if (
                 interaction.isButton()
@@ -3797,7 +3794,9 @@ async function endGiveaway(
             allowedMentions: {
 
                 users:
-                    winners            }
+                    winners
+
+            }
 
         });
 
@@ -4249,6 +4248,10 @@ client.on(
                     member.id
                 );
 
+            // ==================================================
+            // KICK
+            // ==================================================
+
             if (
                 entry
             ) {
@@ -4304,6 +4307,10 @@ client.on(
 
                 return;
             }
+
+            // ==================================================
+            // NORMAL VERLASSEN
+            // ==================================================
 
             if (
                 !isFeatureEnabled(
@@ -4522,9 +4529,7 @@ client.on(
         }
 
     }
-);
-
-// ======================================================
+);// ======================================================
 // TEAM-ROLLEN: WILLKOMMEN / POSITION / VERLASSEN
 // ======================================================
 
@@ -4645,6 +4650,10 @@ async function sendTeamRoleMessage(
         let content =
             "";
 
+        // ==================================================
+        // NEUES TEAMMITGLIED
+        // ==================================================
+
         if (
             type ===
             "welcome" &&
@@ -4658,7 +4667,13 @@ async function sendTeamRoleMessage(
 
 Wir freuen uns, dich im Team zu haben und wünschen dir viel Erfolg und vor allem viel Spaß bei deinen neuen Aufgaben! 🤝`;
 
-        } else if (
+        }
+
+        // ==================================================
+        // NEUE POSITION
+        // ==================================================
+
+        else if (
             type ===
             "position" &&
             roleConfig
@@ -4671,7 +4686,13 @@ Wir freuen uns, dich im Team zu haben und wünschen dir viel Erfolg und vor alle
 
 Wir wünschen dir viel Erfolg und vor allem viel Spaß bei deinen neuen Aufgaben! 🤝`;
 
-        } else if (
+        }
+
+        // ==================================================
+        // TEAM VERLASSEN
+        // ==================================================
+
+        else if (
             type ===
             "leave"
         ) {
@@ -4692,13 +4713,19 @@ Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren
         }
 
         await channel.send({
+
             content,
+
             allowedMentions: {
+
                 users: [
                     memberId
                 ],
+
                 roles: []
+
             }
+
         });
 
     } catch (error) {
@@ -4711,6 +4738,10 @@ Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren
     }
 
 }
+
+// ======================================================
+// TEAM-ROLLEN ÄNDERUNG VERARBEITEN
+// ======================================================
 
 async function processTeamRoleUpdate(
     key
@@ -4746,6 +4777,10 @@ async function processTeamRoleUpdate(
         return;
     }
 
+    // ==================================================
+    // NEU HINZUGEFÜGTE TEAM-ROLLEN
+    // ==================================================
+
     const addedRoleIds =
         new Set(
             [
@@ -4757,6 +4792,10 @@ async function processTeamRoleUpdate(
                     )
             )
         );
+
+    // ==================================================
+    // ENTFERNTE TEAM-ROLLEN
+    // ==================================================
 
     const removedRoleIds =
         new Set(
@@ -4770,6 +4809,10 @@ async function processTeamRoleUpdate(
             )
         );
 
+    // ==================================================
+    // ERSTE TEAM-ROLLE BEKOMMEN
+    // ==================================================
+
     if (
         beforeRoleIds.size === 0 &&
         afterRoleIds.size > 0
@@ -4782,16 +4825,26 @@ async function processTeamRoleUpdate(
                     : afterRoleIds
             );
 
-        await sendTeamRoleMessage(
-            update.guild,
-            update.memberId,
-            "welcome",
+        if (
             roleConfig
-        );
+        ) {
+
+            await sendTeamRoleMessage(
+                update.guild,
+                update.memberId,
+                "welcome",
+                roleConfig
+            );
+
+        }
 
         return;
 
     }
+
+    // ==================================================
+    // ALLE TEAM-ROLLEN VERLOREN
+    // ==================================================
 
     if (
         beforeRoleIds.size > 0 &&
@@ -4808,16 +4861,21 @@ async function processTeamRoleUpdate(
 
     }
 
+    // ==================================================
+    // FIX:
+    // NUR NACHRICHT SENDEN, WENN EINE NEUE ROLLE
+    // HINZUGEFÜGT WURDE.
+    //
+    // ALTE ROLLE ENTFERNEN = KEINE NACHRICHT.
+    // ==================================================
+
     if (
-        addedRoleIds.size > 0 ||
-        removedRoleIds.size > 0
+        addedRoleIds.size > 0
     ) {
 
         const roleConfig =
             getPrimaryTeamRole(
-                addedRoleIds.size > 0
-                    ? addedRoleIds
-                    : afterRoleIds
+                addedRoleIds
             );
 
         if (
@@ -4836,6 +4894,10 @@ async function processTeamRoleUpdate(
     }
 
 }
+
+// ======================================================
+// TEAM-ROLLEN EVENT
+// ======================================================
 
 client.on(
     Events.GuildMemberUpdate,
@@ -4868,6 +4930,10 @@ client.on(
                 key
             );
 
+        // ==================================================
+        // ES GIBT SCHON EINE ROLLENÄNDERUNG
+        // ==================================================
+
         if (
             existing
         ) {
@@ -4888,9 +4954,11 @@ client.on(
             existing.timer =
                 setTimeout(
                     () => {
+
                         processTeamRoleUpdate(
                             key
                         );
+
                     },
                     1500
                 );
@@ -4899,7 +4967,12 @@ client.on(
 
         }
 
+        // ==================================================
+        // NEUE ROLLENÄNDERUNG
+        // ==================================================
+
         const update = {
+
             guild:
                 after.guild,
 
@@ -4912,14 +4985,17 @@ client.on(
 
             timer:
                 null
+
         };
 
         update.timer =
             setTimeout(
                 () => {
+
                     processTeamRoleUpdate(
                         key
                     );
+
                 },
                 1500
             );
@@ -4949,6 +5025,10 @@ client.on(
             ) {
                 return;
             }
+
+            // ==================================================
+            // NICKNAME
+            // ==================================================
 
             if (
                 before.nickname !==
@@ -5029,6 +5109,10 @@ client.on(
                 );
 
             }
+
+            // ==================================================
+            // ROLLEN
+            // ==================================================
 
             const beforeRoles =
                 new Set(
@@ -5206,6 +5290,10 @@ client.on(
                 return;
             }
 
+            // ==================================================
+            // VOICE JOIN
+            // ==================================================
+
             if (
                 !before.channel &&
                 after.channel
@@ -5242,6 +5330,10 @@ client.on(
 
             }
 
+            // ==================================================
+            // VOICE LEAVE
+            // ==================================================
+
             else if (
                 before.channel &&
                 !after.channel
@@ -5277,6 +5369,10 @@ client.on(
                 );
 
             }
+
+            // ==================================================
+            // VOICE MOVE
+            // ==================================================
 
             else if (
                 before.channel &&
@@ -5323,6 +5419,10 @@ client.on(
 
             }
 
+            // ==================================================
+            // SERVER MUTE
+            // ==================================================
+
             if (
                 before.serverMute !==
                 after.serverMute
@@ -5355,6 +5455,10 @@ client.on(
                 );
 
             }
+
+            // ==================================================
+            // SERVER DEAF
+            // ==================================================
 
             if (
                 before.serverDeaf !==
@@ -5620,6 +5724,10 @@ client.on(
                 return;
             }
 
+            // ==================================================
+            // CHANNEL NAME
+            // ==================================================
+
             if (
                 before.name !==
                 after.name
@@ -5666,6 +5774,10 @@ client.on(
                 );
 
             }
+
+            // ==================================================
+            // PERMISSIONS
+            // ==================================================
 
             if (
                 before.permissionOverwrites &&
