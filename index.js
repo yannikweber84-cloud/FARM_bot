@@ -1306,64 +1306,26 @@ async function sendOrUpdateRules() {
 
         }
 
-        const guild =
-            client.guilds.cache.get(
-                GUILD_ID
-            ) ||
-            await client.guilds
-                .fetch(
-                    GUILD_ID
-                )
-                .catch(
-                    () => null
+       const channel =
+    client.channels.cache.get(
+        RULES_CHANNEL_ID
+    ) ||
+    await client.channels
+        .fetch(
+            RULES_CHANNEL_ID
+        )
+        .catch(
+            error => {
+
+                console.error(
+                    "❌ Regelwerk-Channel Fetch Fehler:",
+                    error
                 );
 
-        if (!guild) {
+                return null;
 
-            console.log(
-                `⚠️ Regelwerk: Server nicht gefunden: ${GUILD_ID}`
-            );
-
-            return;
-
-        }
-
-        const channel =
-            guild.channels.cache.get(
-                RULES_CHANNEL_ID
-            ) ||
-            await guild.channels
-                .fetch(
-                    RULES_CHANNEL_ID
-                )
-                .catch(
-                    () => null
-                );
-
-        if (
-            !channel ||
-            !channel.isTextBased() ||
-            typeof channel.send !==
-                "function"
-        ) {
-
-            console.log(
-                `⚠️ Regelwerk-Channel nicht gefunden: ${RULES_CHANNEL_ID}`
-            );
-
-            return;
-
-        }
-
-        let existingMessage =
-            null;
-
-        const pinnedMessages =
-            await channel.messages
-                .fetchPinned()
-                .catch(
-                    () => null
-                );
+            }
+        );
 
         if (pinnedMessages) {
 
