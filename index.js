@@ -74,21 +74,21 @@ const CLIENT_ID =
     "1534585700408889466";
 
 const GUILD_ID =
-    "1488581484565500157";
+    "1540814913222746112";
 
 // ======================================================
 // WELCOME
 // ======================================================
 
 const WELCOME_CHANNEL_ID =
-    "1488581808470757468";
+    "1540814913755156532";
 
 // ======================================================
 // STAFF
 // ======================================================
 
 const STAFF_ROLE_ID =
-    "1488904093970858115";
+    "1540814913243586708";
 
 // ======================================================
 // SUPPORT
@@ -98,10 +98,10 @@ const SUPPORT_ROLE_ID =
     STAFF_ROLE_ID;
 
 const SUPPORT_WARTE_RAUM_ID =
-    "1488584492628185293";
+    "1540814913985970306";
 
 const SUPPORT_LOG_CHANNEL_ID =
-    "1488584310385803416";
+    "1540814913985970305";
 
 // ======================================================
 // SERVER LOG
@@ -109,7 +109,15 @@ const SUPPORT_LOG_CHANNEL_ID =
 
 const SERVER_LOG_CHANNEL_ID =
     process.env.SERVER_LOG_CHANNEL_ID ||
-    "1488584374554460372";
+    "1540814913985970304";
+
+// ======================================================
+// CLAN x SHOP REGELWERK
+// ======================================================
+
+// HIER die Channel-ID eintragen, in den das Regelwerk soll.
+const RULES_CHANNEL_ID =
+    "HIER_REGELWERK_CHANNEL_ID_EINTRAGEN";
 
 // ======================================================
 // TEAM-ROLLEN NACHRICHTEN
@@ -118,44 +126,44 @@ const SERVER_LOG_CHANNEL_ID =
 
 // Channel, in den die Team-Nachrichten gesendet werden:
 const TEAM_ROLE_MESSAGE_CHANNEL_ID =
-    "1488583756448006224";
+    "1540814913755156540";
 
 // Rollen:
 const CO_ANFUEHRER_ROLE_ID =
-    "1488901953202294854";
+    "1540814913264680961";
 
 const CLAN_MANAGER_ROLE_ID =
-    "1535410177069809685";
+    "1540814913264680960";
 
 const ADMIN_ROLE_ID =
-    "1488902628325855424";
+    "1540814913251836013";
 
 const DEV_ROLE_ID =
-    "1537884167851872369";
+    "1540814913251836012";
 
 const TEST_ADMIN_ROLE_ID =
-    "1534222098720100533";
+    "1540814913251836011";
 
 const MOD_ROLE_ID =
-    "1488903101233500241";
+    "1540814913251836009";
 
 const SUP_LEITUNG_ROLE_ID =
-    "1488903601509240872";
+    "1540814913251836007";
 
 const SUP_ROLE_ID =
-    "1488903735802331176";
+    "1540814913251836006";
 
 const BUILDER_LEITUNG_ROLE_ID =
-    "1488904459936600215";
+    "HIER_BUILDER_LEITUNG_ROLE_ID";
 
 const BUILDER_ROLE_ID =
-    "1488904584700362792";
+    "1540814913243586710";
 
 const FARMERLEITUNG_ROLE_ID =
-    "1488904798110613807";
+    "1540814913243586709";
 
 const FARMER_ROLE_ID =
-    "1488904885960315020";
+    "1540814913243586702";
 
 // Reihenfolge = Priorität, falls ein Mitglied mehrere Team-Rollen hat.
 const TEAM_ROLE_CONFIG = [
@@ -226,16 +234,16 @@ const TEAM_ROLE_CONFIG = [
 // ======================================================
 
 const CLAN_CATEGORY_ID =
-    "1534287236407759040";
+    "1540814914719977547";
 
 const TEAM_CATEGORY_ID =
-    "1534287314464018655";
+    "1540814914719977548";
 
 const BAU_CATEGORY_ID =
-    "1534287374819917896";
+    "1540814914719977549";
 
 const GIVEAWAY_CATEGORY_ID =
-    "1538095441940447294";
+    "1540814914719977551";
 
 // ======================================================
 // COUNTING
@@ -981,7 +989,9 @@ function createGiveawayEmbed(
 
     return embed;
 
-}// ======================================================
+}
+
+// ======================================================
 // GEWINNER ZIEHEN
 // ======================================================
 
@@ -1212,6 +1222,284 @@ async function registerCommands() {
 }
 
 // ======================================================
+// CLAN x SHOP REGELWERK SENDEN / AKTUALISIEREN
+// ======================================================
+
+const RULES_EMBED_TITLE =
+    "📜 VIBE Clan x Shop Regelwerk";
+
+const RULES_TEXT =
+`**Willkommen bei VIBE – halb Clan, halb Business. Heißt: wir zocken zusammen, aber hier wird auch gehandelt** 💸
+**Wenn du nur Chaos suchst → falscher Ort. Wenn du Cash + Community willst → bleib 👀**
+
+**1. 🧠 Respekt benutzen (wirklich jetzt)**
+**Kein unnötiges Geflame, kein dummes Rumgehate. Kunden werden nicht vergrault und Member auch nicht. Wer sich benimmt wie ein kompletter Clown, fliegt 🤡**
+
+**2. 💸 Scam = sofort Game Over**
+**Egal ob Clanmate oder Kunde – wer versucht abzuziehen, ist instant raus. Kein “Bro war Spaß” – wir sind kein Flohmarkt für Betrüger.**
+
+**3. 🛒 Shop = sauber & fair**
+**Preise bleiben fair, keine random Abzocke. Wenn du im Namen vom Clan handelst, dann ordentlich. Wir wollen Ruf, nicht Reports.**
+
+**4. ⏳ Aktiv sein oder Platz machen**
+**Wenn du inaktiv bist, bist du basically Deko. Sei online oder sag Bescheid – wir brauchen Member, keine Möbel 🪑💀**
+
+**5. 🤝 Clan > dein Solo Grind**
+**Ja, Geld ist nice – aber Clan geht vor. Unterstütz Member, hilf im Shop und spiel nicht nur deinen eigenen Film.**
+
+**6. 💥 Kein unnötiger Stress mit Kunden/Clans**
+**Kunden anpöbeln oder random Beef starten = maximal lost. Wenn’s Probleme gibt → ruhig klären oder Leitung regelt das.**
+
+**7. 📜 Serverregeln gelten – immer noch**
+**Alles, was gegen Serverregeln geht, geht auch gegen uns. Wer Stress macht, fliegt. Easy.**
+
+**8. 👑 Leitung macht die Ansagen**
+**Du kannst labern, aber die Leitung entscheidet. Wenn dir das nicht passt… ja gut, dann weißt du ja wo die Tür ist bro 🚪**
+
+**9. 📈 Ruf = alles**
+**Wir bauen hier was auf. Wenn du den Clan oder Shop schlecht dastehen lässt, bist du schneller raus als dein Kontostand nach nem Fehlkauf.**
+
+⚠️ **Wichtig:**
+**Die <@&1488901640521252864> <@&1488901953202294854> können das Regelwerk jederzeit ändern, erweitern oder komplett umbauen – also bleib up to date und tu nicht überrascht 😏**
+
+` + "`Die Clan - Teamler haben ihr eigenes Regelwerk, sie sind also aus diesem Regelwerk ausgenommen`" + `
+
+**MfG**
+<@&1488902497987727380>
+
+*Stand: 24.08.2026*
+<@&1488906111389274202> **bitte mit ✅ antworten**`;
+
+function createRulesEmbed() {
+
+    return new EmbedBuilder()
+
+        .setColor(
+            "#2B2D31"
+        )
+
+        .setTitle(
+            RULES_EMBED_TITLE
+        )
+
+        .setDescription(
+            RULES_TEXT
+        );
+
+}
+
+async function sendOrUpdateRules() {
+
+    try {
+
+        if (
+            !RULES_CHANNEL_ID ||
+            RULES_CHANNEL_ID ===
+                "HIER_REGELWERK_CHANNEL_ID_EINTRAGEN"
+        ) {
+
+            console.log(
+                "⚠️ Regelwerk-Channel-ID wurde noch nicht eingetragen."
+            );
+
+            return;
+
+        }
+
+        const guild =
+            client.guilds.cache.get(
+                GUILD_ID
+            ) ||
+            await client.guilds
+                .fetch(
+                    GUILD_ID
+                )
+                .catch(
+                    () => null
+                );
+
+        if (!guild) {
+
+            console.log(
+                `⚠️ Regelwerk: Server nicht gefunden: ${GUILD_ID}`
+            );
+
+            return;
+
+        }
+
+        const channel =
+            guild.channels.cache.get(
+                RULES_CHANNEL_ID
+            ) ||
+            await guild.channels
+                .fetch(
+                    RULES_CHANNEL_ID
+                )
+                .catch(
+                    () => null
+                );
+
+        if (
+            !channel ||
+            !channel.isTextBased() ||
+            typeof channel.send !==
+                "function"
+        ) {
+
+            console.log(
+                `⚠️ Regelwerk-Channel nicht gefunden: ${RULES_CHANNEL_ID}`
+            );
+
+            return;
+
+        }
+
+        let existingMessage =
+            null;
+
+        const pinnedMessages =
+            await channel.messages
+                .fetchPinned()
+                .catch(
+                    () => null
+                );
+
+        if (pinnedMessages) {
+
+            existingMessage =
+                pinnedMessages.find(
+                    message =>
+                        message.author.id ===
+                            client.user.id &&
+                        message.embeds.some(
+                            embed =>
+                                embed.title ===
+                                    RULES_EMBED_TITLE
+                        )
+                ) ||
+                null;
+
+        }
+
+        if (!existingMessage) {
+
+            const recentMessages =
+                await channel.messages
+                    .fetch({
+                        limit: 100
+                    })
+                    .catch(
+                        () => null
+                    );
+
+            if (recentMessages) {
+
+                existingMessage =
+                    recentMessages.find(
+                        message =>
+                            message.author.id ===
+                                client.user.id &&
+                            message.embeds.some(
+                                embed =>
+                                    embed.title ===
+                                        RULES_EMBED_TITLE
+                            )
+                    ) ||
+                    null;
+
+            }
+
+        }
+
+        const payload = {
+
+            content:
+                "@everyone",
+
+            allowedMentions: {
+                parse: [
+                    "everyone"
+                ]
+            },
+
+            embeds: [
+                createRulesEmbed()
+            ]
+
+        };
+
+        if (existingMessage) {
+
+            await existingMessage.edit(
+                payload
+            );
+
+            await existingMessage
+                .react(
+                    "✅"
+                )
+                .catch(
+                    () => {}
+                );
+
+            if (!existingMessage.pinned) {
+
+                await existingMessage
+                    .pin(
+                        "VIBE Clan x Shop Regelwerk"
+                    )
+                    .catch(
+                        () => {}
+                    );
+
+            }
+
+            console.log(
+                `✅ Regelwerk wurde aktualisiert: ${RULES_CHANNEL_ID}`
+            );
+
+            return;
+
+        }
+
+        const rulesMessage =
+            await channel.send(
+                payload
+            );
+
+        await rulesMessage
+            .react(
+                "✅"
+            )
+            .catch(
+                () => {}
+            );
+
+        await rulesMessage
+            .pin(
+                "VIBE Clan x Shop Regelwerk"
+            )
+            .catch(
+                () => {}
+            );
+
+        console.log(
+            `✅ Regelwerk wurde gesendet: ${RULES_CHANNEL_ID}`
+        );
+
+    } catch (error) {
+
+        console.error(
+            "❌ Regelwerk Fehler:",
+            error
+        );
+
+    }
+
+}
+
+// ======================================================
 // BOT READY
 // ======================================================
 
@@ -1258,6 +1546,8 @@ client.once(
         console.log("");
 
         await registerCommands();
+
+        await sendOrUpdateRules();
 
     }
 
@@ -2867,7 +3157,9 @@ Dein Ticket wurde erfolgreich erstellt.
 
                 return;
 
-            }            // ==================================================
+            }
+
+            // ==================================================
             // FORWARD USER SELECT
             // ==================================================
 
@@ -2912,8 +3204,7 @@ Dein Ticket wurde erfolgreich erstellt.
                             () => null
                         );
 
-                if (
-                    !selectedMember ||
+                if (                    !selectedMember ||
                     !isStaff(
                         selectedMember
                     )
@@ -4529,11 +4820,11 @@ client.on(
         }
 
     }
-);// ======================================================
-// TEAM-ROLLEN: WILLKOMMEN / POSITION / VERLASSEN
-// ======================================================
+);
 
-const pendingTeamRoleUpdates =
+// ======================================================
+// TEAM-ROLLEN: WILLKOMMEN / POSITION / VERLASSEN
+// ======================================================const pendingTeamRoleUpdates =
     new Map();
 
 function getTrackedTeamRoleIds(
@@ -4650,10 +4941,6 @@ async function sendTeamRoleMessage(
         let content =
             "";
 
-        // ==================================================
-        // NEUES TEAMMITGLIED
-        // ==================================================
-
         if (
             type ===
             "welcome" &&
@@ -4668,10 +4955,6 @@ async function sendTeamRoleMessage(
 Wir freuen uns, dich im Team zu haben und wünschen dir viel Erfolg und vor allem viel Spaß bei deinen neuen Aufgaben! 🤝`;
 
         }
-
-        // ==================================================
-        // NEUE POSITION
-        // ==================================================
 
         else if (
             type ===
@@ -4688,10 +4971,6 @@ Wir wünschen dir viel Erfolg und vor allem viel Spaß bei deinen neuen Aufgaben
 
         }
 
-        // ==================================================
-        // TEAM VERLASSEN
-        // ==================================================
-
         else if (
             type ===
             "leave"
@@ -4702,14 +4981,16 @@ Wir wünschen dir viel Erfolg und vor allem viel Spaß bei deinen neuen Aufgaben
 
 <@${memberId}> verlässt ab sofort das Team des **VIBE Clans**.
 
-Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren Weg alles Gute und viel Erfolg! 🤝`;
+Wir bedanken uns für deine Zeit und wünschen dir weiterhin viel Erfolg!`;
 
         }
 
         if (
             !content
         ) {
+
             return;
+
         }
 
         await channel.send({
@@ -4722,7 +5003,12 @@ Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren
                     memberId
                 ],
 
-                roles: []
+                roles:
+                    roleConfig
+                        ? [
+                            roleConfig.id
+                        ]
+                        : []
 
             }
 
@@ -4731,7 +5017,7 @@ Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren
     } catch (error) {
 
         console.error(
-            "❌ Team-Rollen-Nachricht Fehler:",
+            "❌ Teamrollen Nachricht Fehler:",
             error
         );
 
@@ -4740,958 +5026,277 @@ Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren
 }
 
 // ======================================================
-// TEAM-ROLLEN ÄNDERUNG VERARBEITEN
-// ======================================================
-
-async function processTeamRoleUpdate(
-    key
-) {
-
-    const update =
-        pendingTeamRoleUpdates.get(
-            key
-        );
-
-    if (
-        !update
-    ) {
-        return;
-    }
-
-    pendingTeamRoleUpdates.delete(
-        key
-    );
-
-    const beforeRoleIds =
-        update.beforeRoleIds;
-
-    const afterRoleIds =
-        update.afterRoleIds;
-
-    if (
-        setsEqual(
-            beforeRoleIds,
-            afterRoleIds
-        )
-    ) {
-        return;
-    }
-
-    // ==================================================
-    // NEU HINZUGEFÜGTE TEAM-ROLLEN
-    // ==================================================
-
-    const addedRoleIds =
-        new Set(
-            [
-                ...afterRoleIds
-            ].filter(
-                id =>
-                    !beforeRoleIds.has(
-                        id
-                    )
-            )
-        );
-
-    // ==================================================
-    // ENTFERNTE TEAM-ROLLEN
-    // ==================================================
-
-    const removedRoleIds =
-        new Set(
-            [
-                ...beforeRoleIds
-            ].filter(
-                id =>
-                    !afterRoleIds.has(
-                        id
-                    )
-            )
-        );
-
-    // ==================================================
-    // ERSTE TEAM-ROLLE BEKOMMEN
-    // ==================================================
-
-    if (
-        beforeRoleIds.size === 0 &&
-        afterRoleIds.size > 0
-    ) {
-
-        const roleConfig =
-            getPrimaryTeamRole(
-                addedRoleIds.size > 0
-                    ? addedRoleIds
-                    : afterRoleIds
-            );
-
-        if (
-            roleConfig
-        ) {
-
-            await sendTeamRoleMessage(
-                update.guild,
-                update.memberId,
-                "welcome",
-                roleConfig
-            );
-
-        }
-
-        return;
-
-    }
-
-    // ==================================================
-    // ALLE TEAM-ROLLEN VERLOREN
-    // ==================================================
-
-    if (
-        beforeRoleIds.size > 0 &&
-        afterRoleIds.size === 0
-    ) {
-
-        await sendTeamRoleMessage(
-            update.guild,
-            update.memberId,
-            "leave"
-        );
-
-        return;
-
-    }
-
-    // ==================================================
-    // FIX:
-    // NUR NACHRICHT SENDEN, WENN EINE NEUE ROLLE
-    // HINZUGEFÜGT WURDE.
-    //
-    // ALTE ROLLE ENTFERNEN = KEINE NACHRICHT.
-    // ==================================================
-
-    if (
-        addedRoleIds.size > 0
-    ) {
-
-        const roleConfig =
-            getPrimaryTeamRole(
-                addedRoleIds
-            );
-
-        if (
-            roleConfig
-        ) {
-
-            await sendTeamRoleMessage(
-                update.guild,
-                update.memberId,
-                "position",
-                roleConfig
-            );
-
-        }
-
-    }
-
-}
-
-// ======================================================
-// TEAM-ROLLEN EVENT
+// TEAM ROLLEN UPDATE
 // ======================================================
 
 client.on(
     Events.GuildMemberUpdate,
-    (before, after) => {
-
-        const beforeRoleIds =
-            getTrackedTeamRoleIds(
-                before
-            );
-
-        const afterRoleIds =
-            getTrackedTeamRoleIds(
-                after
-            );
-
-        if (
-            setsEqual(
-                beforeRoleIds,
-                afterRoleIds
-            )
-        ) {
-            return;
-        }
-
-        const key =
-            `${after.guild.id}:${after.id}`;
-
-        const existing =
-            pendingTeamRoleUpdates.get(
-                key
-            );
-
-        // ==================================================
-        // ES GIBT SCHON EINE ROLLENÄNDERUNG
-        // ==================================================
-
-        if (
-            existing
-        ) {
-
-            clearTimeout(
-                existing.timer
-            );
-
-            existing.afterRoleIds =
-                afterRoleIds;
-
-            existing.guild =
-                after.guild;
-
-            existing.memberId =
-                after.id;
-
-            existing.timer =
-                setTimeout(
-                    () => {
-
-                        processTeamRoleUpdate(
-                            key
-                        );
-
-                    },
-                    1500
-                );
-
-            return;
-
-        }
-
-        // ==================================================
-        // NEUE ROLLENÄNDERUNG
-        // ==================================================
-
-        const update = {
-
-            guild:
-                after.guild,
-
-            memberId:
-                after.id,
-
-            beforeRoleIds,
-
-            afterRoleIds,
-
-            timer:
-                null
-
-        };
-
-        update.timer =
-            setTimeout(
-                () => {
-
-                    processTeamRoleUpdate(
-                        key
-                    );
-
-                },
-                1500
-            );
-
-        pendingTeamRoleUpdates.set(
-            key,
-            update
-        );
-
-    }
-);
-
-// ======================================================
-// NICKNAME + ROLLEN LOGGING
-// ======================================================
-
-client.on(
-    Events.GuildMemberUpdate,
-    async (before, after) => {
+    async (
+        oldMember,
+        newMember
+    ) => {
 
         try {
 
+            const oldRoles =
+                getTrackedTeamRoleIds(
+                    oldMember
+                );
+
+            const newRoles =
+                getTrackedTeamRoleIds(
+                    newMember
+                );
+
             if (
-                !isFeatureEnabled(
-                    "memberLogs"
+                setsEqual(
+                    oldRoles,
+                    newRoles
                 )
             ) {
+
                 return;
-            }
-
-            // ==================================================
-            // NICKNAME
-            // ==================================================
-
-            if (
-                before.nickname !==
-                after.nickname
-            ) {
-
-                await new Promise(
-                    resolve =>
-                        setTimeout(
-                            resolve,
-                            1000
-                        )
-                );
-
-                const entry =
-                    await getAuditExecutor(
-                        after.guild,
-                        AuditLogEvent.MemberUpdate,
-                        after.id
-                    );
-
-                const embed =
-                    baseEmbed(
-                        "✏️ Nickname geändert",
-                        0x5865f2,
-                        "Der Nickname eines Mitglieds wurde geändert."
-                    );
-
-                embed.addFields(
-                    {
-                        name:
-                            "👤 Nutzer",
-
-                        value:
-                            `${after} (${after.id})`
-                    },
-                    {
-                        name:
-                            "📝 Vorher",
-
-                        value:
-                            safeText(
-                                before.nickname,
-                                before.user.username
-                            )
-                    },
-                    {
-                        name:
-                            "📝 Nachher",
-
-                        value:
-                            safeText(
-                                after.nickname,
-                                after.user.username
-                            )
-                    }
-                );
-
-                if (
-                    entry
-                ) {
-
-                    embed.addFields({
-                        name:
-                            "🛡️ Verantwortlicher",
-
-                        value:
-                            entry.executor
-                                ? `${entry.executor} (${entry.executor.id})`
-                                : "Unbekannt"
-                    });
-
-                }
-
-                await sendLog(
-                    after.guild,
-                    embed
-                );
 
             }
-
-            // ==================================================
-            // ROLLEN
-            // ==================================================
-
-            const beforeRoles =
-                new Set(
-                    before.roles.cache.map(
-                        role =>
-                            role.id
-                    )
-                );
-
-            const afterRoles =
-                new Set(
-                    after.roles.cache.map(
-                        role =>
-                            role.id
-                    )
-                );
 
             const addedRoles =
-                after.roles.cache.filter(
-                    role =>
-                        !beforeRoles.has(
-                            role.id
+                [
+                    ...newRoles
+                ].filter(
+                    id =>
+                        !oldRoles.has(
+                            id
                         )
                 );
 
             const removedRoles =
-                before.roles.cache.filter(
-                    role =>
-                        !afterRoles.has(
-                            role.id
+                [
+                    ...oldRoles
+                ].filter(
+                    id =>
+                        !newRoles.has(
+                            id
                         )
                 );
 
-            if (
-                addedRoles.size === 0 &&
-                removedRoles.size === 0
-            ) {
-                return;
-            }
+            // ==================================================
+            // NEUE ROLLE GEGEBEN
+            // ==================================================
 
-            await new Promise(
-                resolve =>
-                    setTimeout(
-                        resolve,
-                        1000
+            if (
+                addedRoles.length > 0
+            ) {
+
+                const key =
+                    `${newMember.guild.id}-${newMember.id}`;
+
+                if (
+                    pendingTeamRoleUpdates.has(
+                        key
                     )
-            );
+                ) {
 
-            const entry =
-                await getAuditExecutor(
-                    after.guild,
-                    AuditLogEvent.MemberRoleUpdate,
-                    after.id
-                );
-
-            const embed =
-                baseEmbed(
-                    "👥 Rollen aktualisiert",
-                    0x5865f2,
-                    "Die Rollen eines Mitglieds wurden geändert."
-                );
-
-            embed.addFields({
-                name:
-                    "👤 Nutzer",
-
-                value:
-                    `${after} (${after.id})`
-            });
-
-            if (
-                addedRoles.size > 0
-            ) {
-
-                embed.addFields({
-                    name:
-                        "✅ Hinzugefügt",
-
-                    value:
-                        addedRoles
-                            .map(
-                                role =>
-                                    role.toString()
-                            )
-                            .join("\n")
-                            .substring(
-                                0,
-                                1024
-                            )
-                });
-
-            }
-
-            if (
-                removedRoles.size > 0
-            ) {
-
-                embed.addFields({
-                    name:
-                        "❌ Entfernt",
-
-                    value:
-                        removedRoles
-                            .map(
-                                role =>
-                                    role.toString()
-                            )
-                            .join("\n")
-                            .substring(
-                                0,
-                                1024
-                            )
-                });
-
-            }
-
-            if (
-                entry
-            ) {
-
-                embed.addFields({
-                    name:
-                        "🛡️ Verantwortlicher",
-
-                    value:
-                        entry.executor
-                            ? `${entry.executor} (${entry.executor.id})`
-                            : "Unbekannt"
-                });
-
-            }
-
-            await sendLog(
-                after.guild,
-                embed
-            );
-
-        } catch (error) {
-
-            console.error(
-                "❌ Member Update Fehler:",
-                error
-            );
-
-        }
-
-    }
-);
-
-// ======================================================
-// VOICE LOGGING
-// ======================================================
-
-client.on(
-    Events.VoiceStateUpdate,
-    async (before, after) => {
-
-        try {
-
-            if (
-                !isFeatureEnabled(
-                    "voiceLogs"
-                )
-            ) {
-                return;
-            }
-
-            const member =
-                after.member ||
-                before.member;
-
-            if (
-                !member
-            ) {
-                return;
-            }
-
-            // ==================================================
-            // VOICE JOIN
-            // ==================================================
-
-            if (
-                !before.channel &&
-                after.channel
-            ) {
-
-                const embed =
-                    baseEmbed(
-                        "🔊 Sprachkanal beigetreten",
-                        0x1abc9c,
-                        "Ein Mitglied ist einem Sprachkanal beigetreten."
+                    clearTimeout(
+                        pendingTeamRoleUpdates.get(
+                            key
+                        )
                     );
 
-                embed.addFields(
-                    {
-                        name:
-                            "👤 Nutzer",
-
-                        value:
-                            `${member} (${member.id})`
-                    },
-                    {
-                        name:
-                            "🔊 Kanal",
-
-                        value:
-                            after.channel.toString()
-                    }
-                );
-
-                await sendLog(
-                    member.guild,
-                    embed
-                );
-
-            }
-
-            // ==================================================
-            // VOICE LEAVE
-            // ==================================================
-
-            else if (
-                before.channel &&
-                !after.channel
-            ) {
-
-                const embed =
-                    baseEmbed(
-                        "🔇 Sprachkanal verlassen",
-                        0x2f3136,
-                        "Ein Mitglied hat einen Sprachkanal verlassen."
-                    );
-
-                embed.addFields(
-                    {
-                        name:
-                            "👤 Nutzer",
-
-                        value:
-                            `${member} (${member.id})`
-                    },
-                    {
-                        name:
-                            "🔊 Kanal",
-
-                        value:
-                            before.channel.toString()
-                    }
-                );
-
-                await sendLog(
-                    member.guild,
-                    embed
-                );
-
-            }
-
-            // ==================================================
-            // VOICE MOVE
-            // ==================================================
-
-            else if (
-                before.channel &&
-                after.channel &&
-                before.channel.id !==
-                after.channel.id
-            ) {
-
-                const embed =
-                    baseEmbed(
-                        "🔁 Sprachkanal gewechselt",
-                        0x1abc9c,
-                        "Ein Mitglied hat den Sprachkanal gewechselt."
-                    );
-
-                embed.addFields(
-                    {
-                        name:
-                            "👤 Nutzer",
-
-                        value:
-                            `${member} (${member.id})`
-                    },
-                    {
-                        name:
-                            "⬅️ Von",
-
-                        value:
-                            before.channel.toString()
-                    },
-                    {
-                        name:
-                            "➡️ Zu",
-
-                        value:
-                            after.channel.toString()
-                    }
-                );
-
-                await sendLog(
-                    member.guild,
-                    embed
-                );
-
-            }
-
-            // ==================================================
-            // SERVER MUTE
-            // ==================================================
-
-            if (
-                before.serverMute !==
-                after.serverMute
-            ) {
-
-                const embed =
-                    baseEmbed(
-                        after.serverMute
-                            ? "🔇 Server-Stummschaltung aktiviert"
-                            : "🔊 Server-Stummschaltung aufgehoben",
-
-                        after.serverMute
-                            ? 0xed4245
-                            : 0x57f287,
-
-                        "Der Server-Mute-Status wurde geändert."
-                    );
-
-                embed.addFields({
-                    name:
-                        "👤 Nutzer",
-
-                    value:
-                        `${member} (${member.id})`
-                });
-
-                await sendLog(
-                    member.guild,
-                    embed
-                );
-
-            }
-
-            // ==================================================
-            // SERVER DEAF
-            // ==================================================
-
-            if (
-                before.serverDeaf !==
-                after.serverDeaf
-            ) {
-
-                const embed =
-                    baseEmbed(
-                        after.serverDeaf
-                            ? "🔕 Server-Taubschaltung aktiviert"
-                            : "🔔 Server-Taubschaltung aufgehoben",
-
-                        after.serverDeaf
-                            ? 0xed4245
-                            : 0x57f287,
-
-                        "Der Server-Deaf-Status wurde geändert."
-                    );
-
-                embed.addFields({
-                    name:
-                        "👤 Nutzer",
-
-                    value:
-                        `${member} (${member.id})`
-                });
-
-                await sendLog(
-                    member.guild,
-                    embed
-                );
-
-            }
-
-        } catch (error) {
-
-            console.error(
-                "❌ Voice Logging Fehler:",
-                error
-            );
-
-        }
-
-    }
-);
-
-// ======================================================
-// CHANNEL CREATE
-// ======================================================
-
-client.on(
-    Events.ChannelCreate,
-    async channel => {
-
-        try {
-
-            if (
-                !isFeatureEnabled(
-                    "channelLogs"
-                )
-            ) {
-                return;
-            }
-
-            if (
-                !channel.guild
-            ) {
-                return;
-            }
-
-            await new Promise(
-                resolve =>
-                    setTimeout(
-                        resolve,
-                        1000
-                    )
-            );
-
-            const entry =
-                await getAuditExecutor(
-                    channel.guild,
-                    AuditLogEvent.ChannelCreate,
-                    channel.id
-                );
-
-            const embed =
-                baseEmbed(
-                    "🏠 Kanal erstellt",
-                    0x57f287,
-                    "Ein neuer Kanal wurde erstellt."
-                );
-
-            embed.addFields(
-                {
-                    name:
-                        "📁 Kanal",
-
-                    value:
-                        channel.toString()
-                },
-                {
-                    name:
-                        "🆔 ID",
-
-                    value:
-                        channel.id
                 }
-            );
 
-            if (
-                entry
-            ) {
-
-                embed.addFields({
-                    name:
-                        "🛡️ Verantwortlicher",
-
-                    value:
-                        entry.executor
-                            ? `${entry.executor} (${entry.executor.id})`
-                            : "Unbekannt"
-                });
-
-            }
-
-            await sendLog(
-                channel.guild,
-                embed
-            );
-
-        } catch (error) {
-
-            console.error(
-                "❌ Channel Create Fehler:",
-                error
-            );
-
-        }
-
-    }
-);
-
-// ======================================================
-// CHANNEL DELETE
-// ======================================================
-
-client.on(
-    Events.ChannelDelete,
-    async channel => {
-
-        try {
-
-            if (
-                !isFeatureEnabled(
-                    "channelLogs"
-                )
-            ) {
-                return;
-            }
-
-            if (
-                !channel.guild
-            ) {
-                return;
-            }
-
-            await new Promise(
-                resolve =>
+                const timer =
                     setTimeout(
-                        resolve,
-                        1000
+                        async () => {
+
+                            pendingTeamRoleUpdates.delete(
+                                key
+                            );
+
+                            const freshMember =
+                                await newMember.guild.members
+                                    .fetch(
+                                        newMember.id
+                                    )
+                                    .catch(
+                                        () => null
+                                    );
+
+                            if (
+                                !freshMember
+                            ) {
+
+                                return;
+
+                            }
+
+                            const freshRoles =
+                                getTrackedTeamRoleIds(
+                                    freshMember
+                                );
+
+                            const newPrimaryRole =
+                                getPrimaryTeamRole(
+                                    freshRoles
+                                );
+
+                            if (
+                                !newPrimaryRole
+                            ) {
+
+                                return;
+
+                            }
+
+                            const oldPrimaryRole =
+                                getPrimaryTeamRole(
+                                    oldRoles
+                                );
+
+                            if (
+                                !oldPrimaryRole
+                            ) {
+
+                                await sendTeamRoleMessage(
+                                    newMember.guild,
+                                    newMember.id,
+                                    "welcome",
+                                    newPrimaryRole
+                                );
+
+                                return;
+
+                            }
+
+                            if (
+                                oldPrimaryRole.id !==
+                                newPrimaryRole.id
+                            ) {
+
+                                await sendTeamRoleMessage(
+                                    newMember.guild,
+                                    newMember.id,
+                                    "position",
+                                    newPrimaryRole
+                                );
+
+                            }
+
+                        },
+                        1500
+                    );
+
+                pendingTeamRoleUpdates.set(
+                    key,
+                    timer
+                );
+
+                return;
+
+            }
+
+            // ==================================================
+            // NUR ALTE ROLLE ENTFERNT
+            // KEINE NACHRICHT WENN NOCH TEAMROLLE DA IST
+            // ==================================================
+
+            if (
+                removedRoles.length > 0 &&
+                newRoles.size > 0
+            ) {
+
+                return;
+
+            }
+
+            // ==================================================
+            // ALLE TEAMROLLEN ENTFERNT
+            // ==================================================
+
+            if (
+                removedRoles.length > 0 &&
+                newRoles.size === 0
+            ) {
+
+                const key =
+                    `${newMember.guild.id}-${newMember.id}`;
+
+                if (
+                    pendingTeamRoleUpdates.has(
+                        key
                     )
-            );
+                ) {
 
-            const entry =
-                await getAuditExecutor(
-                    channel.guild,
-                    AuditLogEvent.ChannelDelete,
-                    channel.id
-                );
+                    clearTimeout(
+                        pendingTeamRoleUpdates.get(
+                            key
+                        )
+                    );
 
-            const embed =
-                baseEmbed(
-                    "🗑️ Kanal gelöscht",
-                    0xed4245,
-                    "Ein Kanal wurde gelöscht."
-                );
+                    pendingTeamRoleUpdates.delete(
+                        key
+                    );
 
-            embed.addFields(
-                {
-                    name:
-                        "📁 Kanal",
-
-                    value:
-                        `#${safeText(
-                            channel.name,
-                            "Unbekannt"
-                        )}`
-                },
-                {
-                    name:
-                        "🆔 ID",
-
-                    value:
-                        channel.id
                 }
-            );
 
-            if (
-                entry
-            ) {
+                const timer =
+                    setTimeout(
+                        async () => {
 
-                embed.addFields({
-                    name:
-                        "🛡️ Verantwortlicher",
+                            pendingTeamRoleUpdates.delete(
+                                key
+                            );
 
-                    value:
-                        entry.executor
-                            ? `${entry.executor} (${entry.executor.id})`
-                            : "Unbekannt"
-                });
+                            const freshMember =
+                                await newMember.guild.members
+                                    .fetch(
+                                        newMember.id
+                                    )
+                                    .catch(
+                                        () => null
+                                    );
+
+                            if (
+                                !freshMember
+                            ) {
+
+                                return;
+
+                            }
+
+                            const freshRoles =
+                                getTrackedTeamRoleIds(
+                                    freshMember
+                                );
+
+                            if (
+                                freshRoles.size > 0
+                            ) {
+
+                                return;
+
+                            }
+
+                            await sendTeamRoleMessage(
+                                newMember.guild,
+                                newMember.id,
+                                "leave"
+                            );
+
+                        },
+                        1500
+                    );
+
+                pendingTeamRoleUpdates.set(
+                    key,
+                    timer
+                );
 
             }
-
-            await sendLog(
-                channel.guild,
-                embed
-            );
 
         } catch (error) {
 
             console.error(
-                "❌ Channel Delete Fehler:",
+                "❌ Teamrollen Update Fehler:",
                 error
             );
 
@@ -5701,128 +5306,7 @@ client.on(
 );
 
 // ======================================================
-// CHANNEL UPDATE
-// ======================================================
-
-client.on(
-    Events.ChannelUpdate,
-    async (before, after) => {
-
-        try {
-
-            if (
-                !isFeatureEnabled(
-                    "channelLogs"
-                )
-            ) {
-                return;
-            }
-
-            if (
-                !after.guild
-            ) {
-                return;
-            }
-
-            // ==================================================
-            // CHANNEL NAME
-            // ==================================================
-
-            if (
-                before.name !==
-                after.name
-            ) {
-
-                const embed =
-                    baseEmbed(
-                        "✏️ Kanalname geändert",
-                        0x5865f2,
-                        "Ein Kanal wurde umbenannt."
-                    );
-
-                embed.addFields(
-                    {
-                        name:
-                            "📁 Kanal",
-
-                        value:
-                            after.toString()
-                    },
-                    {
-                        name:
-                            "📝 Vorher",
-
-                        value:
-                            safeText(
-                                before.name
-                            )
-                    },
-                    {
-                        name:
-                            "📝 Nachher",
-
-                        value:
-                            safeText(
-                                after.name
-                            )
-                    }
-                );
-
-                await sendLog(
-                    after.guild,
-                    embed
-                );
-
-            }
-
-            // ==================================================
-            // PERMISSIONS
-            // ==================================================
-
-            if (
-                before.permissionOverwrites &&
-                after.permissionOverwrites &&
-                !before.permissionOverwrites.cache.equals(
-                    after.permissionOverwrites.cache
-                )
-            ) {
-
-                const embed =
-                    baseEmbed(
-                        "🔐 Kanal-Berechtigungen aktualisiert",
-                        0x5865f2,
-                        "Die Berechtigungen eines Kanals wurden geändert."
-                    );
-
-                embed.addFields({
-                    name:
-                        "📁 Kanal",
-
-                    value:
-                        after.toString()
-                });
-
-                await sendLog(
-                    after.guild,
-                    embed
-                );
-
-            }
-
-        } catch (error) {
-
-            console.error(
-                "❌ Channel Update Fehler:",
-                error
-            );
-
-        }
-
-    }
-);
-
-// ======================================================
-// MESSAGE DELETE LOG
+// NACHRICHT GELÖSCHT
 // ======================================================
 
 client.on(
@@ -5847,20 +5331,10 @@ client.on(
 
             if (
                 message.author &&
-                client.user &&
-                message.author.id ===
-                client.user.id
+                message.author.bot
             ) {
                 return;
             }
-
-            const content =
-                message.content
-                    ? message.content.substring(
-                        0,
-                        1000
-                    )
-                    : "*(Kein Textinhalt / Embed / Anhang)*";
 
             const embed =
                 baseEmbed(
@@ -5881,7 +5355,7 @@ client.on(
                 },
                 {
                     name:
-                        "📍 Kanal",
+                        "📍 Channel",
 
                     value:
                         message.channel
@@ -5894,11 +5368,11 @@ client.on(
 
                     value:
                         safeText(
-                            content,
-                            "*(Kein Inhalt)*"
-                        ).substring(
+                            message.content,
+                            "Kein Text / Embed / Anhang"
+                        ).slice(
                             0,
-                            1024
+                            1000
                         )
                 }
             );
@@ -5911,7 +5385,7 @@ client.on(
         } catch (error) {
 
             console.error(
-                "❌ Message Delete Logging Fehler:",
+                "❌ Message Delete Log Fehler:",
                 error
             );
 
@@ -5921,12 +5395,15 @@ client.on(
 );
 
 // ======================================================
-// MESSAGE EDIT LOG
+// NACHRICHT BEARBEITET
 // ======================================================
 
 client.on(
     Events.MessageUpdate,
-    async (before, after) => {
+    async (
+        oldMessage,
+        newMessage
+    ) => {
 
         try {
 
@@ -5939,23 +5416,37 @@ client.on(
             }
 
             if (
-                !before.guild
+                !newMessage.guild
             ) {
                 return;
             }
 
             if (
-                before.author &&
-                before.author.bot
+                newMessage.author &&
+                newMessage.author.bot
             ) {
                 return;
             }
 
+            const oldContent =
+                safeText(
+                    oldMessage.content,
+                    "Kein Text"
+                );
+
+            const newContent =
+                safeText(
+                    newMessage.content,
+                    "Kein Text"
+                );
+
             if (
-                before.content ===
-                after.content
+                oldContent ===
+                newContent
             ) {
+
                 return;
+
             }
 
             const embed =
@@ -5971,30 +5462,25 @@ client.on(
                         "👤 Autor",
 
                     value:
-                        before.author
-                            ? `${before.author} (${before.author.id})`
+                        newMessage.author
+                            ? `${newMessage.author} (${newMessage.author.id})`
                             : "Unbekannt"
                 },
                 {
                     name:
-                        "📍 Kanal",
+                        "📍 Channel",
 
                     value:
-                        before.channel
-                            ? before.channel.toString()
-                            : "Unbekannt"
+                        newMessage.channel.toString()
                 },
                 {
                     name:
-                        "📝 Vorher",
+                        "📄 Vorher",
 
                     value:
-                        safeText(
-                            before.content,
-                            "*(leer)*"
-                        ).substring(
+                        oldContent.slice(
                             0,
-                            1024
+                            1000
                         )
                 },
                 {
@@ -6002,39 +5488,22 @@ client.on(
                         "📝 Nachher",
 
                     value:
-                        safeText(
-                            after.content,
-                            "*(leer)*"
-                        ).substring(
+                        newContent.slice(
                             0,
-                            1024
+                            1000
                         )
                 }
             );
 
-            if (
-                after.url
-            ) {
-
-                embed.addFields({
-                    name:
-                        "🔗 Nachricht",
-
-                    value:
-                        `[Zur Nachricht](${after.url})`
-                });
-
-            }
-
             await sendLog(
-                before.guild,
+                newMessage.guild,
                 embed
             );
 
         } catch (error) {
 
             console.error(
-                "❌ Message Edit Logging Fehler:",
+                "❌ Message Update Log Fehler:",
                 error
             );
 
@@ -6044,77 +5513,776 @@ client.on(
 );
 
 // ======================================================
-// DISCORD CLIENT ERROR
+// CHANNEL ERSTELLT
 // ======================================================
 
 client.on(
-    Events.Error,
-    error => {
+    Events.ChannelCreate,
+    async channel => {
 
-        console.error(
-            "❌ Discord Client Fehler:",
-            error
-        );
+        try {
+
+            if (
+                !isFeatureEnabled(
+                    "channelLogs"
+                )
+            ) {
+                return;
+            }
+
+            if (
+                !channel.guild
+            ) {
+                return;
+            }
+
+            const embed =
+                baseEmbed(
+                    "➕ Channel erstellt",
+                    0x57f287
+                );
+
+            embed.addFields(
+                {
+                    name:
+                        "📍 Channel",
+
+                    value:
+                        `${channel} (${channel.id})`
+                },
+                {
+                    name:
+                        "📂 Typ",
+
+                    value:
+                        `${channel.type}`
+                }
+            );
+
+            const entry =
+                await getAuditExecutor(
+                    channel.guild,
+                    AuditLogEvent.ChannelCreate,
+                    channel.id
+                );
+
+            if (
+                entry &&
+                entry.executor
+            ) {
+
+                embed.addFields({
+                    name:
+                        "🛡️ Erstellt von",
+
+                    value:
+                        `${entry.executor} (${entry.executor.id})`
+                });
+
+            }
+
+            await sendLog(
+                channel.guild,
+                embed
+            );
+
+        } catch (error) {
+
+            console.error(
+                "❌ Channel Create Log Fehler:",
+                error
+            );
+
+        }
 
     }
 );
 
 // ======================================================
-// DISCORD WARN
+// CHANNEL GELÖSCHT
 // ======================================================
 
 client.on(
-    Events.Warn,
-    warning => {
+    Events.ChannelDelete,
+    async channel => {
 
-        console.warn(
-            "⚠️ Discord Warnung:",
-            warning
-        );
+        try {
+
+            if (
+                !isFeatureEnabled(
+                    "channelLogs"
+                )
+            ) {
+                return;
+            }
+
+            if (
+                !channel.guild
+            ) {
+                return;
+            }
+
+            const embed =
+                baseEmbed(
+                    "➖ Channel gelöscht",
+                    0xed4245
+                );
+
+            embed.addFields(
+                {
+                    name:
+                        "📍 Name",
+
+                    value:
+                        safeText(
+                            channel.name
+                        )
+                },
+                {
+                    name:
+                        "🆔 Channel ID",
+
+                    value:
+                        channel.id
+                }
+            );
+
+            const entry =
+                await getAuditExecutor(
+                    channel.guild,
+                    AuditLogEvent.ChannelDelete,
+                    channel.id
+                );
+
+            if (
+                entry &&
+                entry.executor
+            ) {
+
+                embed.addFields({
+                    name:
+                        "🛡️ Gelöscht von",
+
+                    value:
+                        `${entry.executor} (${entry.executor.id})`
+                });
+
+            }
+
+            await sendLog(
+                channel.guild,
+                embed
+            );
+
+        } catch (error) {
+
+            console.error(
+                "❌ Channel Delete Log Fehler:",
+                error
+            );
+
+        }
 
     }
 );
 
 // ======================================================
-// UNHANDLED PROMISE REJECTION
+// CHANNEL UPDATE
 // ======================================================
 
-process.on(
-    "unhandledRejection",
-    error => {
+client.on(
+    Events.ChannelUpdate,
+    async (
+        oldChannel,
+        newChannel
+    ) => {
 
-        console.error(
-            "❌ Unhandled Promise Rejection:",
-            error
-        );
+        try {
+
+            if (
+                !isFeatureEnabled(
+                    "channelLogs"
+                )
+            ) {
+                return;
+            }
+
+            if (
+                !newChannel.guild
+            ) {
+                return;
+            }
+
+            const changes =
+                [];
+
+            if (
+                oldChannel.name !==
+                newChannel.name
+            ) {
+
+                changes.push(
+                    `**Name:** ${safeText(oldChannel.name)} → ${safeText(newChannel.name)}`
+                );
+
+            }
+
+            if (
+                changes.length === 0
+            ) {
+
+                return;
+
+            }
+
+            const embed =
+                baseEmbed(
+                    "🔧 Channel bearbeitet",
+                    0x5865f2
+                );
+
+            embed.addFields(
+                {
+                    name:
+                        "📍 Channel",
+
+                    value:
+                        `${newChannel} (${newChannel.id})`
+                },
+                {
+                    name:
+                        "📝 Änderungen",
+
+                    value:
+                        changes.join(
+                            "\n"
+                        )
+                }
+            );
+
+            const entry =
+                await getAuditExecutor(
+                    newChannel.guild,
+                    AuditLogEvent.ChannelUpdate,
+                    newChannel.id
+                );
+
+            if (
+                entry &&
+                entry.executor
+            ) {
+
+                embed.addFields({
+                    name:
+                        "🛡️ Bearbeitet von",
+
+                    value:
+                        `${entry.executor} (${entry.executor.id})`
+                });
+
+            }
+
+            await sendLog(
+                newChannel.guild,
+                embed
+            );
+
+        } catch (error) {
+
+            console.error(
+                "❌ Channel Update Log Fehler:",
+                error
+            );
+
+        }
 
     }
 );
 
 // ======================================================
-// UNCAUGHT EXCEPTION
+// ROLLE ERSTELLT
 // ======================================================
 
-process.on(
-    "uncaughtException",
-    error => {
+client.on(
+    Events.GuildRoleCreate,
+    async role => {
 
-        console.error(
-            "❌ Uncaught Exception:",
-            error
-        );
+        try {
+
+            if (
+                !isFeatureEnabled(
+                    "roleLogs"
+                )
+            ) {
+                return;
+            }
+
+            const embed =
+                baseEmbed(
+                    "➕ Rolle erstellt",
+                    0x57f287
+                );
+
+            embed.addFields({
+                name:
+                    "🎭 Rolle",
+
+                value:
+                    `${role} (${role.id})`
+            });
+
+            const entry =
+                await getAuditExecutor(
+                    role.guild,
+                    AuditLogEvent.RoleCreate,
+                    role.id
+                );
+
+            if (
+                entry &&
+                entry.executor
+            ) {
+
+                embed.addFields({
+                    name:
+                        "🛡️ Erstellt von",
+
+                    value:
+                        `${entry.executor} (${entry.executor.id})`
+                });
+
+            }
+
+            await sendLog(
+                role.guild,
+                embed
+            );
+
+        } catch (error) {
+
+            console.error(
+                "❌ Role Create Log Fehler:",
+                error
+            );
+
+        }
 
     }
 );
 
 // ======================================================
-// START MELDUNG
+// ROLLE GELÖSCHT
 // ======================================================
 
-console.log(
-    "✅ VIBE Bot Systeme geladen."
+client.on(
+    Events.GuildRoleDelete,
+    async role => {
+
+        try {
+
+            if (
+                !isFeatureEnabled(
+                    "roleLogs"
+                )
+            ) {
+                return;
+            }
+
+            const embed =
+                baseEmbed(
+                    "➖ Rolle gelöscht",
+                    0xed4245
+                );
+
+            embed.addFields(
+                {
+                    name:
+                        "🎭 Rollenname",
+
+                    value:
+                        safeText(
+                            role.name
+                        )
+                },
+                {
+                    name:
+                        "🆔 Rollen ID",
+
+                    value:
+                        role.id
+                }
+            );
+
+            const entry =
+                await getAuditExecutor(
+                    role.guild,
+                    AuditLogEvent.RoleDelete,
+                    role.id
+                );
+
+            if (
+                entry &&
+                entry.executor
+            ) {
+
+                embed.addFields({
+                    name:
+                        "🛡️ Gelöscht von",
+
+                    value:
+                        `${entry.executor} (${entry.executor.id})`
+                });
+
+            }
+
+            await sendLog(
+                role.guild,
+                embed
+            );
+
+        } catch (error) {
+
+            console.error(
+                "❌ Role Delete Log Fehler:",
+                error
+            );
+
+        }
+
+    }
 );
 
-console.log(
-    "✅ Team-Rollen-Nachrichten System geladen."
+// ======================================================
+// ROLLE BEARBEITET
+// ======================================================
+
+client.on(
+    Events.GuildRoleUpdate,
+    async (
+        oldRole,
+        newRole
+    ) => {
+
+        try {
+
+            if (
+                !isFeatureEnabled(
+                    "roleLogs"
+                )
+            ) {
+                return;
+            }
+
+            const changes =
+                [];
+
+            if (
+                oldRole.name !==
+                newRole.name
+            ) {
+
+                changes.push(
+                    `**Name:** ${oldRole.name} → ${newRole.name}`
+                );
+
+            }
+
+            if (
+                oldRole.hexColor !==
+                newRole.hexColor
+            ) {
+
+                changes.push(
+                    `**Farbe:** ${oldRole.hexColor} → ${newRole.hexColor}`
+                );
+
+            }
+
+            if (
+                oldRole.hoist !==
+                newRole.hoist
+            ) {
+
+                changes.push(
+                    `**Separat angezeigt:** ${oldRole.hoist} → ${newRole.hoist}`
+                );
+
+            }
+
+            if (
+                oldRole.mentionable !==
+                newRole.mentionable
+            ) {
+
+                changes.push(
+                    `**Erwähnbar:** ${oldRole.mentionable} → ${newRole.mentionable}`
+                );
+
+            }
+
+            if (
+                changes.length === 0
+            ) {
+
+                return;
+
+            }
+
+            const embed =
+                baseEmbed(
+                    "🔧 Rolle bearbeitet",
+                    0x5865f2
+                );
+
+            embed.addFields(
+                {
+                    name:
+                        "🎭 Rolle",
+
+                    value:
+                        `${newRole} (${newRole.id})`
+                },
+                {
+                    name:
+                        "📝 Änderungen",
+
+                    value:
+                        changes.join(
+                            "\n"
+                        ).slice(
+                            0,
+                            1024
+                        )
+                }
+            );
+
+            const entry =
+                await getAuditExecutor(
+                    newRole.guild,
+                    AuditLogEvent.RoleUpdate,
+                    newRole.id
+                );
+
+            if (
+                entry &&
+                entry.executor
+            ) {
+
+                embed.addFields({
+                    name:
+                        "🛡️ Bearbeitet von",
+
+                    value:
+                        `${entry.executor} (${entry.executor.id})`
+                });
+
+            }
+
+            await sendLog(
+                newRole.guild,
+                embed
+            );
+
+        } catch (error) {
+
+            console.error(
+                "❌ Role Update Log Fehler:",
+                error
+            );
+
+        }
+
+    }
+);
+
+// ======================================================
+// VOICE LOGS
+// ======================================================
+
+client.on(
+    Events.VoiceStateUpdate,
+    async (
+        oldState,
+        newState
+    ) => {
+
+        try {
+
+            if (
+                !isFeatureEnabled(
+                    "voiceLogs"
+                )
+            ) {
+                return;
+            }
+
+            if (
+                oldState.channelId ===
+                newState.channelId
+            ) {
+
+                return;
+
+            }
+
+            const member =
+                newState.member ||
+                oldState.member;
+
+            if (
+                !member
+            ) {
+
+                return;
+
+            }
+
+            // ==================================================
+            // JOIN
+            // ==================================================
+
+            if (
+                !oldState.channelId &&
+                newState.channelId
+            ) {
+
+                const embed =
+                    baseEmbed(
+                        "🔊 Voice beigetreten",
+                        0x57f287
+                    );
+
+                embed.addFields(
+                    {
+                        name:
+                            "👤 Nutzer",
+
+                        value:
+                            `${member} (${member.id})`
+                    },
+                    {
+                        name:
+                            "🎧 Channel",
+
+                        value:
+                            newState.channel
+                                ? newState.channel.toString()
+                                : "Unbekannt"
+                    }
+                );
+
+                await sendLog(
+                    newState.guild,
+                    embed
+                );
+
+                return;
+
+            }
+
+            // ==================================================
+            // LEAVE
+            // ==================================================
+
+            if (
+                oldState.channelId &&
+                !newState.channelId
+            ) {
+
+                const embed =
+                    baseEmbed(
+                        "🔇 Voice verlassen",
+                        0xed4245
+                    );
+
+                embed.addFields(
+                    {
+                        name:
+                            "👤 Nutzer",
+
+                        value:
+                            `${member} (${member.id})`
+                    },
+                    {
+                        name:
+                            "🎧 Channel",
+
+                        value:
+                            oldState.channel
+                                ? oldState.channel.toString()
+                                : "Unbekannt"
+                    }
+                );
+
+                await sendLog(
+                    oldState.guild,
+                    embed
+                );
+
+                return;
+
+            }
+
+            // ==================================================
+            // MOVE
+            // ==================================================
+
+            if (
+                oldState.channelId &&
+                newState.channelId &&
+                oldState.channelId !==
+                newState.channelId
+            ) {
+
+                const embed =
+                    baseEmbed(
+                        "🔁 Voice Channel gewechselt",
+                        0x5865f2
+                    );
+
+                embed.addFields(
+                    {
+                        name:
+                            "👤 Nutzer",
+
+                        value:
+                            `${member} (${member.id})`
+                    },
+                    {
+                        name:
+                            "⬅️ Von",
+
+                        value:
+                            oldState.channel
+                                ? oldState.channel.toString()
+                                : "Unbekannt"
+                    },
+                    {
+                        name:
+                            "➡️ Nach",
+
+                        value:
+                            newState.channel
+                                ? newState.channel.toString()
+                                : "Unbekannt"
+                    }
+                );
+
+                await sendLog(
+                    newState.guild,
+                    embed
+                );
+
+            }
+
+        } catch (error) {
+
+            console.error(
+                "❌ Voice Log Fehler:",
+                error
+            );
+
+        }
+
+    }
 );
