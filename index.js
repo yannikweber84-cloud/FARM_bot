@@ -117,7 +117,7 @@ const SERVER_LOG_CHANNEL_ID =
 
 // HIER die Channel-ID eintragen, in den das Regelwerk soll.
 const RULES_CHANNEL_ID =
-    "HIER_REGELWERK_CHANNEL_ID_EINTRAGEN";
+    "1534317962012393706";
 
 // ======================================================
 // TEAM-ROLLEN NACHRICHTEN
