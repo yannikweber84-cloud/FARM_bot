@@ -1287,7 +1287,6 @@ function createRulesEmbed() {
         );
 
 }
-
 async function sendOrUpdateRules() {
 
     try {
@@ -1306,34 +1305,81 @@ async function sendOrUpdateRules() {
 
         }
 
-       const channel =
-    client.channels.cache.get(
-        RULES_CHANNEL_ID
-    ) ||
-    await client.channels
-        .fetch(
-            RULES_CHANNEL_ID
-        )
-        .catch(
-            error => {
+        // ======================================================
+        // CHANNEL DIREKT ÜBER DIE ID SUCHEN
+        // ======================================================
 
-                console.error(
-                    "❌ Regelwerk-Channel Fetch Fehler:",
-                    error
+        const channel =
+            client.channels.cache.get(
+                RULES_CHANNEL_ID
+            ) ||
+            await client.channels
+                .fetch(
+                    RULES_CHANNEL_ID
+                )
+                .catch(
+                    error => {
+
+                        console.error(
+                            "❌ Regelwerk-Channel Fetch Fehler:",
+                            error
+                        );
+
+                        return null;
+
+                    }
                 );
 
-                return null;
+        if (
+            !channel ||
+            !channel.isTextBased() ||
+            typeof channel.send !==
+                "function"
+        ) {
 
-            }
-        );
+            console.log(
+                `⚠️ Regelwerk-Channel nicht gefunden: ${RULES_CHANNEL_ID}`
+            );
 
-        if (pinnedMessages) {
+            return;
+
+        }
+
+        // ======================================================
+        // VORHANDENES REGELWERK SUCHEN
+        // ======================================================
+
+        let existingMessage =
+            null;
+
+        const pinnedMessages =
+            await channel.messages
+                .fetchPinned()
+                .catch(
+                    error => {
+
+                        console.log(
+                            "⚠️ Gepinnte Nachrichten konnten nicht geladen werden:",
+                            error.message
+                        );
+
+                        return null;
+
+                    }
+                );
+
+        if (
+            pinnedMessages
+        ) {
 
             existingMessage =
                 pinnedMessages.find(
                     message =>
+
+                        message.author &&
                         message.author.id ===
                             client.user.id &&
+
                         message.embeds.some(
                             embed =>
                                 embed.title ===
@@ -1344,7 +1390,13 @@ async function sendOrUpdateRules() {
 
         }
 
-        if (!existingMessage) {
+        // ======================================================
+        // FALLS NICHT GEPINNT -> LETZTE 100 NACHRICHTEN SUCHEN
+        // ======================================================
+
+        if (
+            !existingMessage
+        ) {
 
             const recentMessages =
                 await channel.messages
@@ -1352,16 +1404,30 @@ async function sendOrUpdateRules() {
                         limit: 100
                     })
                     .catch(
-                        () => null
+                        error => {
+
+                            console.log(
+                                "⚠️ Nachrichten konnten nicht geladen werden:",
+                                error.message
+                            );
+
+                            return null;
+
+                        }
                     );
 
-            if (recentMessages) {
+            if (
+                recentMessages
+            ) {
 
                 existingMessage =
                     recentMessages.find(
                         message =>
+
+                            message.author &&
                             message.author.id ===
                                 client.user.id &&
+
                             message.embeds.some(
                                 embed =>
                                     embed.title ===
@@ -1374,15 +1440,21 @@ async function sendOrUpdateRules() {
 
         }
 
+        // ======================================================
+        // NACHRICHT
+        // ======================================================
+
         const payload = {
 
             content:
                 "@everyone",
 
             allowedMentions: {
+
                 parse: [
                     "everyone"
                 ]
+
             },
 
             embeds: [
@@ -1391,7 +1463,13 @@ async function sendOrUpdateRules() {
 
         };
 
-        if (existingMessage) {
+        // ======================================================
+        // REGELWERK EXISTIERT SCHON -> AKTUALISIEREN
+        // ======================================================
+
+        if (
+            existingMessage
+        ) {
 
             await existingMessage.edit(
                 payload
@@ -1405,7 +1483,9 @@ async function sendOrUpdateRules() {
                     () => {}
                 );
 
-            if (!existingMessage.pinned) {
+            if (
+                !existingMessage.pinned
+            ) {
 
                 await existingMessage
                     .pin(
@@ -1424,6 +1504,10 @@ async function sendOrUpdateRules() {
             return;
 
         }
+
+        // ======================================================
+        // NOCH KEIN REGELWERK -> NEU SENDEN
+        // ======================================================
 
         const rulesMessage =
             await channel.send(
@@ -1460,6 +1544,7 @@ async function sendOrUpdateRules() {
     }
 
 }
+
 
 // ======================================================
 // BOT READY
