@@ -71,24 +71,24 @@ const TOKEN =
     process.env.TOKEN;
 
 const CLIENT_ID =
-    "1541837652603699200";
+    "1534585700408889466";
 
 const GUILD_ID =
-    "1488581484565500157";
+    "1542137235867041912";
 
 // ======================================================
 // WELCOME
 // ======================================================
 
 const WELCOME_CHANNEL_ID =
-    "1488581808470757468";
+    "1542137236500381757";
 
 // ======================================================
 // STAFF
 // ======================================================
 
 const STAFF_ROLE_ID =
-    "1488904093970858115";
+    "1542137235917250619";
 
 // ======================================================
 // SUPPORT
@@ -98,10 +98,10 @@ const SUPPORT_ROLE_ID =
     STAFF_ROLE_ID;
 
 const SUPPORT_WARTE_RAUM_ID =
-    "1488584492628185293";
+    "1542137236718362702";
 
 const SUPPORT_LOG_CHANNEL_ID =
-    "1488584310385803416";
+    "1542137236718362701";
 
 // ======================================================
 // SERVER LOG
@@ -109,7 +109,7 @@ const SUPPORT_LOG_CHANNEL_ID =
 
 const SERVER_LOG_CHANNEL_ID =
     process.env.SERVER_LOG_CHANNEL_ID ||
-    "1488584374554460372";
+    "1542137236718362700";
 
 // ======================================================
 // TEAM-ROLLEN NACHRICHTEN
@@ -118,44 +118,44 @@ const SERVER_LOG_CHANNEL_ID =
 
 // Channel, in den die Team-Nachrichten gesendet werden:
 const TEAM_ROLE_MESSAGE_CHANNEL_ID =
-    "1488583756448006224";
+    "1542137236500381765";
 
 // Rollen:
 const CO_ANFUEHRER_ROLE_ID =
-    "1488901953202294854";
+    "1542137235942412413";
 
 const CLAN_MANAGER_ROLE_ID =
-    "1535410177069809685";
+    "1542137235942412412";
 
 const ADMIN_ROLE_ID =
-    "1488902628325855424";
+    "1542137235934158857";
 
 const DEV_ROLE_ID =
-    "1537884167851872369";
+    "1542137235934158856";
 
 const TEST_ADMIN_ROLE_ID =
-    "1534222098720100533";
+    "1542137235934158855";
 
 const MOD_ROLE_ID =
-    "1488903101233500241";
+    "1542137235934158853";
 
 const SUP_LEITUNG_ROLE_ID =
-    "1488903601509240872";
+    "1542137235934158851";
 
 const SUP_ROLE_ID =
-    "1488903735802331176";
+    "1542137235934158850";
 
 const BUILDER_LEITUNG_ROLE_ID =
-    "1488904459936600215";
+    "1542137235934158848";
 
 const BUILDER_ROLE_ID =
-    "1488904584700362792";
+    "1542137235917250614";
 
 const FARMERLEITUNG_ROLE_ID =
-    "1488904798110613807";
+    "1542137235917250620";
 
 const FARMER_ROLE_ID =
-    "1488904885960315020";
+    "1542137235917250612";
 
 // Reihenfolge = Priorität, falls ein Mitglied mehrere Team-Rollen hat.
 const TEAM_ROLE_CONFIG = [
@@ -226,16 +226,16 @@ const TEAM_ROLE_CONFIG = [
 // ======================================================
 
 const CLAN_CATEGORY_ID =
-    "1534287236407759040";
+    "1542137237997887523";
 
 const TEAM_CATEGORY_ID =
-    "1534287314464018655";
+    "1542137237997887525";
 
 const BAU_CATEGORY_ID =
-    "1534287374819917896";
+    "1542137237997887526";
 
 const GIVEAWAY_CATEGORY_ID =
-    "1538095441940447294";
+    "1542137237997887527";
 
 // ======================================================
 // COUNTING
