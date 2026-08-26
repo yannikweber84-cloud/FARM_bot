@@ -71,7 +71,7 @@ const TOKEN =
     process.env.TOKEN;
 
 const CLIENT_ID =
-    "1534585700408889466";
+    "1541837652603699200";
 
 const GUILD_ID =
     "1488581484565500157";
@@ -1146,8 +1146,20 @@ const commands = [
 
         )
 
-        .toJSON()
-
+        .toJSON(), 
+    
+new SlashCommandBuilder()
+    .setName("say")
+    .setDescription("Lässt den Bot eine Nachricht schreiben")
+    .addStringOption(
+        option =>
+            option
+                .setName("nachricht")
+                .setDescription("Was soll der Bot schreiben?")
+                .setRequired(true)
+                .setMaxLength(2000)
+    )
+    .toJSON()
 ];
 
 // ======================================================
@@ -1315,6 +1327,55 @@ client.on(
                 // ==================================================
                 // /CREATE GIVEAWAY
                 // ==================================================
+
+                // ==================================================
+// /SAY
+// ==================================================
+
+if (
+    interaction.commandName ===
+    "say"
+) {
+
+    if (
+        !isAdmin(
+            interaction.member
+        )
+    ) {
+
+        return interaction.reply({
+            content:
+                "❌ Nur Administratoren können `/say` benutzen.",
+            flags:
+                MessageFlags.Ephemeral
+        });
+
+    }
+
+    const nachricht =
+        interaction.options.getString(
+            "nachricht",
+            true
+        );
+
+    await interaction.reply({
+        content:
+            "✅ Nachricht gesendet.",
+        flags:
+            MessageFlags.Ephemeral
+    });
+
+    await interaction.channel.send({
+        content:
+            nachricht,
+        allowedMentions: {
+            parse: []
+        }
+    });
+
+    return;
+
+}
 
                 if (
                     interaction.commandName ===
