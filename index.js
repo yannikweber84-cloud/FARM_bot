@@ -285,6 +285,155 @@ return text;
 }
 
 // ======================================================
+// /SAY ROLLEN-MARKIERUNGEN
+// Beispiel:
+// @Staff Hallo zusammen!
+//
+// Der Bot wandelt @Rollenname automatisch
+// in eine echte Discord Rollen-Erwähnung um.
+//
+// @everyone und @here werden NICHT aktiviert.
+// ======================================================
+
+function escapeRegExp(value) {
+return String(value).replace(
+/[.*+?^${}()|[\]\\]/g,
+"\\$&"
+);
+}
+
+function resolveSayRoleMentions(
+guild,
+text
+) {
+
+if (!guild) {
+
+return {
+content:
+text,
+
+roleIds:
+[]
+};
+
+}
+
+let content =
+String(text);
+
+const roleIds =
+new Set();
+
+const roles =
+[
+...guild.roles.cache.values()
+]
+.filter(
+role =>
+role.id !== guild.id
+)
+.sort(
+(a, b) =>
+b.name.length -
+a.name.length
+);
+
+for (
+const role
+of roles
+) {
+
+if (
+role.name ===
+"@everyone"
+) {
+continue;
+}
+
+const roleName =
+escapeRegExp(
+role.name
+);
+
+const regex =
+new RegExp(
+`(^|[\\s(\\[{])@${roleName}(?=$|[\\s.,!?;:)\\]}])`,
+"gi"
+);
+
+let found =
+false;
+
+content =
+content.replace(
+regex,
+(match, prefix) => {
+
+found =
+true;
+
+return `${prefix}<@&${role.id}>`;
+
+}
+);
+
+if (found) {
+
+roleIds.add(
+role.id
+);
+
+}
+
+}
+
+// ======================================================
+// FALLS MAN DIREKT <@&ROLLENID> EINGIBT
+// ======================================================
+
+const rawRoleMentionRegex =
+/<@&(\d{17,20})>/g;
+
+let rawMatch;
+
+while (
+(
+rawMatch =
+rawRoleMentionRegex.exec(
+content
+)
+) !==
+null
+) {
+
+if (
+guild.roles.cache.has(
+rawMatch[1]
+) &&
+rawMatch[1] !==
+guild.id
+) {
+
+roleIds.add(
+rawMatch[1]
+);
+
+}
+
+}
+
+return {
+content,
+
+roleIds: [
+...roleIds
+]
+};
+
+}
+
+// ======================================================
 // BASIS EMBED
 // ======================================================
 
@@ -385,9 +534,11 @@ const channel =
 getLogChannel(guild);
 
 if (!channel) {
+
 console.log(
 `⚠️ Log-Kanal nicht gefunden: ${SERVER_LOG_CHANNEL_ID}`
 );
+
 return;
 }
 
@@ -427,12 +578,16 @@ return null;
 
 const logs =
 await guild.fetchAuditLogs({
-limit: maxEntries,
-type: action
+limit:
+maxEntries,
+
+type:
+action
 });
 
 const entry =
-logs.entries.find(entry => {
+logs.entries.find(
+entry => {
 
 if (
 !entry.target ||
@@ -442,13 +597,15 @@ return false;
 }
 
 return (
-entry.target.id === targetId &&
+entry.target.id ===
+targetId &&
 Date.now() -
 entry.createdTimestamp <
 10000
 );
 
-});
+}
+);
 
 return entry || null;
 
@@ -467,6 +624,7 @@ error
 }
 
 return null;
+
 }
 
 }
@@ -529,8 +687,6 @@ null
 
 // ======================================================
 // TICKET STAFF PRÜFEN
-// WICHTIG:
-// NUR STAFF_ROLE_ID DARF TICKET BUTTONS BENUTZEN
 // ======================================================
 
 function isTicketStaff(member) {
@@ -557,7 +713,8 @@ async function fetchAllTicketMessages(
 channel
 ) {
 
-const messages = [];
+const messages =
+[];
 
 let beforeId =
 null;
@@ -565,12 +722,15 @@ null;
 while (true) {
 
 const options = {
-limit: 100
+limit:
+100
 };
 
 if (beforeId) {
+
 options.before =
 beforeId;
+
 }
 
 const batch =
@@ -645,7 +805,11 @@ message.content
 : "";
 
 if (content) {
-parts.push(content);
+
+parts.push(
+content
+);
+
 }
 
 if (
@@ -682,21 +846,27 @@ const embedParts =
 [];
 
 if (embed.title) {
+
 embedParts.push(
 `Titel: ${embed.title}`
 );
+
 }
 
 if (embed.description) {
+
 embedParts.push(
 `Beschreibung: ${embed.description}`
 );
+
 }
 
 if (embed.url) {
+
 embedParts.push(
 `URL: ${embed.url}`
 );
+
 }
 
 parts.push(
@@ -711,9 +881,11 @@ if (
 parts.length ===
 0
 ) {
+
 parts.push(
 "[Keine Textnachricht]"
 );
+
 }
 
 const body =
@@ -842,6 +1014,7 @@ shortened,
 
 return {
 buffer,
+
 messageCount:
 messages.length
 };
@@ -905,6 +1078,7 @@ console.log(
 );
 
 return false;
+
 }
 
 const transcript =
@@ -1119,11 +1293,30 @@ shortMatch[2]
 .toLowerCase();
 
 const multipliers = {
-s: 1000,
-m: 60 * 1000,
-h: 60 * 60 * 1000,
-d: 24 * 60 * 60 * 1000,
-w: 7 * 24 * 60 * 60 * 1000
+s:
+1000,
+
+m:
+60 *
+1000,
+
+h:
+60 *
+60 *
+1000,
+
+d:
+24 *
+60 *
+60 *
+1000,
+
+w:
+7 *
+24 *
+60 *
+60 *
+1000
 };
 
 return Math.floor(
@@ -1155,56 +1348,79 @@ let multiplier =
 null;
 
 if (
-unit === "sekunde" ||
-unit === "sekunden"
+unit ===
+"sekunde" ||
+unit ===
+"sekunden"
 ) {
+
 multiplier =
 1000;
+
 }
 
 if (
-unit === "min" ||
-unit === "minute" ||
-unit === "minuten"
+unit ===
+"min" ||
+unit ===
+"minute" ||
+unit ===
+"minuten"
 ) {
+
 multiplier =
 60 *
 1000;
+
 }
 
 if (
-unit === "stunde" ||
-unit === "stunden" ||
-unit === "std"
+unit ===
+"stunde" ||
+unit ===
+"stunden" ||
+unit ===
+"std"
 ) {
+
 multiplier =
 60 *
 60 *
 1000;
+
 }
 
 if (
-unit === "tag" ||
-unit === "tage" ||
-unit === "tagen"
+unit ===
+"tag" ||
+unit ===
+"tage" ||
+unit ===
+"tagen"
 ) {
+
 multiplier =
 24 *
 60 *
 60 *
 1000;
+
 }
 
 if (
-unit === "woche" ||
-unit === "wochen"
+unit ===
+"woche" ||
+unit ===
+"wochen"
 ) {
+
 multiplier =
 7 *
 24 *
 60 *
 60 *
 1000;
+
 }
 
 if (!multiplier) {
@@ -1315,19 +1531,23 @@ name:
 "🎉 Ergebnis",
 
 value:
-winnerIds.length > 0
+winnerIds.length >
+0
 ? winnerIds
 .map(
 id =>
 `<@${id}>`
 )
-.join(", ")
+.join(
+", "
+)
 : "Keine gültigen Teilnehmer."
 });
 
 }
 
 return embed;
+
 }
 
 // ======================================================
@@ -1347,8 +1567,10 @@ const winners =
 [];
 
 while (
-pool.length > 0 &&
-winners.length < count
+pool.length >
+0 &&
+winners.length <
+count
 ) {
 
 const index =
@@ -1367,11 +1589,11 @@ index,
 }
 
 return winners;
+
 }
 
 // ======================================================
 // SLASH COMMANDS
-// COUNTING IST KOMPLETT ENTFERNT
 // ======================================================
 
 const commands = [
@@ -1525,6 +1747,7 @@ error
 );
 
 return false;
+
 }
 
 }
@@ -1675,7 +1898,7 @@ new TextInputBuilder()
 )
 
 .setPlaceholder(
-"Schreibe hier deine Nachricht..."
+"z. B. @Staff Hallo zusammen!"
 )
 
 .setStyle(
@@ -1705,6 +1928,7 @@ modal
 );
 
 return;
+
 }
 
 // ==================================================
@@ -1887,6 +2111,7 @@ modal
 );
 
 return;
+
 }
 
 // ==================================================
@@ -2060,7 +2285,8 @@ let deletedTotal =
 0;
 
 while (
-remaining > 0
+remaining >
+0
 ) {
 
 const batchSize =
@@ -2085,7 +2311,8 @@ remaining -=
 deletedCount;
 
 if (
-deletedCount === 0 ||
+deletedCount ===
+0 ||
 deletedCount <
 batchSize
 ) {
@@ -2093,7 +2320,8 @@ break;
 }
 
 if (
-remaining > 0
+remaining >
+0
 ) {
 
 await new Promise(
@@ -2112,7 +2340,8 @@ await interaction.editReply({
 content:
 `🧹 **${deletedTotal} Nachrichten wurden gelöscht.**` +
 (
-deletedTotal < amount
+deletedTotal <
+amount
 ? "\n⚠️ Einige Nachrichten konnten nicht gelöscht werden, z. B. weil sie älter als 14 Tage sind."
 : ""
 )
@@ -2179,6 +2408,7 @@ content:
 }
 
 return;
+
 }
 
 // ==================================================
@@ -2367,6 +2597,7 @@ row
 }
 
 return;
+
 }
 
 // ==================================================
@@ -2414,6 +2645,12 @@ MessageFlags.Ephemeral
 
 }
 
+const sayMessage =
+resolveSayRoleMentions(
+interaction.guild,
+nachricht
+);
+
 await interaction.reply({
 content:
 "✅ Nachricht gesendet.",
@@ -2424,14 +2661,22 @@ MessageFlags.Ephemeral
 
 await interaction.channel.send({
 content:
-nachricht,
+sayMessage.content,
 
 allowedMentions: {
-parse: []
+parse:
+[],
+
+roles:
+sayMessage.roleIds,
+
+repliedUser:
+false
 }
 });
 
 return;
+
 }
 
 // ==================================================
@@ -2501,7 +2746,8 @@ winnersText,
 
 if (
 !duration ||
-duration < 10000
+duration <
+10000
 ) {
 
 return interaction.reply({
@@ -2525,8 +2771,10 @@ if (
 !Number.isInteger(
 winnerCount
 ) ||
-winnerCount < 1 ||
-winnerCount > 20
+winnerCount <
+1 ||
+winnerCount >
+20
 ) {
 
 return interaction.reply({
@@ -2656,6 +2904,7 @@ content:
 });
 
 return;
+
 }
 
 // ==================================================
@@ -2727,8 +2976,10 @@ interaction.fields
 
 data.pendingClose = {
 reason,
+
 requestedBy:
 interaction.user.id,
+
 requestedAt:
 Date.now()
 };
@@ -2824,6 +3075,7 @@ data.ownerId
 });
 
 return;
+
 }
 
 // ==================================================
@@ -2863,6 +3115,7 @@ interaction.values[0];
 const config = {
 
 clan_bewerbung: {
+
 name:
 `support-${interaction.user.username.toLowerCase()}`,
 
@@ -2871,9 +3124,11 @@ title:
 
 categoryId:
 CLAN_CATEGORY_ID
+
 },
 
 team_bewerbung: {
+
 name:
 `bewerbung-${interaction.user.username.toLowerCase()}`,
 
@@ -2882,9 +3137,11 @@ title:
 
 categoryId:
 TEAM_CATEGORY_ID
+
 },
 
 bau_firma: {
+
 name:
 `bau-${interaction.user.username.toLowerCase()}`,
 
@@ -2893,9 +3150,11 @@ title:
 
 categoryId:
 BAU_CATEGORY_ID
+
 },
 
 giveaway: {
+
 name:
 `giveaway-${interaction.user.username.toLowerCase()}`,
 
@@ -2904,6 +3163,7 @@ title:
 
 categoryId:
 GIVEAWAY_CATEGORY_ID
+
 }
 
 }[selected];
@@ -3186,6 +3446,7 @@ content:
 });
 
 return;
+
 }
 
 // ==================================================
@@ -3442,7 +3703,6 @@ content:
 
 // ==================================================
 // TICKET ÜBERNEHMEN
-// NUR STAFF ROLLE
 // ==================================================
 
 if (
@@ -3525,7 +3785,6 @@ content:
 
 // ==================================================
 // TICKET WEITERLEITEN
-// NUR STAFF ROLLE
 // ==================================================
 
 if (
@@ -3590,7 +3849,6 @@ MessageFlags.Ephemeral
 
 // ==================================================
 // TICKET SCHLIESSEN
-// NUR STAFF KANN DEN BUTTON STARTEN
 // ==================================================
 
 if (
@@ -3695,10 +3953,11 @@ modal
 );
 
 return;
+
 }
 
 // ==================================================
-// TICKET SCHLIESSEN - MEMBER DRÜCKT JA
+// TICKET SCHLIESSEN - JA
 // ==================================================
 
 if (
@@ -3745,17 +4004,20 @@ MessageFlags.Ephemeral
 }
 
 const closeData = {
+
 reason:
 data.pendingClose.reason,
 
 requestedBy:
 data.pendingClose.requestedBy
+
 };
 
 await interaction.deferUpdate();
 
 const logSent =
 await sendTicketTranscriptLog({
+
 guild:
 interaction.guild,
 
@@ -3771,6 +4033,7 @@ closeData.requestedBy,
 
 confirmedById:
 interaction.user.id
+
 });
 
 if (!logSent) {
@@ -3787,6 +4050,7 @@ content:
 );
 
 return;
+
 }
 
 await channel.send({
@@ -3843,10 +4107,11 @@ error
 );
 
 return;
+
 }
 
 // ==================================================
-// TICKET SCHLIESSEN - MEMBER DRÜCKT NEIN
+// TICKET SCHLIESSEN - NEIN
 // ==================================================
 
 if (
@@ -3919,6 +4184,7 @@ components:
 });
 
 return;
+
 }
 
 }
@@ -4099,7 +4365,8 @@ row
 }
 
 if (
-winners.length > 0
+winners.length >
+0
 ) {
 
 await channel.send({
@@ -4177,7 +4444,8 @@ current.endAt -
 Date.now();
 
 if (
-remaining <= 0
+remaining <=
+0
 ) {
 
 endGiveaway(
@@ -4216,6 +4484,7 @@ timer
 };
 
 scheduleNext();
+
 }
 
 // ======================================================
@@ -4224,7 +4493,10 @@ scheduleNext();
 
 client.on(
 Events.VoiceStateUpdate,
-async (oldState, newState) => {
+async (
+oldState,
+newState
+) => {
 
 try {
 
@@ -4314,7 +4586,8 @@ value:
 
 embed.setThumbnail(
 member.user.displayAvatarURL({
-dynamic: true
+dynamic:
+true
 })
 );
 
@@ -4406,7 +4679,8 @@ ${member.guild.memberCount}`
 
 .setThumbnail(
 member.user.displayAvatarURL({
-dynamic: true
+dynamic:
+true
 })
 )
 
@@ -4618,6 +4892,7 @@ embed
 );
 
 return;
+
 }
 
 // ==================================================
@@ -4873,6 +5148,7 @@ roleConfig.id
 }
 
 return roleIds;
+
 }
 
 function setsEqual(
@@ -4903,6 +5179,7 @@ return false;
 }
 
 return true;
+
 }
 
 function getPrimaryTeamRole(
@@ -4952,6 +5229,7 @@ console.log(
 );
 
 return;
+
 }
 
 let content =
@@ -5013,7 +5291,8 @@ users: [
 memberId
 ],
 
-roles: []
+roles:
+[]
 }
 });
 
@@ -5077,13 +5356,16 @@ id
 );
 
 if (
-beforeRoleIds.size === 0 &&
-afterRoleIds.size > 0
+beforeRoleIds.size ===
+0 &&
+afterRoleIds.size >
+0
 ) {
 
 const roleConfig =
 getPrimaryTeamRole(
-addedRoleIds.size > 0
+addedRoleIds.size >
+0
 ? addedRoleIds
 : afterRoleIds
 );
@@ -5100,11 +5382,14 @@ roleConfig
 }
 
 return;
+
 }
 
 if (
-beforeRoleIds.size > 0 &&
-afterRoleIds.size === 0
+beforeRoleIds.size >
+0 &&
+afterRoleIds.size ===
+0
 ) {
 
 await sendTeamRoleMessage(
@@ -5114,15 +5399,12 @@ update.memberId,
 );
 
 return;
+
 }
 
-// WICHTIG:
-// Nur wenn eine NEUE Rolle hinzugefügt wurde,
-// wird eine Team-Wanderung-Nachricht gesendet.
-// Entfernen der alten Rolle sendet NICHTS.
-
 if (
-addedRoleIds.size > 0
+addedRoleIds.size >
+0
 ) {
 
 const roleConfig =
@@ -5151,7 +5433,10 @@ roleConfig
 
 client.on(
 Events.GuildMemberUpdate,
-(before, after) => {
+(
+before,
+after
+) => {
 
 const beforeRoleIds =
 getTrackedTeamRoleIds(
@@ -5208,6 +5493,7 @@ key
 );
 
 return;
+
 }
 
 const update = {
@@ -5253,7 +5539,10 @@ update
 
 client.on(
 Events.GuildMemberUpdate,
-async (before, after) => {
+async (
+before,
+after
+) => {
 
 try {
 
@@ -5384,8 +5673,10 @@ role.id
 );
 
 if (
-addedRoles.size === 0 &&
-removedRoles.size === 0
+addedRoles.size ===
+0 &&
+removedRoles.size ===
+0
 ) {
 return;
 }
@@ -5421,7 +5712,8 @@ value:
 });
 
 if (
-addedRoles.size > 0
+addedRoles.size >
+0
 ) {
 
 embed.addFields({
@@ -5444,7 +5736,8 @@ role.toString()
 }
 
 if (
-removedRoles.size > 0
+removedRoles.size >
+0
 ) {
 
 embed.addFields({
@@ -5503,7 +5796,10 @@ error
 
 client.on(
 Events.VoiceStateUpdate,
-async (before, after) => {
+async (
+before,
+after
+) => {
 
 try {
 
@@ -5921,7 +6217,10 @@ error
 
 client.on(
 Events.ChannelUpdate,
-async (before, after) => {
+async (
+before,
+after
+) => {
 
 try {
 
@@ -6129,7 +6428,10 @@ error
 
 client.on(
 Events.MessageUpdate,
-async (before, after) => {
+async (
+before,
+after
+) => {
 
 try {
 
@@ -6213,9 +6515,7 @@ after.content,
 }
 );
 
-if (
-after.url
-) {
+if (after.url) {
 
 embed.addFields({
 name:
