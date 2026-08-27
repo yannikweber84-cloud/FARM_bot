@@ -1472,27 +1472,6 @@ new SlashCommandBuilder()
 "Lässt den Bot eine Nachricht schreiben"
 )
 
-.addStringOption(
-option =>
-option
-
-.setName(
-"nachricht"
-)
-
-.setDescription(
-"Was soll der Bot schreiben?"
-)
-
-.setRequired(
-true
-)
-
-.setMaxLength(
-2000
-)
-)
-
 .toJSON()
 
 ];
@@ -1673,28 +1652,57 @@ MessageFlags.Ephemeral
 
 }
 
-const nachricht =
-interaction.options.getString(
-"nachricht",
-true
+const modal =
+new ModalBuilder()
+
+.setCustomId(
+"say_modal"
+)
+
+.setTitle(
+"Nachricht senden"
 );
 
-await interaction.reply({
-content:
-"✅ Nachricht gesendet.",
+const messageInput =
+new TextInputBuilder()
 
-flags:
-MessageFlags.Ephemeral
-});
+.setCustomId(
+"say_message"
+)
 
-await interaction.channel.send({
-content:
-nachricht,
+.setLabel(
+"Was möchtest du sagen?"
+)
 
-allowedMentions: {
-parse: []
-}
-});
+.setPlaceholder(
+"Schreibe hier deine Nachricht..."
+)
+
+.setStyle(
+TextInputStyle.Paragraph
+)
+
+.setRequired(
+true
+)
+
+.setMaxLength(
+2000
+);
+
+const row =
+new ActionRowBuilder()
+.addComponents(
+messageInput
+);
+
+modal.addComponents(
+row
+);
+
+await interaction.showModal(
+modal
+);
 
 return;
 }
@@ -2357,6 +2365,71 @@ row
 });
 
 }
+
+return;
+}
+
+// ==================================================
+// SAY MODAL
+// ==================================================
+
+if (
+interaction.isModalSubmit() &&
+interaction.customId ===
+"say_modal"
+) {
+
+if (
+!isAdmin(
+interaction.member
+)
+) {
+
+return interaction.reply({
+content:
+"❌ Nur Administratoren können `/say` benutzen.",
+
+flags:
+MessageFlags.Ephemeral
+});
+
+}
+
+const nachricht =
+interaction.fields
+.getTextInputValue(
+"say_message"
+)
+.trim();
+
+if (!nachricht) {
+
+return interaction.reply({
+content:
+"❌ Bitte gib eine Nachricht ein.",
+
+flags:
+MessageFlags.Ephemeral
+});
+
+}
+
+await interaction.reply({
+content:
+"✅ Nachricht gesendet.",
+
+flags:
+MessageFlags.Ephemeral
+});
+
+await interaction.channel.send({
+content:
+nachricht,
+
+allowedMentions: {
+parse: []
+}
+});
 
 return;
 }
