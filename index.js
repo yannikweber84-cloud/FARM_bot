@@ -68,6 +68,14 @@ const WELCOME_CHANNEL_ID =
 "1542137236500381757";
 
 // ======================================================
+// AUTO-ROLLE BEIM SERVER-BEITRITT
+// HIER DIE ROLLEN-ID EINTRAGEN, DIE JEDER NEUE USER BEKOMMT
+// ======================================================
+
+const AUTO_ROLE_ID =
+"HIER_AUTO_ROLE_ID_EINTRAGEN";
+
+// ======================================================
 // STAFF
 // ======================================================
 
@@ -285,14 +293,94 @@ return text;
 }
 
 // ======================================================
+// BERECHTIGUNGS-NAMEN FÜR LOGS
+// ======================================================
+
+const PERMISSION_NAMES_DE = {
+Administrator: "Administrator",
+ViewAuditLog: "Audit-Log anzeigen",
+ManageGuild: "Server verwalten",
+ManageRoles: "Rollen verwalten",
+ManageChannels: "Kanäle verwalten",
+KickMembers: "Mitglieder kicken",
+BanMembers: "Mitglieder bannen",
+ManageMessages: "Nachrichten verwalten",
+MentionEveryone: "@everyone / @here / Rollen erwähnen",
+ManageNicknames: "Nicknames verwalten",
+ChangeNickname: "Nickname ändern",
+ViewChannel: "Kanal ansehen",
+SendMessages: "Nachrichten senden",
+SendMessagesInThreads: "Nachrichten in Threads senden",
+CreatePublicThreads: "Öffentliche Threads erstellen",
+CreatePrivateThreads: "Private Threads erstellen",
+ManageThreads: "Threads verwalten",
+EmbedLinks: "Links einbetten",
+AttachFiles: "Dateien anhängen",
+ReadMessageHistory: "Nachrichtenverlauf lesen",
+AddReactions: "Reaktionen hinzufügen",
+UseExternalEmojis: "Externe Emojis verwenden",
+UseExternalStickers: "Externe Sticker verwenden",
+Connect: "Sprachkanal verbinden",
+Speak: "Sprechen",
+MuteMembers: "Mitglieder stummschalten",
+DeafenMembers: "Mitglieder taubschalten",
+MoveMembers: "Mitglieder verschieben",
+UseVAD: "Sprachaktivität verwenden",
+PrioritySpeaker: "Prioritätssprecher",
+Stream: "Video / Bildschirm teilen",
+ManageWebhooks: "Webhooks verwalten",
+ManageEvents: "Events verwalten",
+CreateEvents: "Events erstellen",
+ModerateMembers: "Mitglieder Timeout geben",
+ViewCreatorMonetizationAnalytics: "Monetarisierungs-Analysen anzeigen",
+UseApplicationCommands: "Anwendungsbefehle verwenden",
+UseEmbeddedActivities: "Aktivitäten verwenden",
+UseSoundboard: "Soundboard verwenden",
+UseExternalSounds: "Externe Sounds verwenden",
+SendVoiceMessages: "Sprachnachrichten senden",
+CreateGuildExpressions: "Server-Ausdrücke erstellen",
+ManageGuildExpressions: "Server-Ausdrücke verwalten"
+};
+
+function getPermissionDisplayName(name) {
+return PERMISSION_NAMES_DE[name] || name;
+}
+
+function getPermissionChanges(beforeRole, afterRole) {
+
+const added = [];
+const removed = [];
+
+for (const [name, bit] of Object.entries(PermissionsBitField.Flags)) {
+
+const hadBefore =
+beforeRole.permissions.has(bit);
+
+const hasAfter =
+afterRole.permissions.has(bit);
+
+if (!hadBefore && hasAfter) {
+added.push(
+getPermissionDisplayName(name)
+);
+}
+
+if (hadBefore && !hasAfter) {
+removed.push(
+getPermissionDisplayName(name)
+);
+}
+
+}
+
+return {
+added,
+removed
+};
+}
+
+// ======================================================
 // /SAY ROLLEN-MARKIERUNGEN
-// Beispiel:
-// @Staff Hallo zusammen!
-//
-// Der Bot wandelt @Rollenname automatisch
-// in eine echte Discord Rollen-Erwähnung um.
-//
-// @everyone und @here werden NICHT aktiviert.
 // ======================================================
 
 function escapeRegExp(value) {
@@ -310,11 +398,8 @@ text
 if (!guild) {
 
 return {
-content:
-text,
-
-roleIds:
-[]
+content: text,
+roleIds: []
 };
 
 }
@@ -379,18 +464,12 @@ return `${prefix}<@&${role.id}>`;
 );
 
 if (found) {
-
 roleIds.add(
 role.id
 );
-
 }
 
 }
-
-// ======================================================
-// FALLS MAN DIREKT <@&ROLLENID> EINGIBT
-// ======================================================
 
 const rawRoleMentionRegex =
 /<@&(\d{17,20})>/g;
@@ -403,16 +482,14 @@ rawMatch =
 rawRoleMentionRegex.exec(
 content
 )
-) !==
-null
+) !== null
 ) {
 
 if (
 guild.roles.cache.has(
 rawMatch[1]
 ) &&
-rawMatch[1] !==
-guild.id
+rawMatch[1] !== guild.id
 ) {
 
 roleIds.add(
@@ -805,17 +882,14 @@ message.content
 : "";
 
 if (content) {
-
 parts.push(
 content
 );
-
 }
 
 if (
 message.attachments &&
-message.attachments.size >
-0
+message.attachments.size > 0
 ) {
 
 for (
@@ -833,8 +907,7 @@ parts.push(
 
 if (
 message.embeds &&
-message.embeds.length >
-0
+message.embeds.length > 0
 ) {
 
 for (
@@ -846,27 +919,21 @@ const embedParts =
 [];
 
 if (embed.title) {
-
 embedParts.push(
 `Titel: ${embed.title}`
 );
-
 }
 
 if (embed.description) {
-
 embedParts.push(
 `Beschreibung: ${embed.description}`
 );
-
 }
 
 if (embed.url) {
-
 embedParts.push(
 `URL: ${embed.url}`
 );
-
 }
 
 parts.push(
@@ -878,8 +945,7 @@ parts.push(
 }
 
 if (
-parts.length ===
-0
+parts.length === 0
 ) {
 
 parts.push(
@@ -1078,7 +1144,6 @@ console.log(
 );
 
 return false;
-
 }
 
 const transcript =
@@ -1244,7 +1309,6 @@ error
 );
 
 return false;
-
 }
 
 }
@@ -1353,10 +1417,8 @@ unit ===
 unit ===
 "sekunden"
 ) {
-
 multiplier =
 1000;
-
 }
 
 if (
@@ -1367,11 +1429,9 @@ unit ===
 unit ===
 "minuten"
 ) {
-
 multiplier =
 60 *
 1000;
-
 }
 
 if (
@@ -1382,12 +1442,10 @@ unit ===
 unit ===
 "std"
 ) {
-
 multiplier =
 60 *
 60 *
 1000;
-
 }
 
 if (
@@ -1398,13 +1456,11 @@ unit ===
 unit ===
 "tagen"
 ) {
-
 multiplier =
 24 *
 60 *
 60 *
 1000;
-
 }
 
 if (
@@ -1413,14 +1469,12 @@ unit ===
 unit ===
 "wochen"
 ) {
-
 multiplier =
 7 *
 24 *
 60 *
 60 *
 1000;
-
 }
 
 if (!multiplier) {
@@ -1531,8 +1585,7 @@ name:
 "🎉 Ergebnis",
 
 value:
-winnerIds.length >
-0
+winnerIds.length > 0
 ? winnerIds
 .map(
 id =>
@@ -1567,10 +1620,8 @@ const winners =
 [];
 
 while (
-pool.length >
-0 &&
-winners.length <
-count
+pool.length > 0 &&
+winners.length < count
 ) {
 
 const index =
@@ -1747,7 +1798,6 @@ error
 );
 
 return false;
-
 }
 
 }
@@ -1928,7 +1978,6 @@ modal
 );
 
 return;
-
 }
 
 // ==================================================
@@ -2111,7 +2160,6 @@ modal
 );
 
 return;
-
 }
 
 // ==================================================
@@ -2285,8 +2333,7 @@ let deletedTotal =
 0;
 
 while (
-remaining >
-0
+remaining > 0
 ) {
 
 const batchSize =
@@ -2311,17 +2358,14 @@ remaining -=
 deletedCount;
 
 if (
-deletedCount ===
-0 ||
-deletedCount <
-batchSize
+deletedCount === 0 ||
+deletedCount < batchSize
 ) {
 break;
 }
 
 if (
-remaining >
-0
+remaining > 0
 ) {
 
 await new Promise(
@@ -2340,8 +2384,7 @@ await interaction.editReply({
 content:
 `🧹 **${deletedTotal} Nachrichten wurden gelöscht.**` +
 (
-deletedTotal <
-amount
+deletedTotal < amount
 ? "\n⚠️ Einige Nachrichten konnten nicht gelöscht werden, z. B. weil sie älter als 14 Tage sind."
 : ""
 )
@@ -2408,7 +2451,6 @@ content:
 }
 
 return;
-
 }
 
 // ==================================================
@@ -2597,7 +2639,6 @@ row
 }
 
 return;
-
 }
 
 // ==================================================
@@ -2676,7 +2717,6 @@ false
 });
 
 return;
-
 }
 
 // ==================================================
@@ -2746,8 +2786,7 @@ winnersText,
 
 if (
 !duration ||
-duration <
-10000
+duration < 10000
 ) {
 
 return interaction.reply({
@@ -2771,10 +2810,8 @@ if (
 !Number.isInteger(
 winnerCount
 ) ||
-winnerCount <
-1 ||
-winnerCount >
-20
+winnerCount < 1 ||
+winnerCount > 20
 ) {
 
 return interaction.reply({
@@ -2904,7 +2941,6 @@ content:
 });
 
 return;
-
 }
 
 // ==================================================
@@ -3075,7 +3111,6 @@ data.ownerId
 });
 
 return;
-
 }
 
 // ==================================================
@@ -3446,7 +3481,6 @@ content:
 });
 
 return;
-
 }
 
 // ==================================================
@@ -3953,7 +3987,6 @@ modal
 );
 
 return;
-
 }
 
 // ==================================================
@@ -4050,7 +4083,6 @@ content:
 );
 
 return;
-
 }
 
 await channel.send({
@@ -4107,7 +4139,6 @@ error
 );
 
 return;
-
 }
 
 // ==================================================
@@ -4184,7 +4215,6 @@ components:
 });
 
 return;
-
 }
 
 }
@@ -4365,8 +4395,7 @@ row
 }
 
 if (
-winners.length >
-0
+winners.length > 0
 ) {
 
 await channel.send({
@@ -4444,8 +4473,7 @@ current.endAt -
 Date.now();
 
 if (
-remaining <=
-0
+remaining <= 0
 ) {
 
 endGiveaway(
@@ -4615,6 +4643,81 @@ embed
 
 console.error(
 "❌ Voice Support Fehler:",
+error
+);
+
+}
+
+}
+);
+
+// ======================================================
+// AUTO-ROLLE BEIM SERVER-BEITRITT
+// ======================================================
+
+client.on(
+Events.GuildMemberAdd,
+async member => {
+
+try {
+
+if (member.user.bot) {
+return;
+}
+
+if (
+!/^\d{17,20}$/.test(
+AUTO_ROLE_ID
+)
+) {
+
+console.log(
+"⚠️ AUTO_ROLE_ID ist noch nicht richtig eingetragen."
+);
+
+return;
+}
+
+const role =
+member.guild.roles.cache.get(
+AUTO_ROLE_ID
+) ||
+await member.guild.roles.fetch(
+AUTO_ROLE_ID
+).catch(
+() => null
+);
+
+if (!role) {
+
+console.log(
+`⚠️ Auto-Rolle nicht gefunden: ${AUTO_ROLE_ID}`
+);
+
+return;
+}
+
+if (
+member.roles.cache.has(
+role.id
+)
+) {
+return;
+}
+
+await member.roles.add(
+role,
+"Automatische Rolle beim Server-Beitritt"
+);
+
+console.log(
+`✅ Auto-Rolle ${role.name} an ${member.user.tag} vergeben.`
+);
+
+} catch (error) {
+
+console.error(
+"❌ Auto-Rolle Fehler:",
 error
 );
 
@@ -4836,10 +4939,6 @@ AuditLogEvent.MemberKick,
 member.id
 );
 
-// ==================================================
-// KICK
-// ==================================================
-
 if (entry) {
 
 if (
@@ -4892,12 +4991,7 @@ embed
 );
 
 return;
-
 }
-
-// ==================================================
-// NORMAL VERLASSEN
-// ==================================================
 
 if (
 !isFeatureEnabled(
@@ -5229,7 +5323,6 @@ console.log(
 );
 
 return;
-
 }
 
 let content =
@@ -5358,14 +5451,12 @@ id
 if (
 beforeRoleIds.size ===
 0 &&
-afterRoleIds.size >
-0
+afterRoleIds.size > 0
 ) {
 
 const roleConfig =
 getPrimaryTeamRole(
-addedRoleIds.size >
-0
+addedRoleIds.size > 0
 ? addedRoleIds
 : afterRoleIds
 );
@@ -5382,14 +5473,11 @@ roleConfig
 }
 
 return;
-
 }
 
 if (
-beforeRoleIds.size >
-0 &&
-afterRoleIds.size ===
-0
+beforeRoleIds.size > 0 &&
+afterRoleIds.size === 0
 ) {
 
 await sendTeamRoleMessage(
@@ -5399,12 +5487,10 @@ update.memberId,
 );
 
 return;
-
 }
 
 if (
-addedRoleIds.size >
-0
+addedRoleIds.size > 0
 ) {
 
 const roleConfig =
@@ -5493,7 +5579,6 @@ key
 );
 
 return;
-
 }
 
 const update = {
@@ -5553,10 +5638,6 @@ if (
 ) {
 return;
 }
-
-// ==================================================
-// NICKNAME
-// ==================================================
 
 if (
 before.nickname !==
@@ -5636,10 +5717,6 @@ embed
 
 }
 
-// ==================================================
-// ROLLEN
-// ==================================================
-
 const beforeRoles =
 new Set(
 before.roles.cache.map(
@@ -5673,10 +5750,8 @@ role.id
 );
 
 if (
-addedRoles.size ===
-0 &&
-removedRoles.size ===
-0
+addedRoles.size === 0 &&
+removedRoles.size === 0
 ) {
 return;
 }
@@ -5712,8 +5787,7 @@ value:
 });
 
 if (
-addedRoles.size >
-0
+addedRoles.size > 0
 ) {
 
 embed.addFields({
@@ -5736,8 +5810,7 @@ role.toString()
 }
 
 if (
-removedRoles.size >
-0
+removedRoles.size > 0
 ) {
 
 embed.addFields({
@@ -5819,8 +5892,6 @@ if (!member) {
 return;
 }
 
-// VOICE JOIN
-
 if (
 !before.channel &&
 after.channel
@@ -5857,8 +5928,6 @@ embed
 
 }
 
-// VOICE LEAVE
-
 else if (
 before.channel &&
 !after.channel
@@ -5894,8 +5963,6 @@ embed
 );
 
 }
-
-// VOICE MOVE
 
 else if (
 before.channel &&
@@ -5942,8 +6009,6 @@ embed
 
 }
 
-// SERVER MUTE
-
 if (
 before.serverMute !==
 after.serverMute
@@ -5976,8 +6041,6 @@ embed
 );
 
 }
-
-// SERVER DEAF
 
 if (
 before.serverDeaf !==
@@ -6203,6 +6266,193 @@ embed
 
 console.error(
 "❌ Channel Delete Fehler:",
+error
+);
+
+}
+
+}
+);
+
+// ======================================================
+// ROLLEN-EINSTELLUNGEN / BERECHTIGUNGEN LOGGING
+// ======================================================
+
+client.on(
+Events.GuildRoleUpdate,
+async (
+before,
+after
+) => {
+
+try {
+
+if (
+!isFeatureEnabled(
+"roleLogs"
+)
+) {
+return;
+}
+
+if (!after.guild) {
+return;
+}
+
+const permissionChanges =
+getPermissionChanges(
+before,
+after
+);
+
+const otherChanges = [];
+
+if (before.name !== after.name) {
+otherChanges.push(
+`**Name:** ${before.name} → ${after.name}`
+);
+}
+
+if (before.hexColor !== after.hexColor) {
+otherChanges.push(
+`**Farbe:** ${before.hexColor} → ${after.hexColor}`
+);
+}
+
+if (before.hoist !== after.hoist) {
+otherChanges.push(
+`**Separat anzeigen:** ${before.hoist ? "Ja" : "Nein"} → ${after.hoist ? "Ja" : "Nein"}`
+);
+}
+
+if (before.mentionable !== after.mentionable) {
+otherChanges.push(
+`**Erwähnbar:** ${before.mentionable ? "Ja" : "Nein"} → ${after.mentionable ? "Ja" : "Nein"}`
+);
+}
+
+if (
+permissionChanges.added.length === 0 &&
+permissionChanges.removed.length === 0 &&
+otherChanges.length === 0
+) {
+return;
+}
+
+await new Promise(
+resolve =>
+setTimeout(
+resolve,
+1000
+)
+);
+
+const entry =
+await getAuditExecutor(
+after.guild,
+AuditLogEvent.RoleUpdate,
+after.id
+);
+
+const embed =
+baseEmbed(
+"🛡️ Rolle geändert",
+0x5865f2,
+"Die Einstellungen oder Berechtigungen einer Rolle wurden geändert."
+);
+
+embed.addFields({
+name:
+"🎭 Rolle",
+
+value:
+`${after}\n**Name:** ${after.name}\n**ID:** \`${after.id}\``
+});
+
+if (
+permissionChanges.added.length > 0
+) {
+
+embed.addFields({
+name:
+"✅ Berechtigungen hinzugefügt",
+
+value:
+permissionChanges.added
+.map(
+permission =>
+`• ${permission}`
+)
+.join("\n")
+.substring(
+0,
+1024
+)
+});
+
+}
+
+if (
+permissionChanges.removed.length > 0
+) {
+
+embed.addFields({
+name:
+"❌ Berechtigungen entfernt",
+
+value:
+permissionChanges.removed
+.map(
+permission =>
+`• ${permission}`
+)
+.join("\n")
+.substring(
+0,
+1024
+)
+});
+
+}
+
+if (
+otherChanges.length > 0
+) {
+
+embed.addFields({
+name:
+"⚙️ Weitere Änderungen",
+
+value:
+otherChanges
+.join("\n")
+.substring(
+0,
+1024
+)
+});
+
+}
+
+embed.addFields({
+name:
+"👮 Geändert von",
+
+value:
+entry && entry.executor
+? `${entry.executor} (${entry.executor.id})`
+: "Unbekannt / Audit-Log nicht verfügbar"
+});
+
+await sendLog(
+after.guild,
+embed
+);
+
+} catch (error) {
+
+console.error(
+"❌ Rollen-Einstellungs-Log Fehler:",
 error
 );
 
