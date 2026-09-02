@@ -2,7 +2,27 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
-const { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, PermissionsBitField, ChannelType, SlashCommandBuilder, MessageFlags, REST, Routes, UserSelectMenuBuilder, AuditLogEvent } = require("discord.js");
+const {
+    Client,
+    GatewayIntentBits,
+    Events,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    StringSelectMenuBuilder,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    PermissionsBitField,
+    ChannelType,
+    SlashCommandBuilder,
+    MessageFlags,
+    REST,
+    Routes,
+    UserSelectMenuBuilder,
+    AuditLogEvent
+} = require("discord.js");
 
 const app = express();
 
@@ -212,9 +232,7 @@ let birthdayStore = {
 };
 
 function loadBirthdayStore() {
-
     try {
-
         if (!fs.existsSync(BIRTHDAY_DATA_FILE)) {
             saveBirthdayStore();
             return;
@@ -260,20 +278,15 @@ function loadBirthdayStore() {
         };
 
     } catch (error) {
-
         console.error(
             "❌ Geburtstags-Daten konnten nicht geladen werden:",
             error
         );
-
     }
-
 }
 
 function saveBirthdayStore() {
-
     try {
-
         fs.writeFileSync(
             BIRTHDAY_DATA_FILE,
             JSON.stringify(
@@ -285,18 +298,14 @@ function saveBirthdayStore() {
         );
 
     } catch (error) {
-
         console.error(
             "❌ Geburtstags-Daten konnten nicht gespeichert werden:",
             error
         );
-
     }
-
 }
 
 function parseBirthdayInput(input) {
-
     const text =
         String(
             input ||
@@ -371,11 +380,58 @@ function parseBirthdayInput(input) {
         month,
         year
     };
+}
 
+function parseAbmeldungDate(input) {
+    const text =
+        String(input || "")
+            .trim();
+
+    const match =
+        text.match(
+            /^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/
+        );
+
+    if (!match) {
+        return null;
+    }
+
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+
+    const date =
+        new Date(
+            Date.UTC(
+                year,
+                month - 1,
+                day
+            )
+        );
+
+    if (
+        year < 2020 ||
+        year > 2100 ||
+        date.getUTCFullYear() !== year ||
+        date.getUTCMonth() + 1 !== month ||
+        date.getUTCDate() !== day
+    ) {
+        return null;
+    }
+
+    return {
+        day,
+        month,
+        year,
+        timestamp: date.getTime()
+    };
+}
+
+function formatAbmeldungDate(data) {
+    return `${String(data.day).padStart(2, "0")}.${String(data.month).padStart(2, "0")}.${data.year}`;
 }
 
 function formatBirthdayDate(data) {
-
     const day =
         String(data.day)
             .padStart(
@@ -393,11 +449,9 @@ function formatBirthdayDate(data) {
     return data.year
         ? `${day}.${month}.${data.year}`
         : `${day}.${month}.`;
-
 }
 
 function getBerlinDateParts() {
-
     const formatter =
         new Intl.DateTimeFormat(
             "de-DE",
@@ -417,18 +471,14 @@ function getBerlinDateParts() {
     const result = {};
 
     for (const part of parts) {
-
         if (
             part.type === "day" ||
             part.type === "month" ||
             part.type === "year"
         ) {
-
             result[part.type] =
                 Number(part.value);
-
         }
-
     }
 
     return {
@@ -438,11 +488,9 @@ function getBerlinDateParts() {
         key:
             `${result.year}-${String(result.month).padStart(2, "0")}-${String(result.day).padStart(2, "0")}`
     };
-
 }
 
 function birthdaySortValue(data, now) {
-
     let year =
         now.year;
 
@@ -461,7 +509,6 @@ function birthdaySortValue(data, now) {
         );
 
     if (date < today) {
-
         year += 1;
 
         date =
@@ -470,15 +517,12 @@ function birthdaySortValue(data, now) {
                 data.month - 1,
                 data.day
             );
-
     }
 
     return date;
-
 }
 
 function createBirthdayListEmbed() {
-
     const entries =
         Object.entries(
             birthdayStore.birthdays
@@ -502,12 +546,9 @@ function createBirthdayListEmbed() {
     let description;
 
     if (entries.length === 0) {
-
         description =
             "Noch niemand hat einen Geburtstag eingetragen.";
-
     } else {
-
         description =
             entries
                 .map(
@@ -517,16 +558,13 @@ function createBirthdayListEmbed() {
                 .join("\n");
 
         if (description.length > 4000) {
-
             description =
                 description.substring(
                     0,
                     3970
                 ) +
                 "\n\n*Liste gekürzt.*";
-
         }
-
     }
 
     return new EmbedBuilder()
@@ -538,11 +576,9 @@ function createBirthdayListEmbed() {
                 `${entries.length} Geburtstag${entries.length === 1 ? "" : "e"} eingetragen • aktualisiert sich automatisch`
         })
         .setTimestamp();
-
 }
 
 async function updateBirthdayListMessage(guild) {
-
     if (
         !guild ||
         !birthdayStore.listChannelId ||
@@ -552,7 +588,6 @@ async function updateBirthdayListMessage(guild) {
     }
 
     try {
-
         const channel =
             guild.channels.cache.get(
                 birthdayStore.listChannelId
@@ -590,22 +625,17 @@ async function updateBirthdayListMessage(guild) {
         return true;
 
     } catch (error) {
-
         console.error(
             "❌ Geburtstagsliste aktualisieren Fehler:",
             error
         );
 
         return false;
-
     }
-
 }
 
 async function checkBirthdays() {
-
     try {
-
         const guild =
             client.guilds.cache.get(
                 GUILD_ID
@@ -644,7 +674,6 @@ async function checkBirthdays() {
                 BIRTHDAY_GLOBAL_CHANNEL_ID
             )
         ) {
-
             globalChannel =
                 guild.channels.cache.get(
                     BIRTHDAY_GLOBAL_CHANNEL_ID
@@ -654,14 +683,12 @@ async function checkBirthdays() {
                 ).catch(
                     () => null
                 );
-
         }
 
         if (
             !globalChannel ||
             !globalChannel.isTextBased()
         ) {
-
             const preferredNames = [
                 "global",
                 "global-chat",
@@ -674,7 +701,6 @@ async function checkBirthdays() {
                 const channelName
                 of preferredNames
             ) {
-
                 const found =
                     guild.channels.cache.find(
                         channel =>
@@ -684,29 +710,23 @@ async function checkBirthdays() {
                     );
 
                 if (found) {
-
                     globalChannel =
                         found;
 
                     break;
-
                 }
-
             }
-
         }
 
         if (
             !globalChannel ||
             !globalChannel.isTextBased()
         ) {
-
             console.log(
                 `⚠️ Geburtstags-Global-Channel nicht gefunden: ${BIRTHDAY_GLOBAL_CHANNEL_ID}`
             );
 
             return;
-
         }
 
         let changed =
@@ -716,7 +736,6 @@ async function checkBirthdays() {
             const userId
             of birthdayUserIds
         ) {
-
             if (
                 birthdayStore.announced &&
                 birthdayStore.announced[userId] ===
@@ -749,27 +768,21 @@ async function checkBirthdays() {
 
             changed =
                 true;
-
         }
 
         if (changed) {
-
             birthdayStore.lastAnnouncementDate =
                 today.key;
 
             saveBirthdayStore();
-
         }
 
     } catch (error) {
-
         console.error(
             "❌ Geburtstags-Check Fehler:",
             error
         );
-
     }
-
 }
 
 loadBirthdayStore();
@@ -790,7 +803,6 @@ function safeText(
     value,
     fallback = "Unbekannt"
 ) {
-
     if (
         value === null ||
         value === undefined
@@ -806,11 +818,9 @@ function safeText(
     }
 
     return text;
-
 }
 
 function formatTimeoutDuration(ms) {
-
     if (
         !Number.isFinite(ms) ||
         ms <= 0
@@ -885,7 +895,6 @@ function formatTimeoutDuration(ms) {
         parts.join(" ") ||
         "Weniger als 1 Sekunde"
     );
-
 }
 
 const PERMISSION_NAMES_DE = {
@@ -1020,19 +1029,16 @@ const PERMISSION_NAMES_DE = {
 };
 
 function getPermissionDisplayName(name) {
-
     return (
         PERMISSION_NAMES_DE[name] ||
         name
     );
-
 }
 
 function getPermissionChanges(
     beforeRole,
     afterRole
 ) {
-
     const added = [];
     const removed = [];
 
@@ -1042,7 +1048,6 @@ function getPermissionChanges(
             PermissionsBitField.Flags
         )
     ) {
-
         const hadBefore =
             beforeRole
                 .permissions
@@ -1057,50 +1062,40 @@ function getPermissionChanges(
             !hadBefore &&
             hasAfter
         ) {
-
             added.push(
                 getPermissionDisplayName(name)
             );
-
         }
 
         if (
             hadBefore &&
             !hasAfter
         ) {
-
             removed.push(
                 getPermissionDisplayName(name)
             );
-
         }
-
     }
 
     return {
         added,
         removed
     };
-
 }
 
 function escapeRegExp(value) {
-
     return String(value)
         .replace(
             /[.*+?^${}()|[\]\\]/g,
             "\\$&"
         );
-
 }
 
 function resolveSayRoleMentions(
     guild,
     text
 ) {
-
     if (!guild) {
-
         return {
             content:
                 String(text),
@@ -1108,7 +1103,6 @@ function resolveSayRoleMentions(
             roleIds:
                 []
         };
-
     }
 
     let content =
@@ -1134,7 +1128,6 @@ function resolveSayRoleMentions(
         );
 
     for (const role of roles) {
-
         if (
             role.name === "@everyone"
         ) {
@@ -1159,21 +1152,18 @@ function resolveSayRoleMentions(
             content.replace(
                 regex,
                 (match, prefix) => {
-
                     found =
                         true;
 
                     return (
                         `${prefix}<@&${role.id}>`
                     );
-
                 }
             );
 
         if (found) {
             roleIds.add(role.id);
         }
-
     }
 
     const rawRoleMentionRegex =
@@ -1189,20 +1179,16 @@ function resolveSayRoleMentions(
             )
         ) !== null
     ) {
-
         if (
             guild.roles.cache.has(
                 rawMatch[1]
             ) &&
             rawMatch[1] !== guild.id
         ) {
-
             roleIds.add(
                 rawMatch[1]
             );
-
         }
-
     }
 
     return {
@@ -1211,7 +1197,6 @@ function resolveSayRoleMentions(
             ...roleIds
         ]
     };
-
 }
 
 function baseEmbed(
@@ -1219,7 +1204,6 @@ function baseEmbed(
     color = 0x5865f2,
     description = null
 ) {
-
     const embed =
         new EmbedBuilder();
 
@@ -1240,7 +1224,6 @@ function baseEmbed(
         description !== null &&
         description !== undefined
     ) {
-
         const text =
             String(
                 description
@@ -1249,17 +1232,14 @@ function baseEmbed(
         if (text.length > 0) {
             embed.setDescription(text);
         }
-
     }
 
     embed.setTimestamp();
 
     return embed;
-
 }
 
 function getLogChannel(guild) {
-
     if (!guild) {
         return null;
     }
@@ -1280,16 +1260,13 @@ function getLogChannel(guild) {
     }
 
     return channel;
-
 }
 
 async function sendLog(
     guild,
     embed
 ) {
-
     try {
-
         if (
             !isFeatureEnabled(
                 "serverLogs"
@@ -1309,13 +1286,11 @@ async function sendLog(
             getLogChannel(guild);
 
         if (!channel) {
-
             console.log(
                 `⚠️ Log-Kanal nicht gefunden: ${SERVER_LOG_CHANNEL_ID}`
             );
 
             return;
-
         }
 
         await channel.send({
@@ -1325,14 +1300,11 @@ async function sendLog(
         });
 
     } catch (error) {
-
         console.error(
             "❌ Logging Fehler:",
             error
         );
-
     }
-
 }
 
 async function getAuditExecutor(
@@ -1341,9 +1313,7 @@ async function getAuditExecutor(
     targetId,
     maxEntries = 10
 ) {
-
     try {
-
         if (!guild) {
             return null;
         }
@@ -1360,7 +1330,6 @@ async function getAuditExecutor(
         const entry =
             logs.entries.find(
                 entry => {
-
                     if (
                         !entry.target ||
                         !entry.target.id
@@ -1374,7 +1343,6 @@ async function getAuditExecutor(
                         entry.createdTimestamp <
                         10000
                     );
-
                 }
             );
 
@@ -1384,31 +1352,24 @@ async function getAuditExecutor(
         );
 
     } catch (error) {
-
         if (
             error.code !== 50013
         ) {
-
             console.error(
                 "❌ Audit-Log Fehler:",
                 error
             );
-
         }
 
         return null;
-
     }
-
 }
 
 async function getTimeoutAuditEntry(
     guild,
     targetId
 ) {
-
     try {
-
         const logs =
             await guild.fetchAuditLogs({
                 limit:
@@ -1421,7 +1382,6 @@ async function getTimeoutAuditEntry(
         const entry =
             logs.entries.find(
                 entry => {
-
                     if (
                         !entry.target ||
                         entry.target.id !== targetId
@@ -1450,7 +1410,6 @@ async function getTimeoutAuditEntry(
                             change.key ===
                             "communication_disabled_until"
                     );
-
                 }
             );
 
@@ -1460,26 +1419,20 @@ async function getTimeoutAuditEntry(
         );
 
     } catch (error) {
-
         if (
             error.code !== 50013
         ) {
-
             console.error(
                 "❌ Timeout Audit Fehler:",
                 error
             );
-
         }
 
         return null;
-
     }
-
 }
 
 function isAdmin(member) {
-
     if (!member) {
         return false;
     }
@@ -1491,11 +1444,9 @@ function isAdmin(member) {
                 .Flags
                 .Administrator
         );
-
 }
 
 function isStaff(member) {
-
     if (!member) {
         return false;
     }
@@ -1509,11 +1460,9 @@ function isStaff(member) {
             ) ||
         isAdmin(member)
     );
-
 }
 
 function isTicketStaff(member) {
-
     if (
         !member ||
         !member.roles ||
@@ -1528,11 +1477,9 @@ function isTicketStaff(member) {
         .has(
             STAFF_ROLE_ID
         );
-
 }
 
 function getTicketData(channel) {
-
     if (!channel) {
         return null;
     }
@@ -1543,18 +1490,15 @@ function getTicketData(channel) {
         ) ||
         null
     );
-
 }
 
 async function fetchAllTicketMessages(channel) {
-
     const messages = [];
 
     let beforeId =
         null;
 
     while (true) {
-
         const options = {
             limit:
                 100
@@ -1596,7 +1540,6 @@ async function fetchAllTicketMessages(channel) {
         ) {
             break;
         }
-
     }
 
     messages.sort(
@@ -1606,11 +1549,9 @@ async function fetchAllTicketMessages(channel) {
     );
 
     return messages;
-
 }
 
 function formatTicketMessage(message) {
-
     const timestamp =
         new Date(
             message.createdTimestamp
@@ -1642,30 +1583,24 @@ function formatTicketMessage(message) {
         message.attachments &&
         message.attachments.size > 0
     ) {
-
         for (
             const attachment
             of message.attachments.values()
         ) {
-
             parts.push(
                 `[Anhang: ${attachment.name || "Datei"}] ${attachment.url}`
             );
-
         }
-
     }
 
     if (
         message.embeds &&
         message.embeds.length > 0
     ) {
-
         for (
             const embed
             of message.embeds
         ) {
-
             const embedParts = [];
 
             if (embed.title) {
@@ -1693,17 +1628,13 @@ function formatTicketMessage(message) {
                         : ""
                 }]`
             );
-
         }
-
     }
 
     if (parts.length === 0) {
-
         parts.push(
             "[Keine Textnachricht]"
         );
-
     }
 
     const body =
@@ -1717,7 +1648,6 @@ function formatTicketMessage(message) {
     return (
         `[${timestamp}] ${author}\n${body}\n`
     );
-
 }
 
 async function createTicketTranscript(
@@ -1727,7 +1657,6 @@ async function createTicketTranscript(
     requestedById,
     confirmedById
 ) {
-
     const messages =
         await fetchAllTicketMessages(
             channel
@@ -1824,7 +1753,6 @@ async function createTicketTranscript(
         const message
         of messages
     ) {
-
         transcript +=
             formatTicketMessage(
                 message
@@ -1832,7 +1760,6 @@ async function createTicketTranscript(
 
         transcript +=
             "\n";
-
     }
 
     const maxBytes =
@@ -1850,7 +1777,6 @@ async function createTicketTranscript(
         buffer.length >
         maxBytes
     ) {
-
         const shortened =
             buffer
                 .subarray(
@@ -1869,7 +1795,6 @@ async function createTicketTranscript(
                 shortened,
                 "utf8"
             );
-
     }
 
     return {
@@ -1877,7 +1802,6 @@ async function createTicketTranscript(
         messageCount:
             messages.length
     };
-
 }
 
 async function sendTicketTranscriptLog({
@@ -1888,9 +1812,7 @@ async function sendTicketTranscriptLog({
     requestedById,
     confirmedById
 }) {
-
     try {
-
         if (
             !guild ||
             !channel
@@ -1918,13 +1840,11 @@ async function sendTicketTranscriptLog({
             !logChannel ||
             !logChannel.isTextBased()
         ) {
-
             console.log(
                 `⚠️ Ticket-Transcript-Channel nicht gefunden: ${TICKET_TRANSCRIPT_CHANNEL_ID}`
             );
 
             return false;
-
         }
 
         const transcript =
@@ -2082,16 +2002,13 @@ async function sendTicketTranscriptLog({
         return true;
 
     } catch (error) {
-
         console.error(
             "❌ Ticket Transcript Fehler:",
             error
         );
 
         return false;
-
     }
-
 }
 
 async function createTicketChannel(
@@ -2099,7 +2016,6 @@ async function createTicketChannel(
     config,
     answers = []
 ) {
-
     const guild =
         interaction.guild;
 
@@ -2138,12 +2054,10 @@ async function createTicketChannel(
         !staffRole ||
         !category
     ) {
-
         return interaction.editReply({
             content:
                 "❌ Ticket konnte nicht erstellt werden. Prüfe Rollen und Kategorien."
         });
-
     }
 
     const existing =
@@ -2159,12 +2073,10 @@ async function createTicketChannel(
             );
 
     if (existing) {
-
         return interaction.editReply({
             content:
                 `❌ Du hast bereits ein Ticket offen: ${existing}`
         });
-
     }
 
     const channel =
@@ -2313,7 +2225,6 @@ async function createTicketChannel(
         "";
 
     if (answers.length > 0) {
-
         answersText =
             answers
                 .map(
@@ -2323,7 +2234,6 @@ async function createTicketChannel(
                 .join(
                     "\n\n"
                 );
-
     }
 
     const description =
@@ -2399,11 +2309,9 @@ Dein Ticket wurde erfolgreich erstellt.
         content:
             `✅ Dein Ticket wurde erstellt: ${channel}`
     });
-
 }
 
 function parseGiveawayDuration(input) {
-
     if (!input) {
         return null;
     }
@@ -2429,7 +2337,6 @@ function parseGiveawayDuration(input) {
         );
 
     if (shortMatch) {
-
         const amount =
             Number(
                 shortMatch[1]
@@ -2470,7 +2377,6 @@ function parseGiveawayDuration(input) {
             amount *
             multipliers[unit]
         );
-
     }
 
     const longMatch =
@@ -2498,10 +2404,8 @@ function parseGiveawayDuration(input) {
         unit === "sekunde" ||
         unit === "sekunden"
     ) {
-
         multiplier =
             1000;
-
     }
 
     if (
@@ -2509,11 +2413,9 @@ function parseGiveawayDuration(input) {
         unit === "minute" ||
         unit === "minuten"
     ) {
-
         multiplier =
             60 *
             1000;
-
     }
 
     if (
@@ -2521,12 +2423,10 @@ function parseGiveawayDuration(input) {
         unit === "stunden" ||
         unit === "std"
     ) {
-
         multiplier =
             60 *
             60 *
             1000;
-
     }
 
     if (
@@ -2534,27 +2434,23 @@ function parseGiveawayDuration(input) {
         unit === "tage" ||
         unit === "tagen"
     ) {
-
         multiplier =
             24 *
             60 *
             60 *
             1000;
-
     }
 
     if (
         unit === "woche" ||
         unit === "wochen"
     ) {
-
         multiplier =
             7 *
             24 *
             60 *
             60 *
             1000;
-
     }
 
     if (!multiplier) {
@@ -2565,7 +2461,6 @@ function parseGiveawayDuration(input) {
         amount *
         multiplier
     );
-
 }
 
 function createGiveawayEmbed(
@@ -2573,7 +2468,6 @@ function createGiveawayEmbed(
     ended = false,
     winnerIds = []
 ) {
-
     const endUnix =
         Math.floor(
             data.endAt /
@@ -2649,7 +2543,6 @@ function createGiveawayEmbed(
             });
 
     if (ended) {
-
         embed.addFields({
             name:
                 "🎉 Ergebnis",
@@ -2666,18 +2559,15 @@ function createGiveawayEmbed(
                         )
                     : "Keine gültigen Teilnehmer."
         });
-
     }
 
     return embed;
-
 }
 
 function pickGiveawayWinners(
     participants,
     count
 ) {
-
     const pool = [
         ...participants
     ];
@@ -2688,7 +2578,6 @@ function pickGiveawayWinners(
         pool.length > 0 &&
         winners.length < count
     ) {
-
         const index =
             Math.floor(
                 Math.random() *
@@ -2701,11 +2590,9 @@ function pickGiveawayWinners(
                 1
             )[0]
         );
-
     }
 
     return winners;
-
 }
 
 const commands = [
@@ -2829,13 +2716,21 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName(
+            "abmeldung"
+        )
+        .setDescription(
+            "Meldet dich für einen Zeitraum ab"
+        )
+        .toJSON(),
+
+    new SlashCommandBuilder()
+        .setName(
             "say"
         )
         .setDescription(
             "Lässt den Bot eine Nachricht schreiben"
         )
         .toJSON()
-
 ];
 
 const rest =
@@ -2848,9 +2743,7 @@ const rest =
         );
 
 async function registerCommands() {
-
     try {
-
         console.log(
             "⏳ Registriere Slash Commands..."
         );
@@ -2873,22 +2766,18 @@ async function registerCommands() {
         return true;
 
     } catch (error) {
-
         console.error(
             "❌ Fehler beim Registrieren:",
             error
         );
 
         return false;
-
     }
-
 }
 
 client.once(
     Events.ClientReady,
     async () => {
-
         console.log("");
 
         console.log(
@@ -2931,18 +2820,15 @@ client.once(
             checkBirthdays,
             60 * 1000
         );
-
     }
 );
 
 if (!TOKEN) {
-
     console.error(
         "❌ TOKEN fehlt bei Render Environment!"
     );
 
     process.exit(1);
-
 }
 
 console.log(
@@ -2955,30 +2841,24 @@ client
     )
     .catch(
         error => {
-
             console.error(
                 "❌ Discord Login Fehler:",
                 error
             );
-
         }
     );
 
 client.on(
     Events.InteractionCreate,
     async interaction => {
-
         try {
-
             if (
                 interaction.isChatInputCommand()
             ) {
-
                 if (
                     interaction.commandName ===
                     "geburstag"
                 ) {
-
                     const subcommand =
                         interaction.options.getSubcommand();
 
@@ -2986,13 +2866,11 @@ client.on(
                         subcommand ===
                         "panel"
                     ) {
-
                         if (
                             !isAdmin(
                                 interaction.member
                             )
                         ) {
-
                             return interaction.reply({
                                 content:
                                     "❌ Nur Administratoren können das Geburtstags-Panel erstellen.",
@@ -3000,7 +2878,6 @@ client.on(
                                 flags:
                                     MessageFlags.Ephemeral
                             });
-
                         }
 
                         const button =
@@ -3062,20 +2939,17 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     if (
                         subcommand ===
                         "liste"
                     ) {
-
                         if (
                             !isAdmin(
                                 interaction.member
                             )
                         ) {
-
                             return interaction.reply({
                                 content:
                                     "❌ Nur Administratoren können die feste Geburtstagsliste erstellen oder verschieben.",
@@ -3083,7 +2957,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                 flags:
                                     MessageFlags.Ephemeral
                             });
-
                         }
 
                         await interaction.deferReply({
@@ -3101,12 +2974,10 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             birthdayStore.listChannelId ===
                             interaction.channel.id
                         ) {
-
                             return interaction.editReply({
                                 content:
                                     "✅ Die bestehende Geburtstagsliste wurde aktualisiert."
                             });
-
                         }
 
                         const listMessage =
@@ -3128,20 +2999,17 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             content:
                                 "✅ Geburtstagsliste wurde erstellt und aktualisiert sich ab jetzt automatisch."
                         });
-
                     }
 
                     if (
                         subcommand ===
                         "löschen"
                     ) {
-
                         if (
                             !isAdmin(
                                 interaction.member
                             )
                         ) {
-
                             return interaction.reply({
                                 content:
                                     "❌ Nur Administratoren können Geburtstage löschen.",
@@ -3149,7 +3017,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                 flags:
                                     MessageFlags.Ephemeral
                             });
-
                         }
 
                         const user =
@@ -3163,7 +3030,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                 user.id
                             ]
                         ) {
-
                             return interaction.reply({
                                 content:
                                     `❌ ${user} hat keinen Geburtstag eingetragen.`,
@@ -3171,7 +3037,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                 flags:
                                     MessageFlags.Ephemeral
                             });
-
                         }
 
                         delete birthdayStore.birthdays[
@@ -3181,11 +3046,9 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                         if (
                             birthdayStore.announced
                         ) {
-
                             delete birthdayStore.announced[
                                 user.id
                             ];
-
                         }
 
                         saveBirthdayStore();
@@ -3201,22 +3064,139 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
+                    }
+                }
 
+                // =====================================================
+                // /ABMELDUNG
+                // Nur STAFF_ROLE_ID darf diesen Befehl benutzen
+                // =====================================================
+
+                if (
+                    interaction.commandName ===
+                    "abmeldung"
+                ) {
+                    if (
+                        !interaction.member ||
+                        !interaction.member.roles ||
+                        !interaction.member.roles.cache.has(
+                            STAFF_ROLE_ID
+                        )
+                    ) {
+                        return interaction.reply({
+                            content:
+                                "❌ Du darfst diesen Befehl nicht benutzen.",
+
+                            flags:
+                                MessageFlags.Ephemeral
+                        });
                     }
 
+                    const modal =
+                        new ModalBuilder()
+                            .setCustomId(
+                                "abmeldung_modal"
+                            )
+                            .setTitle(
+                                "Team-Abmeldung"
+                            );
+
+                    const vonInput =
+                        new TextInputBuilder()
+                            .setCustomId(
+                                "abmeldung_von"
+                            )
+                            .setLabel(
+                                "Von wann bist du abgemeldet?"
+                            )
+                            .setPlaceholder(
+                                "z. B. 05.09.2026"
+                            )
+                            .setStyle(
+                                TextInputStyle.Short
+                            )
+                            .setRequired(
+                                true
+                            )
+                            .setMaxLength(
+                                10
+                            );
+
+                    const bisInput =
+                        new TextInputBuilder()
+                            .setCustomId(
+                                "abmeldung_bis"
+                            )
+                            .setLabel(
+                                "Bis wann bist du abgemeldet?"
+                            )
+                            .setPlaceholder(
+                                "z. B. 12.09.2026"
+                            )
+                            .setStyle(
+                                TextInputStyle.Short
+                            )
+                            .setRequired(
+                                true
+                            )
+                            .setMaxLength(
+                                10
+                            );
+
+                    const grundInput =
+                        new TextInputBuilder()
+                            .setCustomId(
+                                "abmeldung_grund"
+                            )
+                            .setLabel(
+                                "Grund"
+                            )
+                            .setPlaceholder(
+                                "z. B. Urlaub, Schule oder private Gründe"
+                            )
+                            .setStyle(
+                                TextInputStyle.Paragraph
+                            )
+                            .setRequired(
+                                true
+                            )
+                            .setMaxLength(
+                                500
+                            );
+
+                    modal.addComponents(
+                        new ActionRowBuilder()
+                            .addComponents(
+                                vonInput
+                            ),
+
+                        new ActionRowBuilder()
+                            .addComponents(
+                                bisInput
+                            ),
+
+                        new ActionRowBuilder()
+                            .addComponents(
+                                grundInput
+                            )
+                    );
+
+                    await interaction.showModal(
+                        modal
+                    );
+
+                    return;
                 }
 
                 if (
                     interaction.commandName ===
                     "say"
                 ) {
-
                     if (
                         !isAdmin(
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Nur Administratoren können `/say` benutzen.",
@@ -3224,7 +3204,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     const modal =
@@ -3269,7 +3248,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                     );
 
                     return;
-
                 }
 
                 if (
@@ -3280,13 +3258,11 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                         .getSubcommand() ===
                         "giveaway"
                 ) {
-
                     if (
                         !isFeatureEnabled(
                             "giveaways"
                         )
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Das Giveaway-System ist derzeit deaktiviert.",
@@ -3294,7 +3270,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     if (
@@ -3310,7 +3285,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                     .ManageGuild
                             )
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Du benötigst die Berechtigung **Server verwalten**, um ein Gewinnspiel zu erstellen.",
@@ -3318,7 +3292,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     const modal =
@@ -3429,20 +3402,17 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                     );
 
                     return;
-
                 }
 
                 if (
                     interaction.commandName ===
                     "logtest"
                 ) {
-
                     if (
                         !isAdmin(
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Nur Administratoren können diesen Befehl benutzen.",
@@ -3450,7 +3420,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     const embed =
@@ -3491,14 +3460,12 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                         flags:
                             MessageFlags.Ephemeral
                     });
-
                 }
 
                 if (
                     interaction.commandName ===
                     "clear"
                 ) {
-
                     if (
                         !interaction
                             .member
@@ -3512,7 +3479,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Du benötigst die Berechtigung **Nachrichten verwalten**.",
@@ -3520,7 +3486,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     const amount =
@@ -3540,7 +3505,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                         typeof channel.bulkDelete !==
                         "function"
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ In diesem Channel können keine Nachrichten gelöscht werden.",
@@ -3548,7 +3512,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     await interaction.deferReply({
@@ -3565,7 +3528,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                     while (
                         remaining > 0
                     ) {
-
                         const batchSize =
                             Math.min(
                                 remaining,
@@ -3594,7 +3556,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                         ) {
                             break;
                         }
-
                     }
 
                     await interaction.editReply({
@@ -3638,20 +3599,17 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                     );
 
                     return;
-
                 }
 
                 if (
                     interaction.commandName ===
                     "ticketpanel"
                 ) {
-
                     if (
                         !isAdmin(
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Nur Administratoren können das Ticket Panel erstellen.",
@@ -3659,7 +3617,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     const embed =
@@ -3796,11 +3753,202 @@ Erstelle einfach ein Ticket.
                             row
                         ]
                     });
-
                 }
 
                 return;
+            }
 
+            // =====================================================
+            // ABMELDUNG FORMULAR ABSENDEN
+            // =====================================================
+
+            if (
+                interaction.isModalSubmit() &&
+                interaction.customId ===
+                "abmeldung_modal"
+            ) {
+                if (
+                    !interaction.member ||
+                    !interaction.member.roles ||
+                    !interaction.member.roles.cache.has(
+                        STAFF_ROLE_ID
+                    )
+                ) {
+                    return interaction.reply({
+                        content:
+                            "❌ Du darfst diesen Befehl nicht benutzen.",
+
+                        flags:
+                            MessageFlags.Ephemeral
+                    });
+                }
+
+                const vonText =
+                    interaction.fields
+                        .getTextInputValue(
+                            "abmeldung_von"
+                        )
+                        .trim();
+
+                const bisText =
+                    interaction.fields
+                        .getTextInputValue(
+                            "abmeldung_bis"
+                        )
+                        .trim();
+
+                const grund =
+                    interaction.fields
+                        .getTextInputValue(
+                            "abmeldung_grund"
+                        )
+                        .trim();
+
+                const von =
+                    parseAbmeldungDate(
+                        vonText
+                    );
+
+                const bis =
+                    parseAbmeldungDate(
+                        bisText
+                    );
+
+                if (!von || !bis) {
+                    return interaction.reply({
+                        content:
+                            "❌ Bitte gib beide Daten richtig ein, z. B. **05.09.2026**.",
+
+                        flags:
+                            MessageFlags.Ephemeral
+                    });
+                }
+
+                if (
+                    bis.timestamp <
+                    von.timestamp
+                ) {
+                    return interaction.reply({
+                        content:
+                            "❌ Das Bis-Datum darf nicht vor dem Von-Datum liegen.",
+
+                        flags:
+                            MessageFlags.Ephemeral
+                    });
+                }
+
+                const durationDays =
+                    Math.floor(
+                        (
+                            bis.timestamp -
+                            von.timestamp
+                        ) /
+                        86400000
+                    ) + 1;
+
+                const abmeldungEmbed =
+                    new EmbedBuilder()
+                        .setColor(
+                            "#FEE75C"
+                        )
+                        .setTitle(
+                            "📅 Team-Abmeldung"
+                        )
+                        .setDescription(
+                            `${interaction.user} hat sich beim **VIBE Clan** abgemeldet.`
+                        )
+                        .addFields(
+                            {
+                                name:
+                                    "👤 Teammitglied",
+
+                                value:
+                                    `${interaction.user}`,
+
+                                inline:
+                                    false
+                            },
+                            {
+                                name:
+                                    "📆 Von",
+
+                                value:
+                                    `**${formatAbmeldungDate(von)}**`,
+
+                                inline:
+                                    true
+                            },
+                            {
+                                name:
+                                    "📆 Bis",
+
+                                value:
+                                    `**${formatAbmeldungDate(bis)}**`,
+
+                                inline:
+                                    true
+                            },
+                            {
+                                name:
+                                    "⏳ Dauer",
+
+                                value:
+                                    `**${durationDays} Tag${durationDays === 1 ? "" : "e"}**`,
+
+                                inline:
+                                    true
+                            },
+                            {
+                                name:
+                                    "📝 Grund",
+
+                                value:
+                                    grund.substring(
+                                        0,
+                                        1024
+                                    ),
+
+                                inline:
+                                    false
+                            },
+                            {
+                                name:
+                                    "📌 Status",
+
+                                value:
+                                    "🔴 **Abgemeldet**",
+
+                                inline:
+                                    false
+                            }
+                        )
+                        .setThumbnail(
+                            interaction.user.displayAvatarURL({
+                                size:
+                                    256
+                            })
+                        )
+                        .setFooter({
+                            text:
+                                "VIBE Clan • Team-Abmeldung"
+                        })
+                        .setTimestamp();
+
+                await interaction.channel.send({
+                    embeds: [
+                        abmeldungEmbed
+                    ]
+                });
+
+                await interaction.reply({
+                    content:
+                        "✅ Deine Abmeldung wurde erfolgreich eingetragen.",
+
+                    flags:
+                        MessageFlags.Ephemeral
+                });
+
+                return;
             }
 
             if (
@@ -3808,13 +3956,11 @@ Erstelle einfach ein Ticket.
                 interaction.customId ===
                 "say_modal"
             ) {
-
                 if (
                     !isAdmin(
                         interaction.member
                     )
                 ) {
-
                     return interaction.reply({
                         content:
                             "❌ Nur Administratoren können `/say` benutzen.",
@@ -3822,7 +3968,6 @@ Erstelle einfach ein Ticket.
                         flags:
                             MessageFlags.Ephemeral
                     });
-
                 }
 
                 const nachricht =
@@ -3866,7 +4011,6 @@ Erstelle einfach ein Ticket.
                     });
 
                 return;
-
             }
 
             if (
@@ -3874,7 +4018,6 @@ Erstelle einfach ein Ticket.
                 interaction.customId ===
                 "create_giveaway_modal"
             ) {
-
                 const durationText =
                     interaction
                         .fields
@@ -3922,7 +4065,6 @@ Erstelle einfach ein Ticket.
                     !duration ||
                     duration < 10000
                 ) {
-
                     return interaction.reply({
                         content:
 `❌ Ungültige Dauer.
@@ -3938,7 +4080,6 @@ Beispiele:
                         flags:
                             MessageFlags.Ephemeral
                     });
-
                 }
 
                 if (
@@ -3948,7 +4089,6 @@ Beispiele:
                     winnerCount < 1 ||
                     winnerCount > 20
                 ) {
-
                     return interaction.reply({
                         content:
                             "❌ Die Anzahl der Gewinner muss zwischen **1 und 20** liegen.",
@@ -3956,7 +4096,6 @@ Beispiele:
                         flags:
                             MessageFlags.Ephemeral
                     });
-
                 }
 
                 await interaction.deferReply({
@@ -4060,7 +4199,6 @@ Beispiele:
                 });
 
                 return;
-
             }
 
             if (
@@ -4068,7 +4206,6 @@ Beispiele:
                 interaction.customId ===
                 "ticket_menu"
             ) {
-
                 const selected =
                     interaction.values[0];
 
@@ -4076,7 +4213,6 @@ Beispiele:
                     selected ===
                     "giveaway"
                 ) {
-
                     await interaction.deferReply({
                         flags:
                             MessageFlags.Ephemeral
@@ -4096,14 +4232,12 @@ Beispiele:
                         },
                         []
                     );
-
                 }
 
                 if (
                     selected ===
                     "clan_bewerbung"
                 ) {
-
                     const modal =
                         new ModalBuilder()
                             .setCustomId(
@@ -4146,14 +4280,12 @@ Beispiele:
                     );
 
                     return;
-
                 }
 
                 if (
                     selected ===
                     "team_bewerbung"
                 ) {
-
                     const modal =
                         new ModalBuilder()
                             .setCustomId(
@@ -4273,14 +4405,12 @@ Beispiele:
                     );
 
                     return;
-
                 }
 
                 if (
                     selected ===
                     "bau_firma"
                 ) {
-
                     const modal =
                         new ModalBuilder()
                             .setCustomId(
@@ -4412,9 +4542,7 @@ Beispiele:
                     );
 
                     return;
-
                 }
-
             }
 
             if (
@@ -4422,7 +4550,6 @@ Beispiele:
                 interaction.customId ===
                 "birthday_modal"
             ) {
-
                 const birthdayInput =
                     interaction.fields.getTextInputValue(
                         "birthday_date"
@@ -4434,7 +4561,6 @@ Beispiele:
                     );
 
                 if (!parsedBirthday) {
-
                     return interaction.reply({
                         content:
                             "❌ Ungültiges Datum. Bitte nutze z. B. **09.05.2011** oder **09.05.**",
@@ -4442,7 +4568,6 @@ Beispiele:
                         flags:
                             MessageFlags.Ephemeral
                     });
-
                 }
 
                 const existed =
@@ -4474,11 +4599,9 @@ Beispiele:
                 if (
                     birthdayStore.announced
                 ) {
-
                     delete birthdayStore.announced[
                         interaction.user.id
                     ];
-
                 }
 
                 saveBirthdayStore();
@@ -4498,7 +4621,6 @@ Beispiele:
                 await checkBirthdays();
 
                 return;
-
             }
 
             if (
@@ -4506,7 +4628,6 @@ Beispiele:
                 interaction.customId ===
                 "ticket_form_support"
             ) {
-
                 await interaction.deferReply({
                     flags:
                         MessageFlags.Ephemeral
@@ -4538,7 +4659,6 @@ Beispiele:
                         }
                     ]
                 );
-
             }
 
             if (
@@ -4546,7 +4666,6 @@ Beispiele:
                 interaction.customId ===
                 "ticket_form_team"
             ) {
-
                 await interaction.deferReply({
                     flags:
                         MessageFlags.Ephemeral
@@ -4623,7 +4742,6 @@ Beispiele:
                         }
                     ]
                 );
-
             }
 
             if (
@@ -4631,7 +4749,6 @@ Beispiele:
                 interaction.customId ===
                 "ticket_form_baufirma"
             ) {
-
                 await interaction.deferReply({
                     flags:
                         MessageFlags.Ephemeral
@@ -4711,7 +4828,6 @@ Beispiele:
                         }
                     ]
                 );
-
             }
 
             if (
@@ -4719,13 +4835,11 @@ Beispiele:
                 interaction.customId ===
                 "ticket_close_reason_modal"
             ) {
-
                 if (
                     !isTicketStaff(
                         interaction.member
                     )
                 ) {
-
                     return interaction.reply({
                         content:
                             "❌ Nur Mitglieder mit der Staff-Rolle können eine Ticket-Schließung starten.",
@@ -4733,7 +4847,6 @@ Beispiele:
                         flags:
                             MessageFlags.Ephemeral
                     });
-
                 }
 
                 const data =
@@ -4742,7 +4855,6 @@ Beispiele:
                     );
 
                 if (!data) {
-
                     return interaction.reply({
                         content:
                             "❌ Ticket-Daten wurden nicht gefunden.",
@@ -4750,13 +4862,11 @@ Beispiele:
                         flags:
                             MessageFlags.Ephemeral
                     });
-
                 }
 
                 if (
                     data.pendingClose
                 ) {
-
                     return interaction.reply({
                         content:
                             "❌ Für dieses Ticket läuft bereits eine Schließungs-Anfrage.",
@@ -4764,7 +4874,6 @@ Beispiele:
                         flags:
                             MessageFlags.Ephemeral
                     });
-
                 }
 
                 const reason =
@@ -4863,7 +4972,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                 });
 
                 return;
-
             }
 
             if (
@@ -4871,7 +4979,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                 interaction.customId ===
                 "forward_ticket_user"
             ) {
-
                 await interaction.deferReply({
                     flags:
                         MessageFlags.Ephemeral
@@ -4882,12 +4989,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         interaction.member
                     )
                 ) {
-
                     return interaction.editReply({
                         content:
                             "❌ Nur Teammitglieder können Tickets weiterleiten."
                     });
-
                 }
 
                 const selectedUserId =
@@ -4910,12 +5015,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         selectedMember
                     )
                 ) {
-
                     return interaction.editReply({
                         content:
                             "❌ Bitte wähle ein gültiges Teammitglied."
                     });
-
                 }
 
                 const data =
@@ -4924,12 +5027,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                     );
 
                 if (!data) {
-
                     return interaction.editReply({
                         content:
                             "❌ Ticket-Daten nicht gefunden."
                     });
-
                 }
 
                 await interaction
@@ -4981,18 +5082,15 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                     content:
                         `✅ Ticket wurde an ${selectedMember} weitergeleitet.`
                 });
-
             }
 
             if (
                 interaction.isButton()
             ) {
-
                 if (
                     interaction.customId ===
                     "birthday_open_modal"
                 ) {
-
                     const existing =
                         birthdayStore.birthdays[
                             interaction.user.id
@@ -5029,13 +5127,11 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             );
 
                     if (existing) {
-
                         dateInput.setValue(
                             formatBirthdayDate(
                                 existing
                             )
                         );
-
                     }
 
                     modal.addComponents(
@@ -5050,7 +5146,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                     );
 
                     return;
-
                 }
 
                 if (
@@ -5058,7 +5153,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         "giveaway_join_"
                     )
                 ) {
-
                     await interaction.deferReply({
                         flags:
                             MessageFlags.Ephemeral
@@ -5078,12 +5172,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         );
 
                     if (!data) {
-
                         return interaction.editReply({
                             content:
                                 "❌ Dieses Gewinnspiel ist nicht mehr aktiv."
                         });
-
                     }
 
                     if (
@@ -5091,12 +5183,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         Date.now() >=
                         data.endAt
                     ) {
-
                         return interaction.editReply({
                             content:
                                 "❌ Dieses Gewinnspiel ist bereits beendet."
                         });
-
                     }
 
                     if (
@@ -5114,12 +5204,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             )
                         )
                     ) {
-
                         return interaction.editReply({
                             content:
                                 "❌ Teammitglieder und Administratoren dürfen nicht teilnehmen."
                         });
-
                     }
 
                     if (
@@ -5129,12 +5217,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                                 interaction.user.id
                             )
                     ) {
-
                         return interaction.editReply({
                             content:
                                 "🎉 Du nimmst bereits am Gewinnspiel teil!"
                         });
-
                     }
 
                     data
@@ -5160,14 +5246,12 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         content:
                             "🎉 **Du machst jetzt beim Gewinnspiel mit!**\n\n🍀 Viel Glück!"
                     });
-
                 }
 
                 if (
                     interaction.customId ===
                     "claim_ticket"
                 ) {
-
                     await interaction.deferReply({
                         flags:
                             MessageFlags.Ephemeral
@@ -5178,12 +5262,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             interaction.member
                         )
                     ) {
-
                         return interaction.editReply({
                             content:
                                 "❌ Nur Teammitglieder mit der Staff-Rolle können Tickets übernehmen."
                         });
-
                     }
 
                     const data =
@@ -5192,23 +5274,19 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         );
 
                     if (!data) {
-
                         return interaction.editReply({
                             content:
                                 "❌ Ticket-Daten wurden nicht gefunden."
                         });
-
                     }
 
                     if (
                         data.claimedBy
                     ) {
-
                         return interaction.editReply({
                             content:
                                 `❌ Dieses Ticket wurde bereits von <@${data.claimedBy}> übernommen.`
                         });
-
                     }
 
                     data.claimedBy =
@@ -5236,20 +5314,17 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         content:
                             "✅ Du hast das Ticket übernommen."
                     });
-
                 }
 
                 if (
                     interaction.customId ===
                     "forward_ticket"
                 ) {
-
                     if (
                         !isTicketStaff(
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Nur Teammitglieder mit der Staff-Rolle können Tickets weiterleiten.",
@@ -5257,7 +5332,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     const select =
@@ -5292,20 +5366,17 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         flags:
                             MessageFlags.Ephemeral
                     });
-
                 }
 
                 if (
                     interaction.customId ===
                     "close_ticket"
                 ) {
-
                     if (
                         !isTicketStaff(
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Nur Mitglieder mit der Staff-Rolle können diesen Ticket-Button benutzen.",
@@ -5313,7 +5384,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     const data =
@@ -5322,7 +5392,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         );
 
                     if (!data) {
-
                         return interaction.reply({
                             content:
                                 "❌ Ticket-Daten wurden nicht gefunden.",
@@ -5330,13 +5399,11 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     if (
                         data.pendingClose
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Für dieses Ticket läuft bereits eine Schließungs-Anfrage.",
@@ -5344,7 +5411,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     const modal =
@@ -5389,14 +5455,12 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                     );
 
                     return;
-
                 }
 
                 if (
                     interaction.customId ===
                     "ticket_close_yes"
                 ) {
-
                     const channel =
                         interaction.channel;
 
@@ -5409,7 +5473,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         !data ||
                         !data.pendingClose
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Es gibt keine offene Schließungs-Anfrage.",
@@ -5417,14 +5480,12 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     if (
                         interaction.user.id !==
                         data.ownerId
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Nur der Ticket-Ersteller kann diese Schließung bestätigen.",
@@ -5432,7 +5493,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     const closeData = {
@@ -5465,7 +5525,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         });
 
                     if (!logSent) {
-
                         data.pendingClose =
                             null;
 
@@ -5475,7 +5534,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         });
 
                         return;
-
                     }
 
                     await channel.send({
@@ -5504,35 +5562,29 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
 
                     setTimeout(
                         async () => {
-
                             await channel
                                 .delete(
                                     `Ticket geschlossen | Grund: ${safeText(closeData.reason, "Kein Grund")}`
                                 )
                                 .catch(
                                     error => {
-
                                         console.error(
                                             "❌ Ticket löschen Fehler:",
                                             error
                                         );
-
                                     }
                                 );
-
                         },
                         1500
                     );
 
                     return;
-
                 }
 
                 if (
                     interaction.customId ===
                     "ticket_close_no"
                 ) {
-
                     const data =
                         getTicketData(
                             interaction.channel
@@ -5542,7 +5594,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         !data ||
                         !data.pendingClose
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Es gibt keine offene Schließungs-Anfrage.",
@@ -5550,14 +5601,12 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     if (
                         interaction.user.id !==
                         data.ownerId
                     ) {
-
                         return interaction.reply({
                             content:
                                 "❌ Nur der Ticket-Ersteller kann diese Schließung ablehnen.",
@@ -5565,7 +5614,6 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             flags:
                                 MessageFlags.Ephemeral
                         });
-
                     }
 
                     data.pendingClose =
@@ -5594,25 +5642,20 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                     });
 
                     return;
-
                 }
-
             }
 
         } catch (error) {
-
             console.error(
                 "❌ Interaction Fehler:",
                 error
             );
 
             try {
-
                 if (
                     interaction.deferred ||
                     interaction.replied
                 ) {
-
                     await interaction
                         .editReply({
                             content:
@@ -5621,9 +5664,7 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         .catch(
                             () => {}
                         );
-
                 } else {
-
                     await interaction.reply({
                         content:
                             "❌ Es ist ein Fehler aufgetreten.",
@@ -5631,20 +5672,16 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         flags:
                             MessageFlags.Ephemeral
                     });
-
                 }
 
             } catch {}
-
         }
-
     }
 );
 
 async function endGiveaway(
     giveawayId
 ) {
-
     const data =
         giveawayData.get(
             giveawayId
@@ -5666,13 +5703,11 @@ async function endGiveaway(
         );
 
     if (timer) {
-
         clearTimeout(timer);
 
         giveawayTimers.delete(
             giveawayId
         );
-
     }
 
     const winners =
@@ -5724,7 +5759,6 @@ async function endGiveaway(
             );
 
     if (message) {
-
         const disabledButton =
             new ButtonBuilder()
                 .setCustomId(
@@ -5766,13 +5800,11 @@ async function endGiveaway(
             .catch(
                 () => {}
             );
-
     }
 
     if (
         winners.length > 0
     ) {
-
         await channel.send({
             content:
 `🎉 **GEWINNSPIEL BEENDET!** 🎉
@@ -5790,7 +5822,6 @@ Herzlichen Glückwunsch! 🎊`,
         });
 
     } else {
-
         await channel.send({
             content:
 `🎉 **Gewinnspiel beendet!**
@@ -5799,15 +5830,12 @@ Es gab leider keine gültigen Teilnehmer.
 
 🎁 **Preis:** ${data.prize}`
         });
-
     }
-
 }
 
 function scheduleGiveawayEnd(
     giveawayId
 ) {
-
     const data =
         giveawayData.get(
             giveawayId
@@ -5819,7 +5847,6 @@ function scheduleGiveawayEnd(
 
     const scheduleNext =
         () => {
-
             const current =
                 giveawayData.get(
                     giveawayId
@@ -5839,23 +5866,19 @@ function scheduleGiveawayEnd(
             if (
                 remaining <= 0
             ) {
-
                 endGiveaway(
                     giveawayId
                 )
                     .catch(
                         error => {
-
                             console.error(
                                 "❌ Giveaway End Fehler:",
                                 error
                             );
-
                         }
                     );
 
                 return;
-
             }
 
             const wait =
@@ -5874,11 +5897,9 @@ function scheduleGiveawayEnd(
                 giveawayId,
                 timer
             );
-
         };
 
     scheduleNext();
-
 }
 
 client.on(
@@ -5887,9 +5908,7 @@ client.on(
         oldState,
         newState
     ) => {
-
         try {
-
             if (
                 newState.channelId !==
                 SUPPORT_WARTE_RAUM_ID
@@ -5976,23 +5995,18 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Voice Support Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 client.on(
     Events.GuildMemberAdd,
     async member => {
-
         try {
-
             if (
                 member.user.bot
             ) {
@@ -6018,13 +6032,11 @@ client.on(
                     );
 
             if (!role) {
-
                 console.log(
                     `⚠️ Auto-Rolle nicht gefunden: ${AUTO_ROLE_ID}`
                 );
 
                 return;
-
             }
 
             if (
@@ -6048,23 +6060,18 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Auto-Rolle Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 client.on(
     Events.GuildMemberAdd,
     async member => {
-
         try {
-
             const channel =
                 member
                     .guild
@@ -6119,23 +6126,18 @@ ${member.guild.memberCount}`
             });
 
         } catch (error) {
-
             console.error(
                 "❌ Welcome Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 client.on(
     Events.GuildMemberAdd,
     async member => {
-
         try {
-
             const accountAge =
                 Date.now() -
                 member
@@ -6200,23 +6202,18 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Join Log Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 client.on(
     Events.GuildMemberRemove,
     async member => {
-
         try {
-
             await new Promise(
                 resolve =>
                     setTimeout(
@@ -6233,7 +6230,6 @@ client.on(
                 );
 
             if (entry) {
-
                 const embed =
                     baseEmbed(
                         "🥾 Mitglied gekickt",
@@ -6276,7 +6272,6 @@ client.on(
                 );
 
                 return;
-
             }
 
             const embed =
@@ -6305,23 +6300,18 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Leave/Kick Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 client.on(
     Events.GuildBanAdd,
     async ban => {
-
         try {
-
             await new Promise(
                 resolve =>
                     setTimeout(
@@ -6353,7 +6343,6 @@ client.on(
             });
 
             if (entry) {
-
                 embed.addFields(
                     {
                         name:
@@ -6375,7 +6364,6 @@ client.on(
                             )
                     }
                 );
-
             }
 
             await sendLog(
@@ -6384,23 +6372,18 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Ban Log Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 client.on(
     Events.GuildBanRemove,
     async ban => {
-
         try {
-
             await new Promise(
                 resolve =>
                     setTimeout(
@@ -6432,7 +6415,6 @@ client.on(
             });
 
             if (entry) {
-
                 embed.addFields({
                     name:
                         "🛡️ Verantwortlicher",
@@ -6442,7 +6424,6 @@ client.on(
                             ? `${entry.executor} (${entry.executor.id})`
                             : "Unbekannt"
                 });
-
             }
 
             await sendLog(
@@ -6451,14 +6432,11 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Unban Log Fehler:",
                 error
             );
-
         }
-
     }
 );
 
@@ -6468,9 +6446,7 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             const beforeTimeout =
                 before
                     .communicationDisabledUntilTimestamp ||
@@ -6522,7 +6498,6 @@ client.on(
                 afterTimeout >
                 Date.now()
             ) {
-
                 const durationMs =
                     afterTimeout -
                     Date.now();
@@ -6606,7 +6581,6 @@ client.on(
                 );
 
                 return;
-
             }
 
             if (
@@ -6617,7 +6591,6 @@ client.on(
                     Date.now()
                 )
             ) {
-
                 const embed =
                     baseEmbed(
                         "✅ Timeout aufgehoben",
@@ -6646,7 +6619,6 @@ client.on(
                     entry &&
                     entry.reason
                 ) {
-
                     embed.addFields({
                         name:
                             "📄 Grund",
@@ -6660,30 +6632,24 @@ client.on(
                                 1024
                             )
                     });
-
                 }
 
                 await sendLog(
                     after.guild,
                     embed
                 );
-
             }
 
         } catch (error) {
-
             console.error(
                 "❌ Timeout Logging Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 function getTrackedTeamRoleIds(member) {
-
     const roleIds =
         new Set();
 
@@ -6691,7 +6657,6 @@ function getTrackedTeamRoleIds(member) {
         const roleConfig
         of TEAM_ROLE_CONFIG
     ) {
-
         if (
             member
                 .roles
@@ -6700,24 +6665,19 @@ function getTrackedTeamRoleIds(member) {
                     roleConfig.id
                 )
         ) {
-
             roleIds.add(
                 roleConfig.id
             );
-
         }
-
     }
 
     return roleIds;
-
 }
 
 function setsEqual(
     first,
     second
 ) {
-
     if (
         first.size !==
         second.size
@@ -6729,19 +6689,15 @@ function setsEqual(
         const value
         of first
     ) {
-
         if (!second.has(value)) {
             return false;
         }
-
     }
 
     return true;
-
 }
 
 function getPrimaryTeamRole(roleIds) {
-
     return (
         TEAM_ROLE_CONFIG.find(
             role =>
@@ -6751,7 +6707,6 @@ function getPrimaryTeamRole(roleIds) {
         ) ||
         null
     );
-
 }
 
 async function sendTeamRoleMessage(
@@ -6760,9 +6715,7 @@ async function sendTeamRoleMessage(
     type,
     roleConfig = null
 ) {
-
     try {
-
         const channel =
             guild
                 .channels
@@ -6793,7 +6746,6 @@ async function sendTeamRoleMessage(
             type === "welcome" &&
             roleConfig
         ) {
-
             content =
 `🎉 **Willkommen im Team!**
 
@@ -6805,7 +6757,6 @@ Wir freuen uns, dich im Team zu haben und wünschen dir viel Erfolg und vor alle
             type === "position" &&
             roleConfig
         ) {
-
             content =
 `🔄 **Neue Position!**
 
@@ -6816,14 +6767,12 @@ Wir wünschen dir viel Erfolg und vor allem viel Spaß bei deinen neuen Aufgaben
         } else if (
             type === "leave"
         ) {
-
             content =
 `👋 **Danke für deine Zeit!**
 
 <@${memberId}> verlässt ab sofort das Team des **VIBE Clans**.
 
 Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren Weg alles Gute und viel Erfolg! 🤝`;
-
         }
 
         if (!content) {
@@ -6844,18 +6793,14 @@ Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren
         });
 
     } catch (error) {
-
         console.error(
             "❌ Team-Rollen-Nachricht Fehler:",
             error
         );
-
     }
-
 }
 
 async function processTeamRoleUpdate(key) {
-
     const update =
         pendingTeamRoleUpdates.get(
             key
@@ -6898,7 +6843,6 @@ async function processTeamRoleUpdate(key) {
         beforeRoleIds.size === 0 &&
         afterRoleIds.size > 0
     ) {
-
         const roleConfig =
             getPrimaryTeamRole(
                 addedRoleIds.size > 0
@@ -6907,25 +6851,21 @@ async function processTeamRoleUpdate(key) {
             );
 
         if (roleConfig) {
-
             await sendTeamRoleMessage(
                 update.guild,
                 update.memberId,
                 "welcome",
                 roleConfig
             );
-
         }
 
         return;
-
     }
 
     if (
         beforeRoleIds.size > 0 &&
         afterRoleIds.size === 0
     ) {
-
         await sendTeamRoleMessage(
             update.guild,
             update.memberId,
@@ -6933,31 +6873,25 @@ async function processTeamRoleUpdate(key) {
         );
 
         return;
-
     }
 
     if (
         addedRoleIds.size > 0
     ) {
-
         const roleConfig =
             getPrimaryTeamRole(
                 addedRoleIds
             );
 
         if (roleConfig) {
-
             await sendTeamRoleMessage(
                 update.guild,
                 update.memberId,
                 "position",
                 roleConfig
             );
-
         }
-
     }
-
 }
 
 client.on(
@@ -6966,7 +6900,6 @@ client.on(
         before,
         after
     ) => {
-
         const beforeRoleIds =
             getTrackedTeamRoleIds(
                 before
@@ -6995,7 +6928,6 @@ client.on(
             );
 
         if (existing) {
-
             clearTimeout(
                 existing.timer
             );
@@ -7006,17 +6938,14 @@ client.on(
             existing.timer =
                 setTimeout(
                     () => {
-
                         processTeamRoleUpdate(
                             key
                         );
-
                     },
                     1500
                 );
 
             return;
-
         }
 
         const update = {
@@ -7037,11 +6966,9 @@ client.on(
         update.timer =
             setTimeout(
                 () => {
-
                     processTeamRoleUpdate(
                         key
                     );
-
                 },
                 1500
             );
@@ -7050,7 +6977,6 @@ client.on(
             key,
             update
         );
-
     }
 );
 
@@ -7060,14 +6986,11 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             if (
                 before.nickname !==
                 after.nickname
             ) {
-
                 await new Promise(
                     resolve =>
                         setTimeout(
@@ -7124,7 +7047,6 @@ client.on(
                     entry &&
                     entry.executor
                 ) {
-
                     embed.addFields({
                         name:
                             "🛡️ Verantwortlicher",
@@ -7132,14 +7054,12 @@ client.on(
                         value:
                             `${entry.executor} (${entry.executor.id})`
                     });
-
                 }
 
                 await sendLog(
                     after.guild,
                     embed
                 );
-
             }
 
             const beforeRoles =
@@ -7226,7 +7146,6 @@ client.on(
             if (
                 addedRoles.size > 0
             ) {
-
                 embed.addFields({
                     name:
                         "✅ Hinzugefügt",
@@ -7243,13 +7162,11 @@ client.on(
                                 1024
                             )
                 });
-
             }
 
             if (
                 removedRoles.size > 0
             ) {
-
                 embed.addFields({
                     name:
                         "❌ Entfernt",
@@ -7266,14 +7183,12 @@ client.on(
                                 1024
                             )
                 });
-
             }
 
             if (
                 entry &&
                 entry.executor
             ) {
-
                 embed.addFields({
                     name:
                         "🛡️ Verantwortlicher",
@@ -7281,7 +7196,6 @@ client.on(
                     value:
                         `${entry.executor} (${entry.executor.id})`
                 });
-
             }
 
             await sendLog(
@@ -7290,14 +7204,11 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Member Update Fehler:",
                 error
             );
-
         }
-
     }
 );
 
@@ -7307,9 +7218,7 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             const member =
                 after.member ||
                 before.member;
@@ -7322,7 +7231,6 @@ client.on(
                 !before.channel &&
                 after.channel
             ) {
-
                 const embed =
                     baseEmbed(
                         "🔊 Sprachkanal beigetreten",
@@ -7356,7 +7264,6 @@ client.on(
                 before.channel &&
                 !after.channel
             ) {
-
                 const embed =
                     baseEmbed(
                         "🔇 Sprachkanal verlassen",
@@ -7392,7 +7299,6 @@ client.on(
                 before.channel.id !==
                 after.channel.id
             ) {
-
                 const embed =
                     baseEmbed(
                         "🔁 Sprachkanal gewechselt",
@@ -7428,27 +7334,21 @@ client.on(
                     member.guild,
                     embed
                 );
-
             }
 
         } catch (error) {
-
             console.error(
                 "❌ Voice Logging Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 client.on(
     Events.ChannelCreate,
     async channel => {
-
         try {
-
             if (!channel.guild) {
                 return;
             }
@@ -7496,7 +7396,6 @@ client.on(
                 entry &&
                 entry.executor
             ) {
-
                 embed.addFields({
                     name:
                         "🛡️ Verantwortlicher",
@@ -7504,7 +7403,6 @@ client.on(
                     value:
                         `${entry.executor} (${entry.executor.id})`
                 });
-
             }
 
             await sendLog(
@@ -7513,23 +7411,18 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Channel Create Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 client.on(
     Events.ChannelDelete,
     async channel => {
-
         try {
-
             if (!channel.guild) {
                 return;
             }
@@ -7577,7 +7470,6 @@ client.on(
                 entry &&
                 entry.executor
             ) {
-
                 embed.addFields({
                     name:
                         "🛡️ Verantwortlicher",
@@ -7585,7 +7477,6 @@ client.on(
                     value:
                         `${entry.executor} (${entry.executor.id})`
                 });
-
             }
 
             await sendLog(
@@ -7594,14 +7485,11 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Channel Delete Fehler:",
                 error
             );
-
         }
-
     }
 );
 
@@ -7611,9 +7499,7 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             const permissionChanges =
                 getPermissionChanges(
                     before,
@@ -7627,44 +7513,36 @@ client.on(
                 before.name !==
                 after.name
             ) {
-
                 otherChanges.push(
                     `**Name:** ${before.name} → ${after.name}`
                 );
-
             }
 
             if (
                 before.hexColor !==
                 after.hexColor
             ) {
-
                 otherChanges.push(
                     `**Farbe:** ${before.hexColor} → ${after.hexColor}`
                 );
-
             }
 
             if (
                 before.hoist !==
                 after.hoist
             ) {
-
                 otherChanges.push(
                     `**Separat anzeigen:** ${before.hoist ? "Ja" : "Nein"} → ${after.hoist ? "Ja" : "Nein"}`
                 );
-
             }
 
             if (
                 before.mentionable !==
                 after.mentionable
             ) {
-
                 otherChanges.push(
                     `**Erwähnbar:** ${before.mentionable ? "Ja" : "Nein"} → ${after.mentionable ? "Ja" : "Nein"}`
                 );
-
             }
 
             if (
@@ -7716,7 +7594,6 @@ client.on(
                     .added
                     .length > 0
             ) {
-
                 embed.addFields({
                     name:
                         "✅ Berechtigungen hinzugefügt",
@@ -7734,7 +7611,6 @@ client.on(
                                 1024
                             )
                 });
-
             }
 
             if (
@@ -7742,7 +7618,6 @@ client.on(
                     .removed
                     .length > 0
             ) {
-
                 embed.addFields({
                     name:
                         "❌ Berechtigungen entfernt",
@@ -7760,13 +7635,11 @@ client.on(
                                 1024
                             )
                 });
-
             }
 
             if (
                 otherChanges.length > 0
             ) {
-
                 embed.addFields({
                     name:
                         "⚙️ Weitere Änderungen",
@@ -7779,7 +7652,6 @@ client.on(
                                 1024
                             )
                 });
-
             }
 
             embed.addFields({
@@ -7799,14 +7671,11 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Rollen-Einstellungs-Log Fehler:",
                 error
             );
-
         }
-
     }
 );
 
@@ -7816,14 +7685,11 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             if (
                 before.name !==
                 after.name
             ) {
-
                 const embed =
                     baseEmbed(
                         "✏️ Kanalname geändert",
@@ -7863,7 +7729,6 @@ client.on(
                     after.guild,
                     embed
                 );
-
             }
 
             if (
@@ -7878,7 +7743,6 @@ client.on(
                             .cache
                     )
             ) {
-
                 await new Promise(
                     resolve =>
                         setTimeout(
@@ -7913,7 +7777,6 @@ client.on(
                     entry &&
                     entry.executor
                 ) {
-
                     embed.addFields({
                         name:
                             "🛡️ Verantwortlicher",
@@ -7921,34 +7784,27 @@ client.on(
                         value:
                             `${entry.executor} (${entry.executor.id})`
                     });
-
                 }
 
                 await sendLog(
                     after.guild,
                     embed
                 );
-
             }
 
         } catch (error) {
-
             console.error(
                 "❌ Channel Update Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 client.on(
     Events.MessageDelete,
     async message => {
-
         try {
-
             if (!message.guild) {
                 return;
             }
@@ -8015,14 +7871,11 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Message Delete Logging Fehler:",
                 error
             );
-
         }
-
     }
 );
 
@@ -8032,9 +7885,7 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             if (!before.guild) {
                 return;
             }
@@ -8108,7 +7959,6 @@ client.on(
             );
 
             if (after.url) {
-
                 embed.addFields({
                     name:
                         "🔗 Nachricht",
@@ -8116,7 +7966,6 @@ client.on(
                     value:
                         `[Zur Nachricht](${after.url})`
                 });
-
             }
 
             await sendLog(
@@ -8125,62 +7974,51 @@ client.on(
             );
 
         } catch (error) {
-
             console.error(
                 "❌ Message Edit Logging Fehler:",
                 error
             );
-
         }
-
     }
 );
 
 client.on(
     Events.Error,
     error => {
-
         console.error(
             "❌ Discord Client Fehler:",
             error
         );
-
     }
 );
 
 client.on(
     Events.Warn,
     warning => {
-
         console.warn(
             "⚠️ Discord Warnung:",
             warning
         );
-
     }
 );
 
 process.on(
     "unhandledRejection",
     error => {
-
         console.error(
             "❌ Unhandled Promise Rejection:",
             error
         );
-
     }
 );
 
 process.on(
     "uncaughtException",
     error => {
-
         console.error(
             "❌ Uncaught Exception:",
             error
         );
-
     }
 );
 
