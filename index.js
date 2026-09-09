@@ -144,8 +144,6 @@ const VOICE_AFK_DATA_FILE =
 const SUPPORT_ROLE_ID =
     STAFF_ROLE_ID;
 
-const SUPPORT_WARTE_RAUM_ID =
-    "1542137236718362702";
 
 // ==========================================
 // AFK VOICE
