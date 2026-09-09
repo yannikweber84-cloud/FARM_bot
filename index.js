@@ -154,7 +154,7 @@ const SUPPORT_WARTE_RAUM_ID =
 
 const AFK_TALK_ID =
     process.env.AFK_TALK_ID ||
-    "HIER_AFK_TALK_ID_EINTRAGEN";
+    "1542137237335179293";
 
 const VOICE_AFK_DELAY_MS =
     5 *
