@@ -1,9 +1,8 @@
 require("dotenv").config();
-
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const express = require("express");
-
 const {
     Client,
     GatewayIntentBits,
@@ -66,13 +65,37 @@ const CLIENT_ID =
 const GUILD_ID =
     "1542137235867041912";
 
+// ==========================================
+// PERSISTENTE BOT-DATEN
+// Auf Render mit Persistent Disk z. B. DATA_DIR=/var/data setzen.
+// Lokal bleibt automatisch der aktuelle Bot-Ordner aktiv.
+// ==========================================
+
+const DATA_DIR =
+    process.env.DATA_DIR ||
+    __dirname;
+
+if (
+    !fs.existsSync(
+        DATA_DIR
+    )
+) {
+    fs.mkdirSync(
+        DATA_DIR,
+        {
+            recursive:
+                true
+        }
+    );
+}
+
 const BIRTHDAY_GLOBAL_CHANNEL_ID =
     process.env.BIRTHDAY_GLOBAL_CHANNEL_ID ||
     "1542137236982734960";
 
 const BIRTHDAY_DATA_FILE =
     path.join(
-        __dirname,
+        DATA_DIR,
         "birthdays.json"
     );
 
@@ -85,7 +108,6 @@ const AUTO_ROLE_ID =
 const STAFF_ROLE_ID =
     "1542137235917250619";
 
-
 // ==========================================
 // ABMELDUNGS-ROLLE
 // HIER DEINE ROLLEN-ID EINTRAGEN
@@ -97,16 +119,47 @@ const ABMELDUNG_ROLE_ID =
 
 const ABMELDUNG_DATA_FILE =
     path.join(
-        __dirname,
+        DATA_DIR,
         "abmeldungen.json"
     );
 
+const TICKET_DATA_FILE =
+    path.join(
+        DATA_DIR,
+        "tickets.json"
+    );
+
+const GIVEAWAY_DATA_FILE =
+    path.join(
+        DATA_DIR,
+        "giveaways.json"
+    );
+
+const VOICE_AFK_DATA_FILE =
+    path.join(
+        DATA_DIR,
+        "voice_afk.json"
+    );
 
 const SUPPORT_ROLE_ID =
     STAFF_ROLE_ID;
 
 const SUPPORT_WARTE_RAUM_ID =
     "1542137236718362702";
+
+// ==========================================
+// AFK VOICE
+// HIER DIE ID VON DEINEM AFK-TALK EINTRAGEN
+// ==========================================
+
+const AFK_TALK_ID =
+    process.env.AFK_TALK_ID ||
+    "HIER_AFK_TALK_ID_EINTRAGEN";
+
+const VOICE_AFK_DELAY_MS =
+    5 *
+    60 *
+    1000;
 
 const SUPPORT_LOG_CHANNEL_ID =
     "1542137236718362701";
@@ -121,7 +174,6 @@ const SERVER_LOG_CHANNEL_ID =
 
 const TEAM_ROLE_MESSAGE_CHANNEL_ID =
     "1542137236500381765";
-
 
 const CO_ANFUEHRER_ROLE_ID =
     "1542137235942412413";
@@ -159,141 +211,104 @@ const FARMERLEITUNG_ROLE_ID =
 const FARMER_ROLE_ID =
     "1542137235917250612";
 
-
 const TEAM_ROLE_CONFIG = [
     {
         id:
             CO_ANFUEHRER_ROLE_ID,
-
         name:
             "Co - Anführer",
-
         placeText:
             "beim **VIBE Clan**"
     },
-
     {
         id:
             CLAN_MANAGER_ROLE_ID,
-
         name:
             "Clan Manager",
-
         placeText:
             "beim **VIBE Clan**"
     },
-
     {
         id:
             ADMIN_ROLE_ID,
-
         name:
             "Admin",
-
         placeText:
             "beim **VIBE Clan**"
     },
-
     {
         id:
             DEV_ROLE_ID,
-
         name:
             "Dev",
-
         placeText:
             "beim **VIBE Clan**"
     },
-
     {
         id:
             TEST_ADMIN_ROLE_ID,
-
         name:
             "test Admin",
-
         placeText:
             "beim **VIBE Clan**"
     },
-
     {
         id:
             MOD_ROLE_ID,
-
         name:
             "Mod",
-
         placeText:
             "beim **VIBE Clan**"
     },
-
     {
         id:
             SUP_LEITUNG_ROLE_ID,
-
         name:
             "Sup leitung",
-
         placeText:
             "beim **VIBE Clan**"
     },
-
     {
         id:
             SUP_ROLE_ID,
-
         name:
             "Sup",
-
         placeText:
             "beim **VIBE Clan**"
     },
-
     {
         id:
             BUILDER_LEITUNG_ROLE_ID,
-
         name:
             "Builder leitung",
-
         placeText:
             "bei der **VIBE Baufirma**"
     },
-
     {
         id:
             BUILDER_ROLE_ID,
-
         name:
             "Builder",
-
         placeText:
             "bei der **VIBE Baufirma**"
     },
-
     {
         id:
             FARMERLEITUNG_ROLE_ID,
-
         name:
             "Farmerleitung",
-
         placeText:
             "beim **VIBE Clan**"
     },
-
     {
         id:
             FARMER_ROLE_ID,
-
         name:
             "Farmer",
-
         placeText:
             "beim **VIBE Clan**"
     }
 ];
-
 
 const CLAN_CATEGORY_ID =
     "1542137237997887523";
@@ -307,7 +322,6 @@ const BAU_CATEGORY_ID =
 const GIVEAWAY_CATEGORY_ID =
     "1542137237997887527";
 
-
 const ticketData =
     new Map();
 
@@ -317,9 +331,11 @@ const giveawayData =
 const giveawayTimers =
     new Map();
 
-const pendingTeamRoleUpdates =
+const voiceAfkTimers =
     new Map();
 
+const pendingTeamRoleUpdates =
+    new Map();
 
 let birthdayStore = {
     birthdays: {},
@@ -329,37 +345,36 @@ let birthdayStore = {
     announced: {}
 };
 
-
 let abmeldungStore = {
     entries: {}
 };
 
+let voiceAfkStore = {
+    entries: {}
+};
 
 // ==========================================
-// ABMELDUNGS-DATEN LADEN
+// TICKET-DATEN LADEN
 // ==========================================
 
-function loadAbmeldungStore() {
+function loadTicketStore() {
     try {
+        ticketData.clear();
 
         if (
             !fs.existsSync(
-                ABMELDUNG_DATA_FILE
+                TICKET_DATA_FILE
             )
         ) {
-
-            saveAbmeldungStore();
-
+            saveTicketStore();
             return;
         }
 
-
         const raw =
             fs.readFileSync(
-                ABMELDUNG_DATA_FILE,
+                TICKET_DATA_FILE,
                 "utf8"
             );
-
 
         if (
             !raw.trim()
@@ -367,12 +382,463 @@ function loadAbmeldungStore() {
             return;
         }
 
+        const parsed =
+            JSON.parse(
+                raw
+            );
+
+        const entries =
+            parsed.entries &&
+            typeof parsed.entries ===
+                "object"
+                ? parsed.entries
+                : {};
+
+        for (
+            const [channelId, data]
+            of Object.entries(
+                entries
+            )
+        ) {
+            ticketData.set(
+                channelId,
+                data
+            );
+        }
+
+        console.log(
+            `💾 ${ticketData.size} Ticket(s) aus Datei geladen.`
+        );
+
+    } catch (error) {
+        console.error(
+            "❌ Ticket-Daten konnten nicht geladen werden:",
+            error
+        );
+    }
+}
+
+// ==========================================
+// TICKET-DATEN SPEICHERN
+// ==========================================
+
+function saveTicketStore() {
+    try {
+        const entries =
+            Object.fromEntries(
+                ticketData.entries()
+            );
+
+        fs.writeFileSync(
+            TICKET_DATA_FILE,
+            JSON.stringify(
+                {
+                    entries
+                },
+                null,
+                2
+            ),
+            "utf8"
+        );
+
+    } catch (error) {
+        console.error(
+            "❌ Ticket-Daten konnten nicht gespeichert werden:",
+            error
+        );
+    }
+}
+
+// ==========================================
+// OFFENE TICKETS NACH UPDATE WIEDERERKENNEN
+// ==========================================
+
+async function restoreTicketsFromGuild(
+    guild
+) {
+    if (
+        !guild
+    ) {
+        return;
+    }
+
+    await guild.channels.fetch()
+        .catch(
+            () => null
+        );
+
+    const ticketCategoryIds =
+        new Set([
+            CLAN_CATEGORY_ID,
+            TEAM_CATEGORY_ID,
+            BAU_CATEGORY_ID,
+            GIVEAWAY_CATEGORY_ID
+        ]);
+
+    const categoryTitles = {
+        [CLAN_CATEGORY_ID]:
+            "Allgemeiner Support",
+
+        [TEAM_CATEGORY_ID]:
+            "Team Bewerbung",
+
+        [BAU_CATEGORY_ID]:
+            "Baufirma",
+
+        [GIVEAWAY_CATEGORY_ID]:
+            "Giveaway"
+    };
+
+    let changed =
+        false;
+
+    for (
+        const channelId
+        of [
+            ...ticketData.keys()
+        ]
+    ) {
+        if (
+            !guild.channels.cache.has(
+                channelId
+            )
+        ) {
+            ticketData.delete(
+                channelId
+            );
+
+            changed =
+                true;
+        }
+    }
+
+    for (
+        const channel
+        of guild.channels.cache.values()
+    ) {
+        if (
+            channel.type !==
+                ChannelType.GuildText ||
+            !channel.parentId ||
+            !ticketCategoryIds.has(
+                channel.parentId
+            ) ||
+            ticketData.has(
+                channel.id
+            )
+        ) {
+            continue;
+        }
+
+        const ownerOverwrite =
+            channel.permissionOverwrites.cache.find(
+                overwrite =>
+                    overwrite.id !==
+                        guild.id &&
+                    overwrite.id !==
+                        STAFF_ROLE_ID &&
+                    !guild.roles.cache.has(
+                        overwrite.id
+                    )
+            );
+
+        if (
+            !ownerOverwrite
+        ) {
+            continue;
+        }
+
+        ticketData.set(
+            channel.id,
+            {
+                ownerId:
+                    ownerOverwrite.id,
+
+                claimedBy:
+                    null,
+
+                forwardedTo:
+                    null,
+
+                categoryTitle:
+                    categoryTitles[
+                        channel.parentId
+                    ] ||
+                    "Ticket",
+
+                createdAt:
+                    channel.createdTimestamp ||
+                    Date.now(),
+
+                pendingClose:
+                    null,
+
+                formAnswers:
+                    []
+            }
+        );
+
+        changed =
+            true;
+    }
+
+    if (
+        changed
+    ) {
+        saveTicketStore();
+    }
+
+    console.log(
+        `💾 ${ticketData.size} offene Ticket(s) wiederhergestellt.`
+    );
+}
+
+// ==========================================
+// GIVEAWAY-DATEN LADEN
+// ==========================================
+
+function loadGiveawayStore() {
+    try {
+        giveawayData.clear();
+
+        if (
+            !fs.existsSync(
+                GIVEAWAY_DATA_FILE
+            )
+        ) {
+            saveGiveawayStore();
+            return;
+        }
+
+        const raw =
+            fs.readFileSync(
+                GIVEAWAY_DATA_FILE,
+                "utf8"
+            );
+
+        if (
+            !raw.trim()
+        ) {
+            return;
+        }
 
         const parsed =
             JSON.parse(
                 raw
             );
 
+        const entries =
+            parsed.entries &&
+            typeof parsed.entries ===
+                "object"
+                ? parsed.entries
+                : {};
+
+        for (
+            const [giveawayId, saved]
+            of Object.entries(
+                entries
+            )
+        ) {
+            if (
+                !saved ||
+                typeof saved !==
+                    "object"
+            ) {
+                continue;
+            }
+
+            giveawayData.set(
+                giveawayId,
+                {
+                    ...saved,
+
+                    participants:
+                        new Set(
+                            Array.isArray(
+                                saved.participants
+                            )
+                                ? saved.participants
+                                : []
+                        ),
+
+                    winnerIds:
+                        Array.isArray(
+                            saved.winnerIds
+                        )
+                            ? saved.winnerIds
+                            : []
+                }
+            );
+        }
+
+        console.log(
+            `💾 ${giveawayData.size} Giveaway(s) aus Datei geladen.`
+        );
+
+    } catch (error) {
+        console.error(
+            "❌ Giveaway-Daten konnten nicht geladen werden:",
+            error
+        );
+    }
+}
+
+// ==========================================
+// GIVEAWAY-DATEN SPEICHERN
+// ==========================================
+
+function saveGiveawayStore() {
+    try {
+        const entries = {};
+
+        for (
+            const [giveawayId, data]
+            of giveawayData.entries()
+        ) {
+            entries[
+                giveawayId
+            ] = {
+                ...data,
+
+                participants: [
+                    ...(
+                        data.participants ||
+                        []
+                    )
+                ],
+
+                winnerIds:
+                    Array.isArray(
+                        data.winnerIds
+                    )
+                        ? data.winnerIds
+                        : []
+            };
+        }
+
+        fs.writeFileSync(
+            GIVEAWAY_DATA_FILE,
+            JSON.stringify(
+                {
+                    entries
+                },
+                null,
+                2
+            ),
+            "utf8"
+        );
+
+    } catch (error) {
+        console.error(
+            "❌ Giveaway-Daten konnten nicht gespeichert werden:",
+            error
+        );
+    }
+}
+
+// ==========================================
+// VOICE-AFK-DATEN LADEN / SPEICHERN
+// ==========================================
+
+function loadVoiceAfkStore() {
+    try {
+        if (
+            !fs.existsSync(
+                VOICE_AFK_DATA_FILE
+            )
+        ) {
+            saveVoiceAfkStore();
+            return;
+        }
+
+        const raw =
+            fs.readFileSync(
+                VOICE_AFK_DATA_FILE,
+                "utf8"
+            );
+
+        if (
+            !raw.trim()
+        ) {
+            return;
+        }
+
+        const parsed =
+            JSON.parse(
+                raw
+            );
+
+        voiceAfkStore = {
+            entries:
+                parsed.entries &&
+                typeof parsed.entries ===
+                    "object"
+                    ? parsed.entries
+                    : {}
+        };
+
+    } catch (error) {
+        console.error(
+            "❌ Voice-AFK-Daten konnten nicht geladen werden:",
+            error
+        );
+    }
+}
+
+function saveVoiceAfkStore() {
+    try {
+        fs.writeFileSync(
+            VOICE_AFK_DATA_FILE,
+
+            JSON.stringify(
+                voiceAfkStore,
+                null,
+                2
+            ),
+
+            "utf8"
+        );
+
+    } catch (error) {
+        console.error(
+            "❌ Voice-AFK-Daten konnten nicht gespeichert werden:",
+            error
+        );
+    }
+}
+
+// ==========================================
+// ABMELDUNGS-DATEN LADEN
+// ==========================================
+
+function loadAbmeldungStore() {
+    try {
+        if (
+            !fs.existsSync(
+                ABMELDUNG_DATA_FILE
+            )
+        ) {
+            saveAbmeldungStore();
+            return;
+        }
+
+        const raw =
+            fs.readFileSync(
+                ABMELDUNG_DATA_FILE,
+                "utf8"
+            );
+
+        if (
+            !raw.trim()
+        ) {
+            return;
+        }
+
+        const parsed =
+            JSON.parse(
+                raw
+            );
 
         abmeldungStore = {
             entries:
@@ -383,17 +849,13 @@ function loadAbmeldungStore() {
                     : {}
         };
 
-
     } catch (error) {
-
         console.error(
             "❌ Abmeldungs-Daten konnten nicht geladen werden:",
             error
         );
-
     }
 }
-
 
 // ==========================================
 // ABMELDUNGS-DATEN SPEICHERN
@@ -401,7 +863,6 @@ function loadAbmeldungStore() {
 
 function saveAbmeldungStore() {
     try {
-
         fs.writeFileSync(
             ABMELDUNG_DATA_FILE,
 
@@ -414,17 +875,13 @@ function saveAbmeldungStore() {
             "utf8"
         );
 
-
     } catch (error) {
-
         console.error(
             "❌ Abmeldungs-Daten konnten nicht gespeichert werden:",
             error
         );
-
     }
 }
-
 
 // ==========================================
 // GEBURTSTAGE LADEN
@@ -432,18 +889,14 @@ function saveAbmeldungStore() {
 
 function loadBirthdayStore() {
     try {
-
         if (
             !fs.existsSync(
                 BIRTHDAY_DATA_FILE
             )
         ) {
-
             saveBirthdayStore();
-
             return;
         }
-
 
         const raw =
             fs.readFileSync(
@@ -451,22 +904,18 @@ function loadBirthdayStore() {
                 "utf8"
             );
 
-
         if (
             !raw.trim()
         ) {
             return;
         }
 
-
         const parsed =
             JSON.parse(
                 raw
             );
 
-
         birthdayStore = {
-
             birthdays:
                 parsed.birthdays &&
                 typeof parsed.birthdays ===
@@ -474,21 +923,17 @@ function loadBirthdayStore() {
                     ? parsed.birthdays
                     : {},
 
-
             listChannelId:
                 parsed.listChannelId ||
                 null,
-
 
             listMessageId:
                 parsed.listMessageId ||
                 null,
 
-
             lastAnnouncementDate:
                 parsed.lastAnnouncementDate ||
                 null,
-
 
             announced:
                 parsed.announced &&
@@ -496,20 +941,15 @@ function loadBirthdayStore() {
                     "object"
                     ? parsed.announced
                     : {}
-
         };
 
-
     } catch (error) {
-
         console.error(
             "❌ Geburtstags-Daten konnten nicht geladen werden:",
             error
         );
-
     }
 }
-
 
 // ==========================================
 // GEBURTSTAGE SPEICHERN
@@ -517,7 +957,6 @@ function loadBirthdayStore() {
 
 function saveBirthdayStore() {
     try {
-
         fs.writeFileSync(
             BIRTHDAY_DATA_FILE,
 
@@ -530,24 +969,19 @@ function saveBirthdayStore() {
             "utf8"
         );
 
-
     } catch (error) {
-
         console.error(
             "❌ Geburtstags-Daten konnten nicht gespeichert werden:",
             error
         );
-
     }
 }
-
 
 // ==========================================
 // GEBURTSTAG DATUM
 // ==========================================
 
 function parseBirthdayInput(input) {
-
     const text =
         String(
             input ||
@@ -559,12 +993,10 @@ function parseBirthdayInput(input) {
                 ""
             );
 
-
     const match =
         text.match(
             /^(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{4}))?$/
         );
-
 
     if (
         !match
@@ -572,18 +1004,15 @@ function parseBirthdayInput(input) {
         return null;
     }
 
-
     const day =
         Number(
             match[1]
         );
 
-
     const month =
         Number(
             match[2]
         );
-
 
     const year =
         match[3]
@@ -591,7 +1020,6 @@ function parseBirthdayInput(input) {
                 match[3]
             )
             : null;
-
 
     if (
         month < 1 ||
@@ -601,11 +1029,9 @@ function parseBirthdayInput(input) {
         return null;
     }
 
-
     const validationYear =
         year ||
         2000;
-
 
     const testDate =
         new Date(
@@ -616,17 +1042,14 @@ function parseBirthdayInput(input) {
             )
         );
 
-
     if (
         testDate.getUTCDate() !==
             day ||
-
         testDate.getUTCMonth() + 1 !==
             month
     ) {
         return null;
     }
-
 
     if (
         year &&
@@ -638,7 +1061,6 @@ function parseBirthdayInput(input) {
         return null;
     }
 
-
     return {
         day,
         month,
@@ -646,13 +1068,11 @@ function parseBirthdayInput(input) {
     };
 }
 
-
 // ==========================================
 // ABMELDUNG DATUM
 // ==========================================
 
 function parseAbmeldungDate(input) {
-
     const text =
         String(
             input ||
@@ -660,12 +1080,10 @@ function parseAbmeldungDate(input) {
         )
             .trim();
 
-
     const match =
         text.match(
             /^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/
         );
-
 
     if (
         !match
@@ -673,24 +1091,20 @@ function parseAbmeldungDate(input) {
         return null;
     }
 
-
     const day =
         Number(
             match[1]
         );
-
 
     const month =
         Number(
             match[2]
         );
 
-
     const year =
         Number(
             match[3]
         );
-
 
     const date =
         new Date(
@@ -701,24 +1115,18 @@ function parseAbmeldungDate(input) {
             )
         );
 
-
     if (
         year < 2020 ||
         year > 2100 ||
-
         date.getUTCFullYear() !==
             year ||
-
         date.getUTCMonth() + 1 !==
             month ||
-
         date.getUTCDate() !==
             day
     ) {
-
         return null;
     }
-
 
     return {
         day,
@@ -730,13 +1138,9 @@ function parseAbmeldungDate(input) {
     };
 }
 
-
 function formatAbmeldungDate(data) {
-
     return `${String(data.day).padStart(2, "0")}.${String(data.month).padStart(2, "0")}.${data.year}`;
-
 }
-
 
 // ==========================================
 // DEUTSCHE / BERLIN ZEIT
@@ -748,10 +1152,8 @@ function getBerlinTimestamp(
     minute,
     second
 ) {
-
     const timeZone =
         "Europe/Berlin";
-
 
     let guess =
         Date.UTC(
@@ -763,13 +1165,11 @@ function getBerlinTimestamp(
             second
         );
 
-
     for (
         let i = 0;
         i < 2;
         i++
     ) {
-
         const parts =
             new Intl.DateTimeFormat(
                 "en-GB",
@@ -804,46 +1204,34 @@ function getBerlinTimestamp(
                     )
                 );
 
-
         const values = {};
-
 
         for (
             const part
             of parts
         ) {
-
             if (
                 part.type ===
                     "year" ||
-
                 part.type ===
                     "month" ||
-
                 part.type ===
                     "day" ||
-
                 part.type ===
                     "hour" ||
-
                 part.type ===
                     "minute" ||
-
                 part.type ===
                     "second"
             ) {
-
                 values[
                     part.type
                 ] =
                     Number(
                         part.value
                     );
-
             }
-
         }
-
 
         const shownAsUtc =
             Date.UTC(
@@ -855,11 +1243,9 @@ function getBerlinTimestamp(
                 values.second
             );
 
-
         const offset =
             shownAsUtc -
             guess;
-
 
         guess =
             Date.UTC(
@@ -871,13 +1257,10 @@ function getBerlinTimestamp(
                 second
             ) -
             offset;
-
     }
-
 
     return guess;
 }
-
 
 // ==========================================
 // RESTZEIT ABMELDUNG
@@ -886,7 +1269,6 @@ function getBerlinTimestamp(
 function getRemainingAbmeldungHours(
     endAt
 ) {
-
     return Math.max(
         0,
 
@@ -902,9 +1284,7 @@ function getRemainingAbmeldungHours(
             )
         )
     );
-
 }
-
 
 // ==========================================
 // ABMELDUNGS EMBED
@@ -914,13 +1294,11 @@ function createAbmeldungEmbed(
     data,
     ended = false
 ) {
-
     const endUnix =
         Math.floor(
             data.endAt /
             1000
         );
-
 
     const remainingHours =
         ended
@@ -929,13 +1307,11 @@ function createAbmeldungEmbed(
                 data.endAt
             );
 
-
     const restzeit =
         ended
             ? "✅ **Abmeldung beendet**"
             : `**${remainingHours} Stunde${remainingHours === 1 ? "" : "n"}**
 <t:${endUnix}:R>`;
-
 
     const embed =
         new EmbedBuilder()
@@ -1053,21 +1429,16 @@ function createAbmeldungEmbed(
 
             .setTimestamp();
 
-
     if (
         data.avatarUrl
     ) {
-
         embed.setThumbnail(
             data.avatarUrl
         );
-
     }
-
 
     return embed;
 }
-
 
 // ==========================================
 // ABMELDUNGS NACHRICHT AKTUALISIEREN
@@ -1077,9 +1448,7 @@ async function updateAbmeldungMessage(
     entry,
     ended = false
 ) {
-
     try {
-
         const guild =
             client.guilds.cache.get(
                 entry.guildId
@@ -1092,13 +1461,11 @@ async function updateAbmeldungMessage(
                     () => null
                 );
 
-
         if (
             !guild
         ) {
             return false;
         }
-
 
         const channel =
             guild.channels.cache.get(
@@ -1112,14 +1479,12 @@ async function updateAbmeldungMessage(
                     () => null
                 );
 
-
         if (
             !channel ||
             !channel.isTextBased()
         ) {
             return false;
         }
-
 
         const message =
             await channel.messages.fetch(
@@ -1129,13 +1494,11 @@ async function updateAbmeldungMessage(
                     () => null
                 );
 
-
         if (
             !message
         ) {
             return false;
         }
-
 
         await message.edit({
             embeds: [
@@ -1146,36 +1509,28 @@ async function updateAbmeldungMessage(
             ]
         });
 
-
         return true;
 
-
     } catch (error) {
-
         console.error(
             "❌ Abmeldungs-Nachricht aktualisieren Fehler:",
             error
         );
 
-
         return false;
     }
 }
-
 
 // ==========================================
 // ABMELDUNGEN AUTOMATISCH PRÜFEN
 // ==========================================
 
 async function checkAbmeldungen() {
-
     try {
-
         const entries =
             Object.values(
                 abmeldungStore.entries
             );
-
 
         if (
             entries.length ===
@@ -1184,58 +1539,40 @@ async function checkAbmeldungen() {
             return;
         }
 
-
         let changed =
             false;
-
 
         for (
             const entry
             of entries
         ) {
-
             const remainingHours =
                 getRemainingAbmeldungHours(
                     entry.endAt
                 );
 
-
-            // Noch aktiv
             if (
                 Date.now() <
                 entry.endAt
             ) {
-
-                // Nur Nachricht bearbeiten,
-                // wenn eine Stunde weniger übrig ist.
-
                 if (
                     entry.lastRemainingHours !==
                     remainingHours
                 ) {
-
                     entry.lastRemainingHours =
                         remainingHours;
-
 
                     await updateAbmeldungMessage(
                         entry,
                         false
                     );
 
-
                     changed =
                         true;
                 }
 
-
                 continue;
             }
-
-
-            // ==========================================
-            // ABGELAUFEN
-            // ==========================================
 
             const guild =
                 client.guilds.cache.get(
@@ -1249,15 +1586,12 @@ async function checkAbmeldungen() {
                         () => null
                     );
 
-
             let roleRemoved =
                 true;
-
 
             if (
                 guild
             ) {
-
                 const member =
                     await guild.members.fetch(
                         entry.userId
@@ -1266,44 +1600,33 @@ async function checkAbmeldungen() {
                             () => null
                         );
 
-
                 if (
                     member &&
                     member.roles.cache.has(
                         ABMELDUNG_ROLE_ID
                     )
                 ) {
-
                     try {
-
                         await member.roles.remove(
                             ABMELDUNG_ROLE_ID,
                             "Abmeldung automatisch abgelaufen"
                         );
 
-
                         console.log(
                             `✅ Abmeldungs-Rolle bei ${entry.userId} entfernt.`
                         );
 
-
                     } catch (error) {
-
                         roleRemoved =
                             false;
-
 
                         console.error(
                             `❌ Abmeldungs-Rolle konnte bei ${entry.userId} nicht entfernt werden:`,
                             error
                         );
-
                     }
-
                 }
-
             }
-
 
             if (
                 !roleRemoved
@@ -1311,49 +1634,38 @@ async function checkAbmeldungen() {
                 continue;
             }
 
-
             await updateAbmeldungMessage(
                 entry,
                 true
             );
 
-
             delete abmeldungStore.entries[
                 entry.userId
             ];
-
 
             changed =
                 true;
         }
 
-
         if (
             changed
         ) {
-
             saveAbmeldungStore();
-
         }
 
-
     } catch (error) {
-
         console.error(
             "❌ Abmeldungs-Check Fehler:",
             error
         );
-
     }
 }
-
 
 // ==========================================
 // GEBURTSTAGS DATUM FORMATIEREN
 // ==========================================
 
 function formatBirthdayDate(data) {
-
     const day =
         String(
             data.day
@@ -1362,7 +1674,6 @@ function formatBirthdayDate(data) {
                 2,
                 "0"
             );
-
 
     const month =
         String(
@@ -1373,15 +1684,12 @@ function formatBirthdayDate(data) {
                 "0"
             );
 
-
     return data.year
         ? `${day}.${month}.${data.year}`
         : `${day}.${month}.`;
 }
 
-
 function getBerlinDateParts() {
-
     const formatter =
         new Intl.DateTimeFormat(
             "de-DE",
@@ -1400,46 +1708,35 @@ function getBerlinDateParts() {
             }
         );
 
-
     const parts =
         formatter.formatToParts(
             new Date()
         );
 
-
     const result = {};
-
 
     for (
         const part
         of parts
     ) {
-
         if (
             part.type ===
                 "day" ||
-
             part.type ===
                 "month" ||
-
             part.type ===
                 "year"
         ) {
-
             result[
                 part.type
             ] =
                 Number(
                     part.value
                 );
-
         }
-
     }
 
-
     return {
-
         day:
             result.day,
 
@@ -1451,19 +1748,15 @@ function getBerlinDateParts() {
 
         key:
             `${result.year}-${String(result.month).padStart(2, "0")}-${String(result.day).padStart(2, "0")}`
-
     };
 }
-
 
 function birthdaySortValue(
     data,
     now
 ) {
-
     let year =
         now.year;
-
 
     let date =
         Date.UTC(
@@ -1472,7 +1765,6 @@ function birthdaySortValue(
             data.day
         );
 
-
     const today =
         Date.UTC(
             now.year,
@@ -1480,15 +1772,12 @@ function birthdaySortValue(
             now.day
         );
 
-
     if (
         date <
         today
     ) {
-
         year +=
             1;
-
 
         date =
             Date.UTC(
@@ -1496,58 +1785,46 @@ function birthdaySortValue(
                 data.month - 1,
                 data.day
             );
-
     }
-
 
     return date;
 }
-
 
 // ==========================================
 // GEBURTSTAGSLISTE EMBED
 // ==========================================
 
 function createBirthdayListEmbed() {
-
     const entries =
         Object.entries(
             birthdayStore.birthdays
         );
 
-
     const now =
         getBerlinDateParts();
 
-
     entries.sort(
         (a, b) =>
-
             birthdaySortValue(
                 a[1],
                 now
             ) -
-
             birthdaySortValue(
                 b[1],
                 now
             )
     );
 
-
     let description;
-
 
     if (
         entries.length ===
         0
     ) {
-
         description =
             "Noch niemand hat einen Geburtstag eingetragen.";
 
     } else {
-
         description =
             entries
                 .map(
@@ -1558,23 +1835,18 @@ function createBirthdayListEmbed() {
                     "\n"
                 );
 
-
         if (
             description.length >
             4000
         ) {
-
             description =
                 description.substring(
                     0,
                     3970
                 ) +
                 "\n\n*Liste gekürzt.*";
-
         }
-
     }
-
 
     return new EmbedBuilder()
 
@@ -1598,7 +1870,6 @@ function createBirthdayListEmbed() {
         .setTimestamp();
 }
 
-
 // ==========================================
 // GEBURTSTAGSLISTE AKTUALISIEREN
 // ==========================================
@@ -1606,7 +1877,6 @@ function createBirthdayListEmbed() {
 async function updateBirthdayListMessage(
     guild
 ) {
-
     if (
         !guild ||
         !birthdayStore.listChannelId ||
@@ -1615,9 +1885,7 @@ async function updateBirthdayListMessage(
         return false;
     }
 
-
     try {
-
         const channel =
             guild.channels.cache.get(
                 birthdayStore.listChannelId
@@ -1630,14 +1898,12 @@ async function updateBirthdayListMessage(
                     () => null
                 );
 
-
         if (
             !channel ||
             !channel.isTextBased()
         ) {
             return false;
         }
-
 
         const message =
             await channel.messages.fetch(
@@ -1647,13 +1913,11 @@ async function updateBirthdayListMessage(
                     () => null
                 );
 
-
         if (
             !message
         ) {
             return false;
         }
-
 
         await message.edit({
             embeds: [
@@ -1661,36 +1925,28 @@ async function updateBirthdayListMessage(
             ]
         });
 
-
         return true;
 
-
     } catch (error) {
-
         console.error(
             "❌ Geburtstagsliste aktualisieren Fehler:",
             error
         );
 
-
         return false;
     }
 }
-
 
 // ==========================================
 // GEBURTSTAGE PRÜFEN
 // ==========================================
 
 async function checkBirthdays() {
-
     try {
-
         const guild =
             client.guilds.cache.get(
                 GUILD_ID
             );
-
 
         if (
             !guild
@@ -1698,10 +1954,8 @@ async function checkBirthdays() {
             return;
         }
 
-
         const today =
             getBerlinDateParts();
-
 
         const birthdayUserIds =
             Object.entries(
@@ -1722,7 +1976,6 @@ async function checkBirthdays() {
                         userId
                 );
 
-
         if (
             birthdayUserIds.length ===
             0
@@ -1730,17 +1983,14 @@ async function checkBirthdays() {
             return;
         }
 
-
         let globalChannel =
             null;
-
 
         if (
             /^\d{17,20}$/.test(
                 BIRTHDAY_GLOBAL_CHANNEL_ID
             )
         ) {
-
             globalChannel =
                 guild.channels.cache.get(
                     BIRTHDAY_GLOBAL_CHANNEL_ID
@@ -1752,15 +2002,12 @@ async function checkBirthdays() {
                     .catch(
                         () => null
                     );
-
         }
-
 
         if (
             !globalChannel ||
             !globalChannel.isTextBased()
         ) {
-
             const preferredNames = [
                 "global",
                 "global-chat",
@@ -1769,12 +2016,10 @@ async function checkBirthdays() {
                 "chat"
             ];
 
-
             for (
                 const channelName
                 of preferredNames
             ) {
-
                 const found =
                     guild.channels.cache.find(
                         channel =>
@@ -1784,45 +2029,35 @@ async function checkBirthdays() {
                                 channelName
                     );
 
-
                 if (
                     found
                 ) {
-
                     globalChannel =
                         found;
 
                     break;
                 }
-
             }
-
         }
-
 
         if (
             !globalChannel ||
             !globalChannel.isTextBased()
         ) {
-
             console.log(
                 `⚠️ Geburtstags-Global-Channel nicht gefunden: ${BIRTHDAY_GLOBAL_CHANNEL_ID}`
             );
 
-
             return;
         }
 
-
         let changed =
             false;
-
 
         for (
             const userId
             of birthdayUserIds
         ) {
-
             if (
                 birthdayStore.announced &&
 
@@ -1831,25 +2066,19 @@ async function checkBirthdays() {
                 ] ===
                     today.key
             ) {
-
                 continue;
             }
 
-
             await globalChannel.send({
-
                 content:
                     `Alles Gute zum Geburstag <@${userId}> 🥳`,
-
 
                 allowedMentions: {
                     users: [
                         userId
                     ]
                 }
-
             });
-
 
             if (
                 !birthdayStore.announced ||
@@ -1857,53 +2086,45 @@ async function checkBirthdays() {
                 typeof birthdayStore.announced !==
                     "object"
             ) {
-
                 birthdayStore.announced =
                     {};
-
             }
-
 
             birthdayStore.announced[
                 userId
             ] =
                 today.key;
 
-
             changed =
                 true;
-
         }
-
 
         if (
             changed
         ) {
-
             birthdayStore.lastAnnouncementDate =
                 today.key;
 
-
             saveBirthdayStore();
-
         }
 
-
     } catch (error) {
-
         console.error(
             "❌ Geburtstags-Check Fehler:",
             error
         );
-
     }
 }
 
+// ==========================================
+// DATEN LADEN
+// ==========================================
 
-// Daten laden
 loadBirthdayStore();
 loadAbmeldungStore();
-
+loadTicketStore();
+loadGiveawayStore();
+loadVoiceAfkStore();
 
 // ==========================================
 // DISCORD CLIENT
@@ -1921,7 +2142,6 @@ const client =
         ]
     });
 
-
 // ==========================================
 // HELPER
 // ==========================================
@@ -1930,7 +2150,6 @@ function safeText(
     value,
     fallback = "Unbekannt"
 ) {
-
     if (
         value === null ||
         value === undefined
@@ -1938,13 +2157,11 @@ function safeText(
         return fallback;
     }
 
-
     const text =
         String(
             value
         )
             .trim();
-
 
     if (
         !text
@@ -1952,13 +2169,10 @@ function safeText(
         return fallback;
     }
 
-
     return text;
 }
 
-
 function formatTimeoutDuration(ms) {
-
     if (
         !Number.isFinite(
             ms
@@ -1968,20 +2182,17 @@ function formatTimeoutDuration(ms) {
         return "Unbekannt";
     }
 
-
     const totalSeconds =
         Math.ceil(
             ms /
             1000
         );
 
-
     const days =
         Math.floor(
             totalSeconds /
             86400
         );
-
 
     const hours =
         Math.floor(
@@ -1992,7 +2203,6 @@ function formatTimeoutDuration(ms) {
             3600
         );
 
-
     const minutes =
         Math.floor(
             (
@@ -2002,61 +2212,46 @@ function formatTimeoutDuration(ms) {
             60
         );
 
-
     const seconds =
         totalSeconds %
         60;
 
-
     const parts =
         [];
-
 
     if (
         days > 0
     ) {
-
         parts.push(
             `${days} Tag${days === 1 ? "" : "e"}`
         );
-
     }
-
 
     if (
         hours > 0
     ) {
-
         parts.push(
             `${hours} Stunde${hours === 1 ? "" : "n"}`
         );
-
     }
-
 
     if (
         minutes > 0
     ) {
-
         parts.push(
             `${minutes} Minute${minutes === 1 ? "" : "n"}`
         );
-
     }
-
 
     if (
         seconds > 0 &&
         days === 0 &&
         hours === 0
     ) {
-
         parts.push(
             `${seconds} Sekunde${seconds === 1 ? "" : "n"}`
         );
-
     }
-
 
     return (
         parts.join(
@@ -2066,9 +2261,7 @@ function formatTimeoutDuration(ms) {
     );
 }
 
-
 const PERMISSION_NAMES_DE = {
-
     Administrator:
         "Administrator",
 
@@ -2197,36 +2390,28 @@ const PERMISSION_NAMES_DE = {
 
     ManageGuildExpressions:
         "Server-Ausdrücke verwalten"
-
 };
-
 
 function getPermissionDisplayName(
     name
 ) {
-
     return (
         PERMISSION_NAMES_DE[
             name
         ] ||
         name
     );
-
 }
-
 
 function getPermissionChanges(
     beforeRole,
     afterRole
 ) {
-
     const added =
         [];
 
-
     const removed =
         [];
-
 
     for (
         const [name, bit]
@@ -2234,14 +2419,12 @@ function getPermissionChanges(
             PermissionsBitField.Flags
         )
     ) {
-
         const hadBefore =
             beforeRole
                 .permissions
                 .has(
                     bit
                 );
-
 
         const hasAfter =
             afterRole
@@ -2250,36 +2433,28 @@ function getPermissionChanges(
                     bit
                 );
 
-
         if (
             !hadBefore &&
             hasAfter
         ) {
-
             added.push(
                 getPermissionDisplayName(
                     name
                 )
             );
-
         }
-
 
         if (
             hadBefore &&
             !hasAfter
         ) {
-
             removed.push(
                 getPermissionDisplayName(
                     name
                 )
             );
-
         }
-
     }
-
 
     return {
         added,
@@ -2287,9 +2462,7 @@ function getPermissionChanges(
     };
 }
 
-
 function escapeRegExp(value) {
-
     return String(
         value
     )
@@ -2297,21 +2470,16 @@ function escapeRegExp(value) {
             /[.*+?^${}()|[\]\\]/g,
             "\\$&"
         );
-
 }
-
 
 function resolveSayRoleMentions(
     guild,
     text
 ) {
-
     if (
         !guild
     ) {
-
         return {
-
             content:
                 String(
                     text
@@ -2319,21 +2487,16 @@ function resolveSayRoleMentions(
 
             roleIds:
                 []
-
         };
-
     }
-
 
     let content =
         String(
             text
         );
 
-
     const roleIds =
         new Set();
-
 
     const roles = [
         ...guild
@@ -2354,12 +2517,10 @@ function resolveSayRoleMentions(
                 a.name.length
         );
 
-
     for (
         const role
         of roles
     ) {
-
         if (
             role.name ===
             "@everyone"
@@ -2367,12 +2528,10 @@ function resolveSayRoleMentions(
             continue;
         }
 
-
         const roleName =
             escapeRegExp(
                 role.name
             );
-
 
         const regex =
             new RegExp(
@@ -2380,10 +2539,8 @@ function resolveSayRoleMentions(
                 "gi"
             );
 
-
         let found =
             false;
-
 
         content =
             content.replace(
@@ -2393,38 +2550,28 @@ function resolveSayRoleMentions(
                     match,
                     prefix
                 ) => {
-
                     found =
                         true;
-
 
                     return (
                         `${prefix}<@&${role.id}>`
                     );
-
                 }
             );
-
 
         if (
             found
         ) {
-
             roleIds.add(
                 role.id
             );
-
         }
-
     }
-
 
     const rawRoleMentionRegex =
         /<@&(\d{17,20})>/g;
 
-
     let rawMatch;
-
 
     while (
         (
@@ -2434,7 +2581,6 @@ function resolveSayRoleMentions(
                 )
         ) !== null
     ) {
-
         if (
             guild.roles.cache.has(
                 rawMatch[1]
@@ -2443,37 +2589,28 @@ function resolveSayRoleMentions(
             rawMatch[1] !==
                 guild.id
         ) {
-
             roleIds.add(
                 rawMatch[1]
             );
-
         }
-
     }
 
-
     return {
-
         content,
 
         roleIds: [
             ...roleIds
         ]
-
     };
 }
-
 
 function baseEmbed(
     title,
     color = 0x5865f2,
     description = null
 ) {
-
     const embed =
         new EmbedBuilder();
-
 
     embed.setTitle(
         safeText(
@@ -2482,7 +2619,6 @@ function baseEmbed(
         )
     );
 
-
     embed.setColor(
         typeof color ===
             "number"
@@ -2490,47 +2626,36 @@ function baseEmbed(
             : 0x5865f2
     );
 
-
     if (
         description !== null &&
         description !== undefined
     ) {
-
         const text =
             String(
                 description
             )
                 .trim();
 
-
         if (
             text.length > 0
         ) {
-
             embed.setDescription(
                 text
             );
-
         }
-
     }
 
-
     embed.setTimestamp();
-
 
     return embed;
 }
 
-
 function getLogChannel(guild) {
-
     if (
         !guild
     ) {
         return null;
     }
-
 
     const channel =
         guild
@@ -2540,7 +2665,6 @@ function getLogChannel(guild) {
                 SERVER_LOG_CHANNEL_ID
             );
 
-
     if (
         !channel ||
         !channel.isTextBased()
@@ -2548,18 +2672,14 @@ function getLogChannel(guild) {
         return null;
     }
 
-
     return channel;
 }
-
 
 async function sendLog(
     guild,
     embed
 ) {
-
     try {
-
         if (
             !isFeatureEnabled(
                 "serverLogs"
@@ -2568,7 +2688,6 @@ async function sendLog(
             return;
         }
 
-
         if (
             !guild ||
             !embed
@@ -2576,25 +2695,20 @@ async function sendLog(
             return;
         }
 
-
         const channel =
             getLogChannel(
                 guild
             );
 
-
         if (
             !channel
         ) {
-
             console.log(
                 `⚠️ Log-Kanal nicht gefunden: ${SERVER_LOG_CHANNEL_ID}`
             );
 
-
             return;
         }
-
 
         await channel.send({
             embeds: [
@@ -2602,17 +2716,13 @@ async function sendLog(
             ]
         });
 
-
     } catch (error) {
-
         console.error(
             "❌ Logging Fehler:",
             error
         );
-
     }
 }
-
 
 async function getAuditExecutor(
     guild,
@@ -2620,40 +2730,31 @@ async function getAuditExecutor(
     targetId,
     maxEntries = 10
 ) {
-
     try {
-
         if (
             !guild
         ) {
             return null;
         }
 
-
         const logs =
             await guild.fetchAuditLogs({
-
                 limit:
                     maxEntries,
 
                 type:
                     action
-
             });
-
 
         const entry =
             logs.entries.find(
                 entry => {
-
                     if (
                         !entry.target ||
                         !entry.target.id
                     ) {
-
                         return false;
                     }
-
 
                     return (
                         entry.target.id ===
@@ -2663,134 +2764,104 @@ async function getAuditExecutor(
                             entry.createdTimestamp <
                             10000
                     );
-
                 }
             );
-
 
         return (
             entry ||
             null
         );
 
-
     } catch (error) {
-
         if (
             error.code !==
             50013
         ) {
-
             console.error(
                 "❌ Audit-Log Fehler:",
                 error
             );
-
         }
-
 
         return null;
     }
 }
 
-
 async function getTimeoutAuditEntry(
     guild,
     targetId
 ) {
-
     try {
-
         const logs =
             await guild.fetchAuditLogs({
-
                 limit:
                     10,
 
                 type:
                     AuditLogEvent.MemberUpdate
-
             });
-
 
         const entry =
             logs.entries.find(
                 entry => {
-
                     if (
                         !entry.target ||
                         entry.target.id !==
                             targetId
                     ) {
-
                         return false;
                     }
-
 
                     if (
                         Date.now() -
                             entry.createdTimestamp >
                             15000
                     ) {
-
                         return false;
                     }
-
 
                     if (
                         !Array.isArray(
                             entry.changes
                         )
                     ) {
-
                         return true;
                     }
-
 
                     return entry.changes.some(
                         change =>
                             change.key ===
                                 "communication_disabled_until"
                     );
-
                 }
             );
-
 
         return (
             entry ||
             null
         );
 
-
     } catch (error) {
-
         if (
             error.code !==
             50013
         ) {
-
             console.error(
                 "❌ Timeout Audit Fehler:",
                 error
             );
-
         }
-
 
         return null;
     }
 }
 
-
 function isAdmin(member) {
-
     if (
         !member
     ) {
         return false;
     }
-
 
     return member
         .permissions
@@ -2799,18 +2870,14 @@ function isAdmin(member) {
                 .Flags
                 .Administrator
         );
-
 }
 
-
 function isStaff(member) {
-
     if (
         !member
     ) {
         return false;
     }
-
 
     return (
         member
@@ -2824,21 +2891,16 @@ function isStaff(member) {
             member
         )
     );
-
 }
 
-
 function isTicketStaff(member) {
-
     if (
         !member ||
         !member.roles ||
         !member.roles.cache
     ) {
-
         return false;
     }
-
 
     return member
         .roles
@@ -2846,18 +2908,14 @@ function isTicketStaff(member) {
         .has(
             STAFF_ROLE_ID
         );
-
 }
 
-
 function getTicketData(channel) {
-
     if (
         !channel
     ) {
         return null;
     }
-
 
     return (
         ticketData.get(
@@ -2867,40 +2925,31 @@ function getTicketData(channel) {
     );
 }
 
-
 // ==========================================
 // TICKET TRANSCRIPT
 // ==========================================
 
 async function fetchAllTicketMessages(channel) {
-
     const messages =
         [];
-
 
     let beforeId =
         null;
 
-
     while (
         true
     ) {
-
         const options = {
             limit:
                 100
         };
 
-
         if (
             beforeId
         ) {
-
             options.before =
                 beforeId;
-
         }
-
 
         const batch =
             await channel
@@ -2909,7 +2958,6 @@ async function fetchAllTicketMessages(channel) {
                     options
                 );
 
-
         if (
             batch.size ===
             0
@@ -2917,21 +2965,17 @@ async function fetchAllTicketMessages(channel) {
             break;
         }
 
-
         messages.push(
             ...batch.values()
         );
 
-
         const oldest =
             batch.last();
-
 
         beforeId =
             oldest
                 ? oldest.id
                 : null;
-
 
         if (
             batch.size <
@@ -2940,9 +2984,7 @@ async function fetchAllTicketMessages(channel) {
         ) {
             break;
         }
-
     }
-
 
     messages.sort(
         (a, b) =>
@@ -2950,13 +2992,10 @@ async function fetchAllTicketMessages(channel) {
             b.createdTimestamp
     );
 
-
     return messages;
 }
 
-
 function formatTicketMessage(message) {
-
     const timestamp =
         new Date(
             message.createdTimestamp
@@ -2969,99 +3008,75 @@ function formatTicketMessage(message) {
                 }
             );
 
-
     const author =
         message.author
             ? `${message.author.tag} (${message.author.id})`
             : "Unbekannter Nutzer";
 
-
     const parts =
         [];
-
 
     const content =
         message.content
             ? message.content.trim()
             : "";
 
-
     if (
         content
     ) {
-
         parts.push(
             content
         );
-
     }
-
 
     if (
         message.attachments &&
         message.attachments.size > 0
     ) {
-
         for (
             const attachment
             of message.attachments.values()
         ) {
-
             parts.push(
                 `[Anhang: ${attachment.name || "Datei"}] ${attachment.url}`
             );
-
         }
-
     }
-
 
     if (
         message.embeds &&
         message.embeds.length > 0
     ) {
-
         for (
             const embed
             of message.embeds
         ) {
-
             const embedParts =
                 [];
-
 
             if (
                 embed.title
             ) {
-
                 embedParts.push(
                     `Titel: ${embed.title}`
                 );
-
             }
-
 
             if (
                 embed.description
             ) {
-
                 embedParts.push(
                     `Beschreibung: ${embed.description}`
                 );
-
             }
-
 
             if (
                 embed.url
             ) {
-
                 embedParts.push(
                     `URL: ${embed.url}`
                 );
-
             }
-
 
             parts.push(
                 `[Embed${
@@ -3070,23 +3085,17 @@ function formatTicketMessage(message) {
                         : ""
                 }]`
             );
-
         }
-
     }
-
 
     if (
         parts.length ===
         0
     ) {
-
         parts.push(
             "[Keine Textnachricht]"
         );
-
     }
-
 
     const body =
         parts
@@ -3098,12 +3107,10 @@ function formatTicketMessage(message) {
                 ""
             );
 
-
     return (
         `[${timestamp}] ${author}\n${body}\n`
     );
 }
-
 
 async function createTicketTranscript(
     channel,
@@ -3112,27 +3119,19 @@ async function createTicketTranscript(
     requestedById,
     confirmedById
 ) {
-
     const messages =
         await fetchAllTicketMessages(
             channel
         );
 
-
     const header = [
-
         "======================================================",
-
         "VIBE TICKET TRANSCRIPT",
-
         "======================================================",
-
 
         `Ticket: #${channel.name}`,
 
-
         `Channel-ID: ${channel.id}`,
-
 
         `Ticket-Ersteller: ${
             data &&
@@ -3141,14 +3140,12 @@ async function createTicketTranscript(
                 : "Unbekannt"
         }`,
 
-
         `Kategorie: ${
             data &&
             data.categoryTitle
                 ? data.categoryTitle
                 : "Unbekannt"
         }`,
-
 
         `Übernommen von: ${
             data &&
@@ -3157,7 +3154,6 @@ async function createTicketTranscript(
                 : "Niemand"
         }`,
 
-
         `Weitergeleitet an: ${
             data &&
             data.forwardedTo
@@ -3165,24 +3161,20 @@ async function createTicketTranscript(
                 : "Niemand"
         }`,
 
-
         `Schließung angefragt von: ${
             requestedById ||
             "Unbekannt"
         }`,
-
 
         `Schließung bestätigt von: ${
             confirmedById ||
             "Unbekannt"
         }`,
 
-
         `Grund: ${
             reason ||
             "Kein Grund angegeben"
         }`,
-
 
         `Erstellt: ${
             data &&
@@ -3200,7 +3192,6 @@ async function createTicketTranscript(
                 : "Unbekannt"
         }`,
 
-
         `Geschlossen: ${
             new Date()
                 .toLocaleString(
@@ -3212,45 +3203,35 @@ async function createTicketTranscript(
                 )
         }`,
 
-
         `Nachrichten: ${messages.length}`,
 
-
         "======================================================",
-
         ""
 
     ].join(
         "\n"
     );
 
-
     let transcript =
         header;
-
 
     for (
         const message
         of messages
     ) {
-
         transcript +=
             formatTicketMessage(
                 message
             );
 
-
         transcript +=
             "\n";
-
     }
-
 
     const maxBytes =
         7.5 *
         1024 *
         1024;
-
 
     let buffer =
         Buffer.from(
@@ -3258,12 +3239,10 @@ async function createTicketTranscript(
             "utf8"
         );
 
-
     if (
         buffer.length >
         maxBytes
     ) {
-
         const shortened =
             buffer
                 .subarray(
@@ -3277,15 +3256,12 @@ async function createTicketTranscript(
                 ) +
             "\n\n[Transcript wurde wegen der Dateigröße gekürzt.]";
 
-
         buffer =
             Buffer.from(
                 shortened,
                 "utf8"
             );
-
     }
-
 
     return {
         buffer,
@@ -3295,7 +3271,6 @@ async function createTicketTranscript(
     };
 }
 
-
 async function sendTicketTranscriptLog({
     guild,
     channel,
@@ -3304,16 +3279,13 @@ async function sendTicketTranscriptLog({
     requestedById,
     confirmedById
 }) {
-
     try {
-
         if (
             !guild ||
             !channel
         ) {
             return false;
         }
-
 
         const logChannel =
             guild
@@ -3332,20 +3304,16 @@ async function sendTicketTranscriptLog({
                     () => null
                 );
 
-
         if (
             !logChannel ||
             !logChannel.isTextBased()
         ) {
-
             console.log(
                 `⚠️ Ticket-Transcript-Channel nicht gefunden: ${TICKET_TRANSCRIPT_CHANNEL_ID}`
             );
 
-
             return false;
         }
-
 
         const transcript =
             await createTicketTranscript(
@@ -3355,7 +3323,6 @@ async function sendTicketTranscriptLog({
                 requestedById,
                 confirmedById
             );
-
 
         const logEmbed =
             new EmbedBuilder()
@@ -3485,7 +3452,6 @@ async function sendTicketTranscriptLog({
 
                 .setTimestamp();
 
-
         const safeChannelName =
             channel
                 .name
@@ -3498,13 +3464,10 @@ async function sendTicketTranscriptLog({
                     60
                 );
 
-
         await logChannel.send({
-
             embeds: [
                 logEmbed
             ],
-
 
             files: [
                 {
@@ -3515,25 +3478,19 @@ async function sendTicketTranscriptLog({
                         `ticket-${safeChannelName}-${channel.id}.txt`
                 }
             ]
-
         });
-
 
         return true;
 
-
     } catch (error) {
-
         console.error(
             "❌ Ticket Transcript Fehler:",
             error
         );
 
-
         return false;
     }
 }
-
 
 // ==========================================
 // TICKET ERSTELLEN
@@ -3544,10 +3501,8 @@ async function createTicketChannel(
     config,
     answers = []
 ) {
-
     const guild =
         interaction.guild;
-
 
     const member =
         await guild
@@ -3559,7 +3514,6 @@ async function createTicketChannel(
                 () => null
             );
 
-
     const staffRole =
         await guild
             .roles
@@ -3569,7 +3523,6 @@ async function createTicketChannel(
             .catch(
                 () => null
             );
-
 
     const category =
         await guild
@@ -3581,20 +3534,16 @@ async function createTicketChannel(
                 () => null
             );
 
-
     if (
         !member ||
         !staffRole ||
         !category
     ) {
-
         return interaction.editReply({
             content:
                 "❌ Ticket konnte nicht erstellt werden. Prüfe Rollen und Kategorien."
         });
-
     }
-
 
     const existing =
         guild
@@ -3604,43 +3553,33 @@ async function createTicketChannel(
                 channel =>
                     channel.type ===
                         ChannelType.GuildText &&
-
                     channel.name ===
                         config.name
             );
 
-
     if (
         existing
     ) {
-
         return interaction.editReply({
             content:
                 `❌ Du hast bereits ein Ticket offen: ${existing}`
         });
-
     }
-
 
     const channel =
         await guild
             .channels
             .create({
-
                 name:
                     config.name,
-
 
                 type:
                     ChannelType.GuildText,
 
-
                 parent:
                     category.id,
 
-
                 permissionOverwrites: [
-
                     {
                         id:
                             guild.roles.everyone.id,
@@ -3689,11 +3628,8 @@ async function createTicketChannel(
                                 .ReadMessageHistory
                         ]
                     }
-
                 ]
-
             });
-
 
     ticketData.set(
         channel.id,
@@ -3722,66 +3658,52 @@ async function createTicketChannel(
         }
     );
 
+    saveTicketStore();
 
     const claimButton =
         new ButtonBuilder()
-
             .setCustomId(
                 "claim_ticket"
             )
-
             .setLabel(
                 "Ticket übernehmen"
             )
-
             .setEmoji(
                 "📌"
             )
-
             .setStyle(
                 ButtonStyle.Primary
             );
 
-
     const forwardButton =
         new ButtonBuilder()
-
             .setCustomId(
                 "forward_ticket"
             )
-
             .setLabel(
                 "Weiterleiten"
             )
-
             .setEmoji(
                 "➡️"
             )
-
             .setStyle(
                 ButtonStyle.Secondary
             );
 
-
     const closeButton =
         new ButtonBuilder()
-
             .setCustomId(
                 "close_ticket"
             )
-
             .setLabel(
                 "Ticket schließen"
             )
-
             .setEmoji(
                 "🔒"
             )
-
             .setStyle(
                 ButtonStyle.Danger
             );
-
 
     const row =
         new ActionRowBuilder()
@@ -3791,16 +3713,13 @@ async function createTicketChannel(
                 closeButton
             );
 
-
     let answersText =
         "";
-
 
     if (
         answers.length >
         0
     ) {
-
         answersText =
             answers
                 .map(
@@ -3810,9 +3729,7 @@ async function createTicketChannel(
                 .join(
                     "\n\n"
                 );
-
     }
-
 
     const description =
         answersText
@@ -3844,38 +3761,29 @@ Dein Ticket wurde erfolgreich erstellt.
 ➡️ **Weiterleiten:** Nur Staff.
 🔒 **Schließen:** Nur Staff startet die Schließung; der Ticket-Ersteller bestätigt danach mit Ja oder Nein.`;
 
-
     const ticketEmbed =
         new EmbedBuilder()
-
             .setColor(
                 "#57F287"
             )
-
             .setTitle(
                 config.title
             )
-
             .setDescription(
                 description.substring(
                     0,
                     4096
                 )
             )
-
             .setFooter({
                 text:
                     "VIBE Ticket System"
             })
-
             .setTimestamp();
 
-
     await channel.send({
-
         content:
             `<@&${STAFF_ROLE_ID}>`,
-
 
         allowedMentions: {
             roles: [
@@ -3883,18 +3791,14 @@ Dein Ticket wurde erfolgreich erstellt.
             ]
         },
 
-
         embeds: [
             ticketEmbed
         ],
 
-
         components: [
             row
         ]
-
     });
-
 
     await interaction.editReply({
         content:
@@ -3902,19 +3806,16 @@ Dein Ticket wurde erfolgreich erstellt.
     });
 }
 
-
 // ==========================================
 // GIVEAWAY ZEIT
 // ==========================================
 
 function parseGiveawayDuration(input) {
-
     if (
         !input
     ) {
         return null;
     }
-
 
     const value =
         String(
@@ -3927,51 +3828,41 @@ function parseGiveawayDuration(input) {
                 "."
             );
 
-
     const compact =
         value.replace(
             /\s+/g,
             ""
         );
 
-
     const shortMatch =
         compact.match(
             /^(\d+(?:\.\d+)?)(s|m|h|d|w)$/i
         );
 
-
     if (
         shortMatch
     ) {
-
         const amount =
             Number(
                 shortMatch[1]
             );
 
-
         const unit =
             shortMatch[2]
                 .toLowerCase();
 
-
         const multipliers = {
-
             s:
                 1000,
-
 
             m:
                 60 *
                 1000,
 
-
             h:
                 60 *
                 60 *
                 1000,
-
 
             d:
                 24 *
@@ -3979,16 +3870,13 @@ function parseGiveawayDuration(input) {
                 60 *
                 1000,
 
-
             w:
                 7 *
                 24 *
                 60 *
                 60 *
                 1000
-
         };
-
 
         return Math.floor(
             amount *
@@ -3996,15 +3884,12 @@ function parseGiveawayDuration(input) {
                 unit
             ]
         );
-
     }
-
 
     const longMatch =
         value.match(
             /^(\d+(?:\.\d+)?)\s*(sekunde|sekunden|min|minute|minuten|stunde|stunden|std|tag|tage|tagen|woche|wochen)$/i
         );
-
 
     if (
         !longMatch
@@ -4012,89 +3897,70 @@ function parseGiveawayDuration(input) {
         return null;
     }
 
-
     const amount =
         Number(
             longMatch[1]
         );
 
-
     const unit =
         longMatch[2]
             .toLowerCase();
 
-
     let multiplier =
         null;
-
 
     if (
         unit === "sekunde" ||
         unit === "sekunden"
     ) {
-
         multiplier =
             1000;
-
     }
-
 
     if (
         unit === "min" ||
         unit === "minute" ||
         unit === "minuten"
     ) {
-
         multiplier =
             60 *
             1000;
-
     }
-
 
     if (
         unit === "stunde" ||
         unit === "stunden" ||
         unit === "std"
     ) {
-
         multiplier =
             60 *
             60 *
             1000;
-
     }
-
 
     if (
         unit === "tag" ||
         unit === "tage" ||
         unit === "tagen"
     ) {
-
         multiplier =
             24 *
             60 *
             60 *
             1000;
-
     }
-
 
     if (
         unit === "woche" ||
         unit === "wochen"
     ) {
-
         multiplier =
             7 *
             24 *
             60 *
             60 *
             1000;
-
     }
-
 
     if (
         !multiplier
@@ -4102,13 +3968,11 @@ function parseGiveawayDuration(input) {
         return null;
     }
 
-
     return Math.floor(
         amount *
         multiplier
     );
 }
-
 
 // ==========================================
 // GIVEAWAY EMBED
@@ -4119,13 +3983,11 @@ function createGiveawayEmbed(
     ended = false,
     winnerIds = []
 ) {
-
     const endUnix =
         Math.floor(
             data.endAt /
             1000
         );
-
 
     const embed =
         new EmbedBuilder()
@@ -4204,20 +4066,15 @@ function createGiveawayEmbed(
                         : "Klicke unten auf 🎉 Teilnehmen!"
             });
 
-
     if (
         ended
     ) {
-
         embed.addFields({
-
             name:
                 "🎉 Ergebnis",
 
-
             value:
                 winnerIds.length > 0
-
                     ? winnerIds
                         .map(
                             id =>
@@ -4226,43 +4083,33 @@ function createGiveawayEmbed(
                         .join(
                             ", "
                         )
-
                     : "Keine gültigen Teilnehmer."
-
         });
-
     }
-
 
     return embed;
 }
-
 
 function pickGiveawayWinners(
     participants,
     count
 ) {
-
     const pool = [
         ...participants
     ];
 
-
     const winners =
         [];
-
 
     while (
         pool.length > 0 &&
         winners.length < count
     ) {
-
         const index =
-            Math.floor(
-                Math.random() *
+            crypto.randomInt(
+                0,
                 pool.length
             );
-
 
         winners.push(
             pool.splice(
@@ -4270,206 +4117,151 @@ function pickGiveawayWinners(
                 1
             )[0]
         );
-
     }
-
 
     return winners;
 }
-
 
 // ==========================================
 // SLASH COMMANDS
 // ==========================================
 
 const commands = [
-
     new SlashCommandBuilder()
-
         .setName(
             "ticketpanel"
         )
-
         .setDescription(
             "Erstellt das Ticket Panel"
         )
-
         .toJSON(),
 
-
     new SlashCommandBuilder()
-
         .setName(
             "logtest"
         )
-
         .setDescription(
             "Testet das Server-Logging"
         )
-
         .toJSON(),
 
-
     new SlashCommandBuilder()
-
         .setName(
             "clear"
         )
-
         .setDescription(
             "Löscht Nachrichten aus diesem Channel"
         )
-
         .addIntegerOption(
             option =>
                 option
-
                     .setName(
                         "nummer"
                     )
-
                     .setDescription(
                         "Wie viele Nachrichten sollen gelöscht werden?"
                     )
-
                     .setRequired(
                         true
                     )
-
                     .setMinValue(
                         1
                     )
-
                     .setMaxValue(
                         1000
                     )
         )
-
         .toJSON(),
 
-
     new SlashCommandBuilder()
-
         .setName(
             "create"
         )
-
         .setDescription(
             "Erstellt Inhalte auf dem Server"
         )
-
         .addSubcommand(
             subcommand =>
                 subcommand
-
                     .setName(
                         "giveaway"
                     )
-
                     .setDescription(
                         "Erstellt ein Gewinnspiel"
                     )
         )
-
         .toJSON(),
 
-
     new SlashCommandBuilder()
-
         .setName(
             "geburstag"
         )
-
         .setDescription(
             "Geburtstagssystem"
         )
-
         .addSubcommand(
             subcommand =>
                 subcommand
-
                     .setName(
                         "panel"
                     )
-
                     .setDescription(
                         "Erstellt das Panel zum Geburtstag eintragen"
                     )
         )
-
         .addSubcommand(
             subcommand =>
                 subcommand
-
                     .setName(
                         "liste"
                     )
-
                     .setDescription(
                         "Erstellt oder zeigt die Geburtstagsliste"
                     )
         )
-
         .addSubcommand(
             subcommand =>
                 subcommand
-
                     .setName(
                         "löschen"
                     )
-
                     .setDescription(
                         "Löscht einen Geburtstag aus der Liste"
                     )
-
                     .addUserOption(
                         option =>
                             option
-
                                 .setName(
                                     "nutzer"
                                 )
-
                                 .setDescription(
                                     "Welcher Nutzer soll gelöscht werden?"
                                 )
-
                                 .setRequired(
                                     true
                                 )
                     )
         )
-
         .toJSON(),
 
-
     new SlashCommandBuilder()
-
         .setName(
             "abmeldung"
         )
-
         .setDescription(
             "Meldet dich für einen Zeitraum ab"
         )
-
         .toJSON(),
 
-
     new SlashCommandBuilder()
-
         .setName(
             "say"
         )
-
         .setDescription(
             "Lässt den Bot eine Nachricht schreiben"
         )
-
         .toJSON()
-
 ];
-
 
 // ==========================================
 // COMMAND REGISTRATION
@@ -4484,18 +4276,13 @@ const rest =
             TOKEN
         );
 
-
 async function registerCommands() {
-
     try {
-
         console.log(
             "⏳ Registriere Slash Commands..."
         );
 
-
         await rest.put(
-
             Routes.applicationGuildCommands(
                 CLIENT_ID,
                 GUILD_ID
@@ -4505,30 +4292,23 @@ async function registerCommands() {
                 body:
                     commands
             }
-
         );
-
 
         console.log(
             "✅ Slash Commands registriert"
         );
 
-
         return true;
 
-
     } catch (error) {
-
         console.error(
             "❌ Fehler beim Registrieren:",
             error
         );
 
-
         return false;
     }
 }
-
 
 // ==========================================
 // CLIENT READY
@@ -4538,7 +4318,6 @@ client.once(
     Events.ClientReady,
 
     async () => {
-
         console.log("");
 
         console.log(
@@ -4573,53 +4352,82 @@ client.once(
             "===================================="
         );
 
-
         await registerCommands();
 
+        const guild =
+            client.guilds.cache.get(
+                GUILD_ID
+            ) ||
+
+            await client.guilds.fetch(
+                GUILD_ID
+            )
+                .catch(
+                    () => null
+                );
+
+        if (
+            guild
+        ) {
+            await restoreTicketsFromGuild(
+                guild
+            );
+
+            await updateBirthdayListMessage(
+                guild
+            );
+
+            for (
+                const [giveawayId, data]
+                of giveawayData.entries()
+            ) {
+                if (
+                    data.ended
+                ) {
+                    continue;
+                }
+
+                scheduleGiveawayEnd(
+                    giveawayId
+                );
+            }
+
+            await restoreVoiceAfkState(
+                guild
+            );
+        }
 
         await checkBirthdays();
 
-
         await checkAbmeldungen();
-
 
         setInterval(
             checkBirthdays,
             60 * 1000
         );
 
-
-        // Jede Minute prüfen.
-        // Embed wird nur bei einer neuen Reststunde bearbeitet.
         setInterval(
             checkAbmeldungen,
             60 * 1000
         );
-
     }
 );
-
 
 if (
     !TOKEN
 ) {
-
     console.error(
         "❌ TOKEN fehlt bei Render Environment!"
     );
 
-
     process.exit(
         1
     );
-
 }
-
 
 console.log(
     "🔐 Bot wird eingeloggt..."
 );
-
 
 client
     .login(
@@ -4627,15 +4435,12 @@ client
     )
     .catch(
         error => {
-
             console.error(
                 "❌ Discord Login Fehler:",
                 error
             );
-
         }
     );
-
 
 // ==========================================
 // INTERACTIONS
@@ -4645,13 +4450,7 @@ client.on(
     Events.InteractionCreate,
 
     async interaction => {
-
         try {
-
-            // ==========================================
-            // SLASH COMMANDS
-            // ==========================================
-
             if (
                 interaction.isChatInputCommand()
             ) {
@@ -4664,56 +4463,42 @@ client.on(
                     interaction.commandName ===
                     "geburstag"
                 ) {
-
                     const subcommand =
                         interaction.options
                             .getSubcommand();
 
-
-                    // PANEL
                     if (
                         subcommand ===
                         "panel"
                     ) {
-
                         if (
                             !isAdmin(
                                 interaction.member
                             )
                         ) {
-
                             return interaction.reply({
-
                                 content:
                                     "❌ Nur Administratoren können das Geburtstags-Panel erstellen.",
 
                                 flags:
                                     MessageFlags.Ephemeral
-
                             });
-
                         }
-
 
                         const button =
                             new ButtonBuilder()
-
                                 .setCustomId(
                                     "birthday_open_modal"
                                 )
-
                                 .setLabel(
                                     "Geburtstag eintragen"
                                 )
-
                                 .setEmoji(
                                     "🎂"
                                 )
-
                                 .setStyle(
                                     ButtonStyle.Primary
                                 );
-
 
                         const row =
                             new ActionRowBuilder()
@@ -4721,18 +4506,14 @@ client.on(
                                     button
                                 );
 
-
                         const embed =
                             new EmbedBuilder()
-
                                 .setColor(
                                     "#FEE75C"
                                 )
-
                                 .setTitle(
                                     "🎂 Geburtstag eintragen"
                                 )
-
                                 .setDescription(
 `Klicke unten auf **Geburtstag eintragen** und trage deinen Geburtstag ein.
 
@@ -4740,17 +4521,13 @@ client.on(
 
 Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                 )
-
                                 .setFooter({
                                     text:
                                         "VIBE Geburtstagssystem"
                                 })
-
                                 .setTimestamp();
 
-
                         await interaction.channel.send({
-
                             embeds: [
                                 embed
                             ],
@@ -4758,130 +4535,94 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             components: [
                                 row
                             ]
-
                         });
 
-
                         return interaction.reply({
-
                             content:
                                 "✅ Geburtstags-Panel wurde erstellt.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
 
-
-                    // LISTE
                     if (
                         subcommand ===
                         "liste"
                     ) {
-
                         if (
                             !isAdmin(
                                 interaction.member
                             )
                         ) {
-
                             return interaction.reply({
-
                                 content:
                                     "❌ Nur Administratoren können die feste Geburtstagsliste erstellen oder verschieben.",
 
                                 flags:
                                     MessageFlags.Ephemeral
-
                             });
-
                         }
-
 
                         await interaction.deferReply({
                             flags:
                                 MessageFlags.Ephemeral
                         });
 
-
                         const oldUpdated =
                             await updateBirthdayListMessage(
                                 interaction.guild
                             );
 
-
                         if (
                             oldUpdated &&
-
                             birthdayStore.listChannelId ===
                                 interaction.channel.id
                         ) {
-
                             return interaction.editReply({
                                 content:
                                     "✅ Die bestehende Geburtstagsliste wurde aktualisiert."
                             });
-
                         }
-
 
                         const listMessage =
                             await interaction.channel.send({
-
                                 embeds: [
                                     createBirthdayListEmbed()
                                 ]
-
                             });
-
 
                         birthdayStore.listChannelId =
                             interaction.channel.id;
 
-
                         birthdayStore.listMessageId =
                             listMessage.id;
 
-
                         saveBirthdayStore();
 
-
                         return interaction.editReply({
-
                             content:
                                 "✅ Geburtstagsliste wurde erstellt und aktualisiert sich ab jetzt automatisch."
-
                         });
-
                     }
 
-
-                    // LÖSCHEN
                     if (
                         subcommand ===
                         "löschen"
                     ) {
-
                         if (
                             !isAdmin(
                                 interaction.member
                             )
                         ) {
-
                             return interaction.reply({
-
                                 content:
                                     "❌ Nur Administratoren können Geburtstage löschen.",
 
                                 flags:
                                     MessageFlags.Ephemeral
-
                             });
-
                         }
-
 
                         const user =
                             interaction.options.getUser(
@@ -4889,64 +4630,47 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                 true
                             );
 
-
                         if (
                             !birthdayStore.birthdays[
                                 user.id
                             ]
                         ) {
-
                             return interaction.reply({
-
                                 content:
                                     `❌ ${user} hat keinen Geburtstag eingetragen.`,
 
                                 flags:
                                     MessageFlags.Ephemeral
-
                             });
-
                         }
-
 
                         delete birthdayStore.birthdays[
                             user.id
                         ];
 
-
                         if (
                             birthdayStore.announced
                         ) {
-
                             delete birthdayStore.announced[
                                 user.id
                             ];
-
                         }
 
-
                         saveBirthdayStore();
-
 
                         await updateBirthdayListMessage(
                             interaction.guild
                         );
 
-
                         return interaction.reply({
-
                             content:
                                 `✅ Der Geburtstag von ${user} wurde gelöscht.`,
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
                 }
-
 
                 // ==========================================
                 // /ABMELDUNG
@@ -4956,127 +4680,95 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                     interaction.commandName ===
                     "abmeldung"
                 ) {
-
                     if (
                         !interaction.member ||
                         !interaction.member.roles ||
-
                         !interaction.member.roles.cache.has(
                             STAFF_ROLE_ID
                         )
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Du darfst diesen Befehl nicht benutzen.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     const modal =
                         new ModalBuilder()
-
                             .setCustomId(
                                 "abmeldung_modal"
                             )
-
                             .setTitle(
                                 "Team-Abmeldung"
                             );
 
-
                     const vonInput =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "abmeldung_von"
                             )
-
                             .setLabel(
                                 "Von wann bist du abgemeldet?"
                             )
-
                             .setPlaceholder(
                                 "z. B. 05.09.2026"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             )
-
                             .setMaxLength(
                                 10
                             );
-
 
                     const bisInput =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "abmeldung_bis"
                             )
-
                             .setLabel(
                                 "Bis wann bist du abgemeldet?"
                             )
-
                             .setPlaceholder(
                                 "z. B. 12.09.2026"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             )
-
                             .setMaxLength(
                                 10
                             );
 
-
                     const grundInput =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "abmeldung_grund"
                             )
-
                             .setLabel(
                                 "Grund"
                             )
-
                             .setPlaceholder(
                                 "z. B. Urlaub, Schule oder private Gründe"
                             )
-
                             .setStyle(
                                 TextInputStyle.Paragraph
                             )
-
                             .setRequired(
                                 true
                             )
-
                             .setMaxLength(
                                 500
                             );
 
-
                     modal.addComponents(
-
                         new ActionRowBuilder()
                             .addComponents(
                                 vonInput
@@ -5091,18 +4783,14 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             .addComponents(
                                 grundInput
                             )
-
                     );
-
 
                     await interaction.showModal(
                         modal
                     );
 
-
                     return;
                 }
-
 
                 // ==========================================
                 // /SAY
@@ -5112,84 +4800,63 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                     interaction.commandName ===
                     "say"
                 ) {
-
                     if (
                         !isAdmin(
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Nur Administratoren können `/say` benutzen.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     const modal =
                         new ModalBuilder()
-
                             .setCustomId(
                                 "say_modal"
                             )
-
                             .setTitle(
                                 "Nachricht senden"
                             );
 
-
                     const messageInput =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "say_message"
                             )
-
                             .setLabel(
                                 "Was möchtest du sagen?"
                             )
-
                             .setPlaceholder(
                                 "z. B. @Staff Hallo zusammen!"
                             )
-
                             .setStyle(
                                 TextInputStyle.Paragraph
                             )
-
                             .setRequired(
                                 true
                             )
-
                             .setMaxLength(
                                 2000
                             );
 
-
                     modal.addComponents(
-
                         new ActionRowBuilder()
                             .addComponents(
                                 messageInput
                             )
-
                     );
-
 
                     await interaction.showModal(
                         modal
                     );
 
-
                     return;
                 }
-
 
                 // ==========================================
                 // GIVEAWAY ERSTELLEN
@@ -5203,25 +4870,19 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                         .getSubcommand() ===
                         "giveaway"
                 ) {
-
                     if (
                         !isFeatureEnabled(
                             "giveaways"
                         )
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Das Giveaway-System ist derzeit deaktiviert.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     if (
                         !isAdmin(
@@ -5236,130 +4897,97 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                     .ManageGuild
                             )
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Du benötigst die Berechtigung **Server verwalten**, um ein Gewinnspiel zu erstellen.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     const modal =
                         new ModalBuilder()
-
                             .setCustomId(
                                 "create_giveaway_modal"
                             )
-
                             .setTitle(
                                 "Gewinnspiel erstellen"
                             );
 
-
                     const durationInput =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "giveaway_duration"
                             )
-
                             .setLabel(
                                 "Dauer"
                             )
-
                             .setPlaceholder(
                                 "z. B. 10 Minuten, 2 Stunden oder 1 Tag"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             );
-
 
                     const winnersInput =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "giveaway_winners"
                             )
-
                             .setLabel(
                                 "Anzahl der Gewinner"
                             )
-
                             .setPlaceholder(
                                 "z. B. 1"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             );
-
 
                     const prizeInput =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "giveaway_prize"
                             )
-
                             .setLabel(
                                 "Preis"
                             )
-
                             .setPlaceholder(
                                 "Was kann man gewinnen?"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             );
 
-
                     const descriptionInput =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "giveaway_description"
                             )
-
                             .setLabel(
                                 "Beschreibung"
                             )
-
                             .setPlaceholder(
                                 "Optional: Weitere Informationen"
                             )
-
                             .setStyle(
                                 TextInputStyle.Paragraph
                             )
-
                             .setRequired(
                                 false
                             );
 
-
                     modal.addComponents(
-
                         new ActionRowBuilder()
                             .addComponents(
                                 durationInput
@@ -5379,18 +5007,14 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             .addComponents(
                                 descriptionInput
                             )
-
                     );
-
 
                     await interaction.showModal(
                         modal
                     );
 
-
                     return;
                 }
-
 
                 // ==========================================
                 // LOG TEST
@@ -5400,25 +5024,19 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                     interaction.commandName ===
                     "logtest"
                 ) {
-
                     if (
                         !isAdmin(
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Nur Administratoren können diesen Befehl benutzen.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     const embed =
                         baseEmbed(
@@ -5427,9 +5045,7 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             "Das Server-Logging funktioniert."
                         );
 
-
                     embed.addFields(
-
                         {
                             name:
                                 "Ausgeführt von",
@@ -5447,27 +5063,21 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                     ? interaction.channel.toString()
                                     : "Unbekannt"
                         }
-
                     );
-
 
                     await sendLog(
                         interaction.guild,
                         embed
                     );
 
-
                     return interaction.reply({
-
                         content:
                             "✅ Test-Log wurde gesendet.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
                 }
-
 
                 // ==========================================
                 // CLEAR
@@ -5477,7 +5087,6 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                     interaction.commandName ===
                     "clear"
                 ) {
-
                     if (
                         !interaction.member
                             .permissions
@@ -5491,18 +5100,14 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Du benötigst die Berechtigung **Nachrichten verwalten**.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
                     }
-
 
                     const amount =
                         interaction.options
@@ -5511,56 +5116,43 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                 true
                             );
 
-
                     const channel =
                         interaction.channel;
-
 
                     if (
                         !channel ||
                         !channel.isTextBased() ||
-
                         typeof channel.bulkDelete !==
                             "function"
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ In diesem Channel können keine Nachrichten gelöscht werden.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     await interaction.deferReply({
                         flags:
                             MessageFlags.Ephemeral
                     });
 
-
                     let remaining =
                         amount;
-
 
                     let deletedTotal =
                         0;
 
-
                     while (
                         remaining > 0
                     ) {
-
                         const batchSize =
                             Math.min(
                                 remaining,
                                 100
                             );
-
 
                         const deleted =
                             await channel.bulkDelete(
@@ -5568,18 +5160,14 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                                 true
                             );
 
-
                         const deletedCount =
                             deleted.size;
-
 
                         deletedTotal +=
                             deletedCount;
 
-
                         remaining -=
                             deletedCount;
-
 
                         if (
                             deletedCount === 0 ||
@@ -5587,17 +5175,12 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                         ) {
                             break;
                         }
-
                     }
 
-
                     await interaction.editReply({
-
                         content:
                             `🧹 **${deletedTotal} Nachrichten wurden gelöscht.**`
-
                     });
-
 
                     const logEmbed =
                         baseEmbed(
@@ -5605,9 +5188,7 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             0xed4245
                         );
 
-
                     logEmbed.addFields(
-
                         {
                             name:
                                 "👤 Ausgeführt von",
@@ -5631,19 +5212,15 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                             value:
                                 `${deletedTotal} Nachrichten`
                         }
-
                     );
-
 
                     await sendLog(
                         interaction.guild,
                         logEmbed
                     );
 
-
                     return;
                 }
-
 
                 // ==========================================
                 // TICKET PANEL
@@ -5653,40 +5230,30 @@ Dein Geburtstag wird danach automatisch in der Geburtstagsliste angezeigt.`
                     interaction.commandName ===
                     "ticketpanel"
                 ) {
-
                     if (
                         !isAdmin(
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Nur Administratoren können das Ticket Panel erstellen.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     const embed =
                         new EmbedBuilder()
-
                             .setColor(
                                 "#2B2D31"
                             )
-
                             .setTitle(
                                 "🎫 Allgemeiner Support"
                             )
-
                             .setDescription(
 `Du hast ein Problem, eine Frage oder benötigst Hilfe auf unserem Server?
-
 Dann bist du hier genau richtig!
 
 Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich.
@@ -5694,7 +5261,6 @@ Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich.
 ━━━━━━━━━━━━━━━━━━
 
 📌 **Wobei wir helfen können:**
-
 • ❓ Fragen rund um den Server
 • 🐛 Probleme & Bugs
 • 🚨 Spieler melden
@@ -5707,13 +5273,11 @@ Erstelle ein Ticket und beschreibe dein Anliegen so genau wie möglich.
 👥 **Bewerbungen & Bau-Firma**
 
 Du möchtest Teil unseres Teams werden oder die Bau-Firma unterstützen?
-
 Erstelle einfach ein Ticket.
 
 ━━━━━━━━━━━━━━━━━━
 
 📋 **Wichtige Hinweise:**
-
 • Beschreibe dein Anliegen genau
 • Bleibe freundlich
 • Erstelle nur ein Ticket pro Anliegen
@@ -5722,31 +5286,24 @@ Erstelle einfach ein Ticket.
 
 🚀 Vielen Dank und viel Spaß auf unserem Server!`
                             )
-
                             .setThumbnail(
                                 client.user
                                     .displayAvatarURL()
                             )
-
                             .setFooter({
                                 text:
                                     "VIBE Support System"
                             });
 
-
                     const menu =
                         new StringSelectMenuBuilder()
-
                             .setCustomId(
                                 "ticket_menu"
                             )
-
                             .setPlaceholder(
                                 "Wähle eine Kategorie aus"
                             )
-
                             .addOptions([
-
                                 {
                                     label:
                                         "Allgemeiner Support",
@@ -5802,9 +5359,7 @@ Erstelle einfach ein Ticket.
                                     value:
                                         "giveaway"
                                 }
-
                             ]);
-
 
                     const row =
                         new ActionRowBuilder()
@@ -5812,9 +5367,7 @@ Erstelle einfach ein Ticket.
                                 menu
                             );
 
-
                     return interaction.reply({
-
                         embeds: [
                             embed
                         ],
@@ -5822,15 +5375,11 @@ Erstelle einfach ein Ticket.
                         components: [
                             row
                         ]
-
                     });
-
                 }
-
 
                 return;
             }
-
 
             // ==========================================
             // ABMELDUNG FORMULAR ABSENDEN
@@ -5838,51 +5387,38 @@ Erstelle einfach ein Ticket.
 
             if (
                 interaction.isModalSubmit() &&
-
                 interaction.customId ===
                     "abmeldung_modal"
             ) {
-
                 if (
                     !interaction.member ||
                     !interaction.member.roles ||
-
                     !interaction.member.roles.cache.has(
                         STAFF_ROLE_ID
                     )
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Du darfst diesen Befehl nicht benutzen.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 if (
                     !/^\d{17,20}$/.test(
                         ABMELDUNG_ROLE_ID
                     )
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Die **ABMELDUNG_ROLE_ID** wurde im Code noch nicht eingetragen.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 const vonText =
                     interaction.fields
@@ -5891,14 +5427,12 @@ Erstelle einfach ein Ticket.
                         )
                         .trim();
 
-
                 const bisText =
                     interaction.fields
                         .getTextInputValue(
                             "abmeldung_bis"
                         )
                         .trim();
-
 
                 const grund =
                     interaction.fields
@@ -5907,54 +5441,41 @@ Erstelle einfach ein Ticket.
                         )
                         .trim();
 
-
                 const von =
                     parseAbmeldungDate(
                         vonText
                     );
-
 
                 const bis =
                     parseAbmeldungDate(
                         bisText
                     );
 
-
                 if (
                     !von ||
                     !bis
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Bitte gib beide Daten richtig ein, z. B. **05.09.2026**.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 if (
                     bis.timestamp <
                     von.timestamp
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Das Bis-Datum darf nicht vor dem Von-Datum liegen.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 const startAt =
                     getBerlinTimestamp(
@@ -5964,8 +5485,6 @@ Erstelle einfach ein Ticket.
                         0
                     );
 
-
-                // Bis Ende des angegebenen Tages
                 const endAt =
                     getBerlinTimestamp(
                         bis,
@@ -5974,24 +5493,18 @@ Erstelle einfach ein Ticket.
                         59
                     );
 
-
                 if (
                     endAt <=
                     Date.now()
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Das Ende deiner Abmeldung liegt bereits in der Vergangenheit.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 const abmeldungRole =
                     interaction.guild.roles.cache.get(
@@ -6005,92 +5518,67 @@ Erstelle einfach ein Ticket.
                             () => null
                         );
 
-
                 if (
                     !abmeldungRole
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Die Abmeldungs-Rolle wurde nicht gefunden. Prüfe die **ABMELDUNG_ROLE_ID**.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
 
-
                 try {
-
                     await interaction.member.roles.add(
                         abmeldungRole,
                         `Abgemeldet bis ${formatAbmeldungDate(bis)}`
                     );
 
-
                 } catch (error) {
-
                     console.error(
                         "❌ Abmeldungs-Rolle vergeben Fehler:",
                         error
                     );
 
-
                     return interaction.reply({
-
                         content:
                             "❌ Ich konnte dir die Abmeldungs-Rolle nicht geben. Prüfe, ob meine Bot-Rolle **über** der Abmeldungs-Rolle steht und ich **Rollen verwalten** darf.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
 
-
                 const entry = {
-
                     userId:
                         interaction.user.id,
-
 
                     guildId:
                         interaction.guild.id,
 
-
                     channelId:
                         interaction.channel.id,
 
-
                     messageId:
                         null,
-
 
                     vonText:
                         formatAbmeldungDate(
                             von
                         ),
 
-
                     bisText:
                         formatAbmeldungDate(
                             bis
                         ),
 
-
                     startAt,
-
-
                     endAt,
-
 
                     reason:
                         grund,
-
 
                     avatarUrl:
                         interaction.user
@@ -6099,59 +5587,45 @@ Erstelle einfach ein Ticket.
                                     256
                             }),
 
-
                     lastRemainingHours:
                         getRemainingAbmeldungHours(
                             endAt
                         ),
 
-
                     createdAt:
                         Date.now()
-
                 };
-
 
                 const abmeldungMessage =
                     await interaction.channel.send({
-
                         embeds: [
                             createAbmeldungEmbed(
                                 entry,
                                 false
                             )
                         ]
-
                     });
-
 
                 entry.messageId =
                     abmeldungMessage.id;
-
 
                 abmeldungStore.entries[
                     interaction.user.id
                 ] =
                     entry;
 
-
                 saveAbmeldungStore();
 
-
                 await interaction.reply({
-
                     content:
                         `✅ Deine Abmeldung wurde eingetragen und die Rolle ${abmeldungRole} wurde dir gegeben. Sie wird nach Ablauf automatisch entfernt.`,
 
                     flags:
                         MessageFlags.Ephemeral
-
                 });
-
 
                 return;
             }
-
 
             // ==========================================
             // SAY MODAL
@@ -6159,29 +5633,22 @@ Erstelle einfach ein Ticket.
 
             if (
                 interaction.isModalSubmit() &&
-
                 interaction.customId ===
                     "say_modal"
             ) {
-
                 if (
                     !isAdmin(
                         interaction.member
                     )
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Nur Administratoren können `/say` benutzen.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 const nachricht =
                     interaction.fields
@@ -6190,33 +5657,25 @@ Erstelle einfach ein Ticket.
                         )
                         .trim();
 
-
                 const sayMessage =
                     resolveSayRoleMentions(
                         interaction.guild,
                         nachricht
                     );
 
-
                 await interaction.reply({
-
                     content:
                         "✅ Nachricht gesendet.",
 
                     flags:
                         MessageFlags.Ephemeral
-
                 });
 
-
                 await interaction.channel.send({
-
                     content:
                         sayMessage.content,
 
-
                     allowedMentions: {
-
                         parse:
                             [],
 
@@ -6225,15 +5684,11 @@ Erstelle einfach ein Ticket.
 
                         repliedUser:
                             false
-
                     }
-
                 });
-
 
                 return;
             }
-
 
             // ==========================================
             // GIVEAWAY MODAL
@@ -6241,18 +5696,15 @@ Erstelle einfach ein Ticket.
 
             if (
                 interaction.isModalSubmit() &&
-
                 interaction.customId ===
                     "create_giveaway_modal"
             ) {
-
                 const durationText =
                     interaction.fields
                         .getTextInputValue(
                             "giveaway_duration"
                         )
                         .trim();
-
 
                 const winnersText =
                     interaction.fields
@@ -6261,14 +5713,12 @@ Erstelle einfach ein Ticket.
                         )
                         .trim();
 
-
                 const prize =
                     interaction.fields
                         .getTextInputValue(
                             "giveaway_prize"
                         )
                         .trim();
-
 
                 const description =
                     interaction.fields
@@ -6277,12 +5727,10 @@ Erstelle einfach ein Ticket.
                         )
                         .trim();
 
-
                 const duration =
                     parseGiveawayDuration(
                         durationText
                     );
-
 
                 const winnerCount =
                     Number.parseInt(
@@ -6290,14 +5738,11 @@ Erstelle einfach ein Ticket.
                         10
                     );
 
-
                 if (
                     !duration ||
                     duration < 10000
                 ) {
-
                     return interaction.reply({
-
                         content:
 `❌ Ungültige Dauer.
 
@@ -6311,11 +5756,8 @@ Beispiele:
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 if (
                     !Number.isInteger(
@@ -6325,32 +5767,24 @@ Beispiele:
                     winnerCount < 1 ||
                     winnerCount > 20
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Die Anzahl der Gewinner muss zwischen **1 und 20** liegen.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 await interaction.deferReply({
                     flags:
                         MessageFlags.Ephemeral
                 });
 
-
                 const giveawayId =
                     `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 
-
                 const data = {
-
                     id:
                         giveawayId,
 
@@ -6367,9 +5801,7 @@ Beispiele:
                         interaction.user.id,
 
                     prize,
-
                     description,
-
                     winnerCount,
 
                     participants:
@@ -6387,29 +5819,22 @@ Beispiele:
 
                     winnerIds:
                         []
-
                 };
-
 
                 const joinButton =
                     new ButtonBuilder()
-
                         .setCustomId(
                             `giveaway_join_${giveawayId}`
                         )
-
                         .setLabel(
                             "Teilnehmen"
                         )
-
                         .setEmoji(
                             "🎉"
                         )
-
                         .setStyle(
                             ButtonStyle.Primary
                         );
-
 
                 const row =
                     new ActionRowBuilder()
@@ -6417,10 +5842,8 @@ Beispiele:
                             joinButton
                         );
 
-
                 const giveawayMessage =
                     await interaction.channel.send({
-
                         embeds: [
                             createGiveawayEmbed(
                                 data
@@ -6430,36 +5853,29 @@ Beispiele:
                         components: [
                             row
                         ]
-
                     });
-
 
                 data.messageId =
                     giveawayMessage.id;
-
 
                 giveawayData.set(
                     giveawayId,
                     data
                 );
 
+                saveGiveawayStore();
 
                 scheduleGiveawayEnd(
                     giveawayId
                 );
 
-
                 await interaction.editReply({
-
                     content:
                         `✅ Das Gewinnspiel wurde erfolgreich erstellt!\n${giveawayMessage.url}`
-
                 });
-
 
                 return;
             }
-
 
             // ==========================================
             // TICKET SELECT MENU
@@ -6467,28 +5883,22 @@ Beispiele:
 
             if (
                 interaction.isStringSelectMenu() &&
-
                 interaction.customId ===
                     "ticket_menu"
             ) {
-
                 const selected =
                     interaction.values[0];
-
 
                 if (
                     selected ===
                     "giveaway"
                 ) {
-
                     await interaction.deferReply({
                         flags:
                             MessageFlags.Ephemeral
                     });
 
-
                     return createTicketChannel(
-
                         interaction,
 
                         {
@@ -6503,199 +5913,149 @@ Beispiele:
                         },
 
                         []
-
                     );
-
                 }
-
 
                 if (
                     selected ===
                     "clan_bewerbung"
                 ) {
-
                     const modal =
                         new ModalBuilder()
-
                             .setCustomId(
                                 "ticket_form_support"
                             )
-
                             .setTitle(
                                 "Allgemeiner Support"
                             );
 
-
                     const anliegen =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "support_anliegen"
                             )
-
                             .setLabel(
                                 "Was ist dein Anliegen?"
                             )
-
                             .setPlaceholder(
                                 "Beschreibe dein Anliegen..."
                             )
-
                             .setStyle(
                                 TextInputStyle.Paragraph
                             )
-
                             .setRequired(
                                 true
                             )
-
                             .setMaxLength(
                                 1000
                             );
 
-
                     modal.addComponents(
-
                         new ActionRowBuilder()
                             .addComponents(
                                 anliegen
                             )
-
                     );
-
 
                     await interaction.showModal(
                         modal
                     );
 
-
                     return;
                 }
-
 
                 if (
                     selected ===
                     "team_bewerbung"
                 ) {
-
                     const modal =
                         new ModalBuilder()
-
                             .setCustomId(
                                 "ticket_form_team"
                             )
-
                             .setTitle(
                                 "Team Bewerbung"
                             );
 
-
                     const alter =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "team_alter"
                             )
-
                             .setLabel(
                                 "Wie alt bist du?"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             );
-
 
                     const spielstunden =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "team_spielstunden"
                             )
-
                             .setLabel(
                                 "Wieviele Spielstunden auf OPSUCHT?"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             );
-
 
                     const rolle =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "team_rolle"
                             )
-
                             .setLabel(
                                 "Für welche Rolle bewirbst du dich?"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             );
-
 
                     const rolleSchonmal =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "team_rolle_schonmal"
                             )
-
                             .setLabel(
                                 "Hattest du die Rolle schonmal?"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             );
 
-
                     const infos =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "team_infos"
                             )
-
                             .setLabel(
                                 "Infos zu dir (optional)"
                             )
-
                             .setStyle(
                                 TextInputStyle.Paragraph
                             )
-
                             .setRequired(
                                 false
                             )
-
                             .setMaxLength(
                                 1000
                             );
 
-
                     modal.addComponents(
-
                         new ActionRowBuilder()
                             .addComponents(
                                 alter
@@ -6720,158 +6080,119 @@ Beispiele:
                             .addComponents(
                                 infos
                             )
-
                     );
-
 
                     await interaction.showModal(
                         modal
                     );
 
-
                     return;
                 }
-
 
                 if (
                     selected ===
                     "bau_firma"
                 ) {
-
                     const modal =
                         new ModalBuilder()
-
                             .setCustomId(
                                 "ticket_form_baufirma"
                             )
-
                             .setTitle(
                                 "Baufirma"
                             );
 
-
                     const art =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "bau_art"
                             )
-
                             .setLabel(
                                 "Bewerbung oder Bauauftrag?"
                             )
-
                             .setPlaceholder(
                                 "Bewerbung oder Bauauftrag"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             );
 
-
                     const bauen =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "bau_wunsch"
                             )
-
                             .setLabel(
                                 "Was sollen wir dir bauen?"
                             )
-
                             .setPlaceholder(
                                 "Nur bei Bauauftrag"
                             )
-
                             .setStyle(
                                 TextInputStyle.Paragraph
                             )
-
                             .setRequired(
                                 false
                             );
-
 
                     const alter =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "bau_alter"
                             )
-
                             .setLabel(
                                 "Wie alt bist du?"
                             )
-
                             .setPlaceholder(
                                 "Nur bei Bewerbung"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 false
                             );
-
 
                     const vorzeigen =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "bau_vorzeigen"
                             )
-
                             .setLabel(
                                 "Kannst du uns was vorzeigen?"
                             )
-
                             .setPlaceholder(
                                 "Nur bei Bewerbung"
                             )
-
                             .setStyle(
                                 TextInputStyle.Paragraph
                             )
-
                             .setRequired(
                                 false
                             );
-
 
                     const aktiv =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "bau_aktiv"
                             )
-
                             .setLabel(
                                 "Wie aktiv bist du in der Woche?"
                             )
-
                             .setPlaceholder(
                                 "Nur bei Bewerbung"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 false
                             );
 
-
                     modal.addComponents(
-
                         new ActionRowBuilder()
                             .addComponents(
                                 art
@@ -6896,20 +6217,15 @@ Beispiele:
                             .addComponents(
                                 aktiv
                             )
-
                     );
-
 
                     await interaction.showModal(
                         modal
                     );
 
-
                     return;
                 }
-
             }
-
 
             // ==========================================
             // GEBURTSTAG MODAL
@@ -6917,40 +6233,31 @@ Beispiele:
 
             if (
                 interaction.isModalSubmit() &&
-
                 interaction.customId ===
                     "birthday_modal"
             ) {
-
                 const birthdayInput =
                     interaction.fields
                         .getTextInputValue(
                             "birthday_date"
                         );
 
-
                 const parsedBirthday =
                     parseBirthdayInput(
                         birthdayInput
                     );
 
-
                 if (
                     !parsedBirthday
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Ungültiges Datum. Bitte nutze z. B. **09.05.2011** oder **09.05.**",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 const existed =
                     Boolean(
@@ -6959,11 +6266,9 @@ Beispiele:
                         ]
                     );
 
-
                 birthdayStore.birthdays[
                     interaction.user.id
                 ] = {
-
                     day:
                         parsedBirthday.day,
 
@@ -6978,46 +6283,34 @@ Beispiele:
 
                     updatedAt:
                         Date.now()
-
                 };
-
 
                 if (
                     birthdayStore.announced
                 ) {
-
                     delete birthdayStore.announced[
                         interaction.user.id
                     ];
-
                 }
 
-
                 saveBirthdayStore();
-
 
                 await updateBirthdayListMessage(
                     interaction.guild
                 );
 
-
                 await interaction.reply({
-
                     content:
                         `${existed ? "✅ Dein Geburtstag wurde geändert auf" : "✅ Dein Geburtstag wurde eingetragen:"} **${formatBirthdayDate(parsedBirthday)}**`,
 
                     flags:
                         MessageFlags.Ephemeral
-
                 });
-
 
                 await checkBirthdays();
 
-
                 return;
             }
-
 
             // ==========================================
             // SUPPORT FORM
@@ -7025,19 +6318,15 @@ Beispiele:
 
             if (
                 interaction.isModalSubmit() &&
-
                 interaction.customId ===
                     "ticket_form_support"
             ) {
-
                 await interaction.deferReply({
                     flags:
                         MessageFlags.Ephemeral
                 });
 
-
                 return createTicketChannel(
-
                     interaction,
 
                     {
@@ -7063,10 +6352,8 @@ Beispiele:
                                     )
                         }
                     ]
-
                 );
             }
-
 
             // ==========================================
             // TEAM BEWERBUNG FORM
@@ -7074,19 +6361,15 @@ Beispiele:
 
             if (
                 interaction.isModalSubmit() &&
-
                 interaction.customId ===
                     "ticket_form_team"
             ) {
-
                 await interaction.deferReply({
                     flags:
                         MessageFlags.Ephemeral
                 });
 
-
                 return createTicketChannel(
-
                     interaction,
 
                     {
@@ -7101,7 +6384,6 @@ Beispiele:
                     },
 
                     [
-
                         {
                             question:
                                 "Wie alt bist du?",
@@ -7157,12 +6439,9 @@ Beispiele:
                                     ) ||
                                 "Keine Angabe"
                         }
-
                     ]
-
                 );
             }
-
 
             // ==========================================
             // BAUFIRMA FORM
@@ -7170,19 +6449,15 @@ Beispiele:
 
             if (
                 interaction.isModalSubmit() &&
-
                 interaction.customId ===
                     "ticket_form_baufirma"
             ) {
-
                 await interaction.deferReply({
                     flags:
                         MessageFlags.Ephemeral
                 });
 
-
                 return createTicketChannel(
-
                     interaction,
 
                     {
@@ -7197,7 +6472,6 @@ Beispiele:
                     },
 
                     [
-
                         {
                             question:
                                 "Willst du dich bewerben oder sollen wir dir was bauen?",
@@ -7256,12 +6530,9 @@ Beispiele:
                                     ) ||
                                 "Keine Angabe"
                         }
-
                     ]
-
                 );
             }
-
 
             // ==========================================
             // TICKET SCHLIESS GRUND
@@ -7269,69 +6540,51 @@ Beispiele:
 
             if (
                 interaction.isModalSubmit() &&
-
                 interaction.customId ===
                     "ticket_close_reason_modal"
             ) {
-
                 if (
                     !isTicketStaff(
                         interaction.member
                     )
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Nur Mitglieder mit der Staff-Rolle können eine Ticket-Schließung starten.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 const data =
                     getTicketData(
                         interaction.channel
                     );
 
-
                 if (
                     !data
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Ticket-Daten wurden nicht gefunden.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 if (
                     data.pendingClose
                 ) {
-
                     return interaction.reply({
-
                         content:
                             "❌ Für dieses Ticket läuft bereits eine Schließungs-Anfrage.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
-
 
                 const reason =
                     interaction.fields
@@ -7340,9 +6593,7 @@ Beispiele:
                         )
                         .trim();
 
-
                 data.pendingClose = {
-
                     reason,
 
                     requestedBy:
@@ -7350,49 +6601,39 @@ Beispiele:
 
                     requestedAt:
                         Date.now()
-
                 };
 
+                saveTicketStore();
 
                 const yesButton =
                     new ButtonBuilder()
-
                         .setCustomId(
                             "ticket_close_yes"
                         )
-
                         .setLabel(
                             "Ja, schließen"
                         )
-
                         .setEmoji(
                             "✅"
                         )
-
                         .setStyle(
                             ButtonStyle.Danger
                         );
 
-
                 const noButton =
                     new ButtonBuilder()
-
                         .setCustomId(
                             "ticket_close_no"
                         )
-
                         .setLabel(
                             "Nein, offen lassen"
                         )
-
                         .setEmoji(
                             "❌"
                         )
-
                         .setStyle(
                             ButtonStyle.Secondary
                         );
-
 
                 const row =
                     new ActionRowBuilder()
@@ -7401,18 +6642,14 @@ Beispiele:
                             noButton
                         );
 
-
                 const embed =
                     new EmbedBuilder()
-
                         .setColor(
                             "#FEE75C"
                         )
-
                         .setTitle(
                             "🔒 Ticket schließen?"
                         )
-
                         .setDescription(
 `<@${data.ownerId}>, möchtest du dein Ticket wirklich schließen?
 
@@ -7420,17 +6657,13 @@ Beispiele:
 
 Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         )
-
                         .setFooter({
                             text:
                                 `Schließung angefragt von ${interaction.user.tag}`
                         })
-
                         .setTimestamp();
 
-
                 await interaction.reply({
-
                     content:
                         `<@${data.ownerId}>`,
 
@@ -7447,13 +6680,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             data.ownerId
                         ]
                     }
-
                 });
-
 
                 return;
             }
-
 
             // ==========================================
             // TICKET WEITERLEITEN USER SELECT
@@ -7461,34 +6691,27 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
 
             if (
                 interaction.isUserSelectMenu() &&
-
                 interaction.customId ===
                     "forward_ticket_user"
             ) {
-
                 await interaction.deferReply({
                     flags:
                         MessageFlags.Ephemeral
                 });
-
 
                 if (
                     !isTicketStaff(
                         interaction.member
                     )
                 ) {
-
                     return interaction.editReply({
                         content:
                             "❌ Nur Teammitglieder können Tickets weiterleiten."
                     });
-
                 }
-
 
                 const selectedUserId =
                     interaction.values[0];
-
 
                 const selectedMember =
                     await interaction.guild.members.fetch(
@@ -7498,44 +6721,37 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             () => null
                         );
 
-
                 if (
                     !selectedMember ||
                     !isTicketStaff(
                         selectedMember
                     )
                 ) {
-
                     return interaction.editReply({
                         content:
                             "❌ Bitte wähle ein gültiges Teammitglied."
                     });
-
                 }
-
 
                 const data =
                     getTicketData(
                         interaction.channel
                     );
 
-
                 if (
                     !data
                 ) {
-
                     return interaction.editReply({
                         content:
                             "❌ Ticket-Daten nicht gefunden."
                     });
-
                 }
-
 
                 await interaction.channel
                     .permissionOverwrites
                     .edit(
                         selectedMember.id,
+
                         {
                             ViewChannel:
                                 true,
@@ -7548,47 +6764,38 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         }
                     );
 
-
                 data.forwardedTo =
                     selectedMember.id;
 
+                saveTicketStore();
 
                 await interaction.channel.send({
-
                     content:
                         `${selectedMember}`,
 
                     embeds: [
                         new EmbedBuilder()
-
                             .setColor(
                                 "#5865F2"
                             )
-
                             .setTitle(
                                 "➡️ Ticket weitergeleitet"
                             )
-
                             .setDescription(
 `Dieses Ticket wurde weitergeleitet.
 
 👤 **Von:** ${interaction.user}
-
 🎯 **An:** ${selectedMember}`
                             )
-
                             .setTimestamp()
                     ]
-
                 });
-
 
                 return interaction.editReply({
                     content:
                         `✅ Ticket wurde an ${selectedMember} weitergeleitet.`
                 });
             }
-
 
             // ==========================================
             // BUTTONS
@@ -7598,89 +6805,72 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                 interaction.isButton()
             ) {
 
-                // Geburtstag
+                // ==========================================
+                // GEBURTSTAG
+                // ==========================================
+
                 if (
                     interaction.customId ===
                     "birthday_open_modal"
                 ) {
-
                     const existing =
                         birthdayStore.birthdays[
                             interaction.user.id
                         ];
 
-
                     const modal =
                         new ModalBuilder()
-
                             .setCustomId(
                                 "birthday_modal"
                             )
-
                             .setTitle(
                                 "Geburtstag eintragen"
                             );
 
-
                     const dateInput =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "birthday_date"
                             )
-
                             .setLabel(
                                 "Wann hast du Geburtstag?"
                             )
-
                             .setPlaceholder(
                                 "z. B. 09.05.2011"
                             )
-
                             .setStyle(
                                 TextInputStyle.Short
                             )
-
                             .setRequired(
                                 true
                             )
-
                             .setMaxLength(
                                 10
                             );
 
-
                     if (
                         existing
                     ) {
-
                         dateInput.setValue(
                             formatBirthdayDate(
                                 existing
                             )
                         );
-
                     }
 
-
                     modal.addComponents(
-
                         new ActionRowBuilder()
                             .addComponents(
                                 dateInput
                             )
-
                     );
-
 
                     await interaction.showModal(
                         modal
                     );
 
-
                     return;
                 }
-
 
                 // ==========================================
                 // GIVEAWAY TEILNEHMEN
@@ -7691,12 +6881,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                         "giveaway_join_"
                     )
                 ) {
-
                     await interaction.deferReply({
                         flags:
                             MessageFlags.Ephemeral
                     });
-
 
                     const giveawayId =
                         interaction.customId
@@ -7705,38 +6893,30 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                                 ""
                             );
 
-
                     const data =
                         giveawayData.get(
                             giveawayId
                         );
 
-
                     if (
                         !data
                     ) {
-
                         return interaction.editReply({
                             content:
                                 "❌ Dieses Gewinnspiel ist nicht mehr aktiv."
                         });
-
                     }
-
 
                     if (
                         data.ended ||
                         Date.now() >=
                             data.endAt
                     ) {
-
                         return interaction.editReply({
                             content:
                                 "❌ Dieses Gewinnspiel ist bereits beendet."
                         });
-
                     }
-
 
                     if (
                         interaction.member &&
@@ -7750,56 +6930,45 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                             )
                         )
                     ) {
-
                         return interaction.editReply({
                             content:
                                 "❌ Teammitglieder und Administratoren dürfen nicht teilnehmen."
                         });
-
                     }
-
 
                     if (
                         data.participants.has(
                             interaction.user.id
                         )
                     ) {
-
                         return interaction.editReply({
                             content:
                                 "🎉 Du nimmst bereits am Gewinnspiel teil!"
                         });
-
                     }
-
 
                     data.participants.add(
                         interaction.user.id
                     );
 
+                    saveGiveawayStore();
 
                     await interaction.message.edit({
-
                         embeds: [
                             createGiveawayEmbed(
                                 data
                             )
                         ]
-
                     })
                         .catch(
                             () => {}
                         );
 
-
                     return interaction.editReply({
-
                         content:
                             "🎉 **Du machst jetzt beim Gewinnspiel mit!**\n\n🍀 Viel Glück!"
-
                     });
                 }
-
 
                 // ==========================================
                 // CLAIM
@@ -7809,94 +6978,71 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                     interaction.customId ===
                     "claim_ticket"
                 ) {
-
                     await interaction.deferReply({
                         flags:
                             MessageFlags.Ephemeral
                     });
-
 
                     if (
                         !isTicketStaff(
                             interaction.member
                         )
                     ) {
-
                         return interaction.editReply({
-
                             content:
                                 "❌ Nur Teammitglieder mit der Staff-Rolle können Tickets übernehmen."
-
                         });
-
                     }
-
 
                     const data =
                         getTicketData(
                             interaction.channel
                         );
 
-
                     if (
                         !data
                     ) {
-
                         return interaction.editReply({
                             content:
                                 "❌ Ticket-Daten wurden nicht gefunden."
                         });
-
                     }
-
 
                     if (
                         data.claimedBy
                     ) {
-
                         return interaction.editReply({
-
                             content:
                                 `❌ Dieses Ticket wurde bereits von <@${data.claimedBy}> übernommen.`
-
                         });
-
                     }
-
 
                     data.claimedBy =
                         interaction.user.id;
 
+                    saveTicketStore();
 
                     await interaction.channel.send({
-
                         embeds: [
                             new EmbedBuilder()
-
                                 .setColor(
                                     "#57F287"
                                 )
-
                                 .setTitle(
                                     "📌 Ticket übernommen"
                                 )
-
                                 .setDescription(
                                     `Das Ticket wurde von ${interaction.user} übernommen.`
                                 )
-
                                 .setTimestamp()
                         ]
-
                     });
-
 
                     return interaction.editReply({
                         content:
                             "✅ Du hast das Ticket übernommen."
                     });
                 }
-
 
                 // ==========================================
                 // FORWARD
@@ -7906,45 +7052,34 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                     interaction.customId ===
                     "forward_ticket"
                 ) {
-
                     if (
                         !isTicketStaff(
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Nur Teammitglieder mit der Staff-Rolle können Tickets weiterleiten.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     const select =
                         new UserSelectMenuBuilder()
-
                             .setCustomId(
                                 "forward_ticket_user"
                             )
-
                             .setPlaceholder(
                                 "Teammitglied auswählen"
                             )
-
                             .setMinValues(
                                 1
                             )
-
                             .setMaxValues(
                                 1
                             );
-
 
                     const row =
                         new ActionRowBuilder()
@@ -7952,9 +7087,7 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                                 select
                             );
 
-
                     return interaction.reply({
-
                         content:
                             "➡️ Wähle das Teammitglied aus:",
 
@@ -7964,10 +7097,8 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
                 }
-
 
                 // ==========================================
                 // CLOSE
@@ -7977,124 +7108,92 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                     interaction.customId ===
                     "close_ticket"
                 ) {
-
                     if (
                         !isTicketStaff(
                             interaction.member
                         )
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Nur Mitglieder mit der Staff-Rolle können diesen Ticket-Button benutzen.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     const data =
                         getTicketData(
                             interaction.channel
                         );
 
-
                     if (
                         !data
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Ticket-Daten wurden nicht gefunden.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     if (
                         data.pendingClose
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Für dieses Ticket läuft bereits eine Schließungs-Anfrage.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     const modal =
                         new ModalBuilder()
-
                             .setCustomId(
                                 "ticket_close_reason_modal"
                             )
-
                             .setTitle(
                                 "Ticket schließen"
                             );
 
-
                     const reasonInput =
                         new TextInputBuilder()
-
                             .setCustomId(
                                 "ticket_close_reason"
                             )
-
                             .setLabel(
                                 "Grund"
                             )
-
                             .setPlaceholder(
                                 "z. B. Done"
                             )
-
                             .setStyle(
                                 TextInputStyle.Paragraph
                             )
-
                             .setRequired(
                                 true
                             )
-
                             .setMaxLength(
                                 500
                             );
 
-
                     modal.addComponents(
-
                         new ActionRowBuilder()
                             .addComponents(
                                 reasonInput
                             )
-
                     );
-
 
                     await interaction.showModal(
                         modal
                     );
 
-
                     return;
                 }
-
 
                 // ==========================================
                 // TICKET CLOSE YES
@@ -8104,70 +7203,52 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                     interaction.customId ===
                     "ticket_close_yes"
                 ) {
-
                     const channel =
                         interaction.channel;
-
 
                     const data =
                         getTicketData(
                             channel
                         );
 
-
                     if (
                         !data ||
                         !data.pendingClose
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Es gibt keine offene Schließungs-Anfrage.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     if (
                         interaction.user.id !==
                         data.ownerId
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Nur der Ticket-Ersteller kann diese Schließung bestätigen.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
 
-
                     const closeData = {
-
                         reason:
                             data.pendingClose.reason,
 
                         requestedBy:
                             data.pendingClose.requestedBy
-
                     };
-
 
                     await interaction.deferUpdate();
 
-
                     const logSent =
                         await sendTicketTranscriptLog({
-
                             guild:
                                 interaction.guild,
 
@@ -8183,43 +7264,33 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
 
                             confirmedById:
                                 interaction.user.id
-
                         });
-
 
                     if (
                         !logSent
                     ) {
-
                         data.pendingClose =
                             null;
 
+                        saveTicketStore();
 
                         await channel.send({
-
                             content:
                                 "❌ Das Ticket wurde **nicht** gelöscht, weil das Transcript nicht in den Ticket-Log-Channel gesendet werden konnte."
-
                         });
-
 
                         return;
                     }
 
-
                     await channel.send({
-
                         embeds: [
                             new EmbedBuilder()
-
                                 .setColor(
                                     "#ED4245"
                                 )
-
                                 .setTitle(
                                     "🔒 Ticket wird geschlossen"
                                 )
-
                                 .setDescription(
 `Das Ticket wurde von ${interaction.user} bestätigt und wird jetzt geschlossen.
 
@@ -8227,44 +7298,36 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
 
 📄 Das Transcript wurde im Ticket-Log gespeichert.`
                                 )
-
                                 .setTimestamp()
                         ]
-
                     });
-
 
                     ticketData.delete(
                         channel.id
                     );
 
+                    saveTicketStore();
 
                     setTimeout(
                         async () => {
-
                             await channel.delete(
                                 `Ticket geschlossen | Grund: ${safeText(closeData.reason, "Kein Grund")}`
                             )
                                 .catch(
                                     error => {
-
                                         console.error(
                                             "❌ Ticket löschen Fehler:",
                                             error
                                         );
-
                                     }
                                 );
-
                         },
 
                         1500
                     );
 
-
                     return;
                 }
-
 
                 // ==========================================
                 // TICKET CLOSE NO
@@ -8274,137 +7337,101 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
                     interaction.customId ===
                     "ticket_close_no"
                 ) {
-
                     const data =
                         getTicketData(
                             interaction.channel
                         );
 
-
                     if (
                         !data ||
                         !data.pendingClose
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Es gibt keine offene Schließungs-Anfrage.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     if (
                         interaction.user.id !==
                         data.ownerId
                     ) {
-
                         return interaction.reply({
-
                             content:
                                 "❌ Nur der Ticket-Ersteller kann diese Schließung ablehnen.",
 
                             flags:
                                 MessageFlags.Ephemeral
-
                         });
-
                     }
-
 
                     data.pendingClose =
                         null;
 
+                    saveTicketStore();
 
                     await interaction.update({
-
                         content:
                             "",
 
-
                         embeds: [
                             new EmbedBuilder()
-
                                 .setColor(
                                     "#57F287"
                                 )
-
                                 .setTitle(
                                     "✅ Ticket bleibt offen"
                                 )
-
                                 .setDescription(
                                     `${interaction.user} hat die Schließung abgelehnt. Das Ticket bleibt geöffnet.`
                                 )
-
                                 .setTimestamp()
                         ],
 
-
                         components:
                             []
-
                     });
-
 
                     return;
                 }
-
             }
 
-
         } catch (error) {
-
             console.error(
                 "❌ Interaction Fehler:",
                 error
             );
 
-
             try {
-
                 if (
                     interaction.deferred ||
                     interaction.replied
                 ) {
-
                     await interaction.editReply({
-
                         content:
                             "❌ Es ist ein Fehler aufgetreten."
-
                     })
                         .catch(
                             () => {}
                         );
 
                 } else {
-
                     await interaction.reply({
-
                         content:
                             "❌ Es ist ein Fehler aufgetreten.",
 
                         flags:
                             MessageFlags.Ephemeral
-
                     });
-
                 }
 
-
             } catch {}
-
         }
-
     }
 );
-
 
 // ==========================================
 // GIVEAWAY ENDE
@@ -8413,12 +7440,10 @@ Nur der Ticket-Ersteller kann **Ja** oder **Nein** auswählen.`
 async function endGiveaway(
     giveawayId
 ) {
-
     const data =
         giveawayData.get(
             giveawayId
         );
-
 
     if (
         !data ||
@@ -8427,32 +7452,25 @@ async function endGiveaway(
         return;
     }
 
-
     data.ended =
         true;
-
 
     const timer =
         giveawayTimers.get(
             giveawayId
         );
 
-
     if (
         timer
     ) {
-
         clearTimeout(
             timer
         );
 
-
         giveawayTimers.delete(
             giveawayId
         );
-
     }
-
 
     const winners =
         pickGiveawayWinners(
@@ -8460,23 +7478,21 @@ async function endGiveaway(
             data.winnerCount
         );
 
-
     data.winnerIds =
         winners;
 
+    saveGiveawayStore();
 
     const guild =
         client.guilds.cache.get(
             data.guildId
         );
 
-
     if (
         !guild
     ) {
         return;
     }
-
 
     const channel =
         await guild.channels.fetch(
@@ -8486,14 +7502,12 @@ async function endGiveaway(
                 () => null
             );
 
-
     if (
         !channel ||
         !channel.isTextBased()
     ) {
         return;
     }
-
 
     const message =
         await channel.messages.fetch(
@@ -8503,34 +7517,26 @@ async function endGiveaway(
                 () => null
             );
 
-
     if (
         message
     ) {
-
         const disabledButton =
             new ButtonBuilder()
-
                 .setCustomId(
                     `giveaway_join_${giveawayId}`
                 )
-
                 .setLabel(
                     "Gewinnspiel beendet"
                 )
-
                 .setEmoji(
                     "🎉"
                 )
-
                 .setStyle(
                     ButtonStyle.Secondary
                 )
-
                 .setDisabled(
                     true
                 );
-
 
         const row =
             new ActionRowBuilder()
@@ -8538,9 +7544,7 @@ async function endGiveaway(
                     disabledButton
                 );
 
-
         await message.edit({
-
             embeds: [
                 createGiveawayEmbed(
                     data,
@@ -8552,21 +7556,16 @@ async function endGiveaway(
             components: [
                 row
             ]
-
         })
             .catch(
                 () => {}
             );
-
     }
-
 
     if (
         winners.length > 0
     ) {
-
         await channel.send({
-
             content:
 `🎉 **GEWINNSPIEL BEENDET!** 🎉
 
@@ -8576,41 +7575,31 @@ async function endGiveaway(
 
 Herzlichen Glückwunsch! 🎊`,
 
-
             allowedMentions: {
                 users:
                     winners
             }
-
         });
 
-
     } else {
-
         await channel.send({
-
             content:
 `🎉 **Gewinnspiel beendet!**
 
 Es gab leider keine gültigen Teilnehmer.
 
 🎁 **Preis:** ${data.prize}`
-
         });
-
     }
 }
-
 
 function scheduleGiveawayEnd(
     giveawayId
 ) {
-
     const data =
         giveawayData.get(
             giveawayId
         );
-
 
     if (
         !data
@@ -8618,15 +7607,12 @@ function scheduleGiveawayEnd(
         return;
     }
 
-
     const scheduleNext =
         () => {
-
             const current =
                 giveawayData.get(
                     giveawayId
                 );
-
 
             if (
                 !current ||
@@ -8635,34 +7621,27 @@ function scheduleGiveawayEnd(
                 return;
             }
 
-
             const remaining =
                 current.endAt -
                 Date.now();
 
-
             if (
                 remaining <= 0
             ) {
-
                 endGiveaway(
                     giveawayId
                 )
                     .catch(
                         error => {
-
                             console.error(
                                 "❌ Giveaway End Fehler:",
                                 error
                             );
-
                         }
                     );
 
-
                 return;
             }
-
 
             const wait =
                 Math.min(
@@ -8670,25 +7649,597 @@ function scheduleGiveawayEnd(
                     2000000000
                 );
 
-
             const timer =
                 setTimeout(
                     scheduleNext,
                     wait
                 );
 
-
             giveawayTimers.set(
                 giveawayId,
                 timer
             );
-
         };
-
 
     scheduleNext();
 }
 
+// ==========================================
+// AUTOMATISCHER VOICE-AFK
+//
+// Nach 5 Minuten Mute / Deaf -> AFK-Talk.
+// Beim vollständigen Entmuten -> zurück.
+// ==========================================
+
+function hasValidAfkTalkId() {
+    return /^\d{17,20}$/.test(
+        AFK_TALK_ID
+    );
+}
+
+function isVoiceAfkMuted(
+    state
+) {
+    if (
+        !state
+    ) {
+        return false;
+    }
+
+    return Boolean(
+        state.selfMute ||
+        state.selfDeaf ||
+        state.serverMute ||
+        state.serverDeaf
+    );
+}
+
+function clearVoiceAfkTimer(
+    userId
+) {
+    const timer =
+        voiceAfkTimers.get(
+            userId
+        );
+
+    if (
+        timer
+    ) {
+        clearTimeout(
+            timer
+        );
+
+        voiceAfkTimers.delete(
+            userId
+        );
+    }
+}
+
+async function moveMemberToAfk(
+    guild,
+    userId
+) {
+    try {
+        if (
+            !guild ||
+            !hasValidAfkTalkId()
+        ) {
+            return;
+        }
+
+        const member =
+            await guild.members.fetch(
+                userId
+            )
+                .catch(
+                    () => null
+                );
+
+        if (
+            !member ||
+            !member.voice ||
+            !member.voice.channelId
+        ) {
+            return;
+        }
+
+        if (
+            member.voice.channelId ===
+            AFK_TALK_ID
+        ) {
+            return;
+        }
+
+        if (
+            !isVoiceAfkMuted(
+                member.voice
+            )
+        ) {
+            return;
+        }
+
+        const afkChannel =
+            guild.channels.cache.get(
+                AFK_TALK_ID
+            ) ||
+
+            await guild.channels.fetch(
+                AFK_TALK_ID
+            )
+                .catch(
+                    () => null
+                );
+
+        if (
+            !afkChannel ||
+            (
+                afkChannel.type !==
+                    ChannelType.GuildVoice &&
+
+                afkChannel.type !==
+                    ChannelType.GuildStageVoice
+            )
+        ) {
+            console.log(
+                `⚠️ AFK-Talk nicht gefunden oder kein Voice-Channel: ${AFK_TALK_ID}`
+            );
+
+            return;
+        }
+
+        const entry =
+            voiceAfkStore.entries[
+                userId
+            ] ||
+            {};
+
+        const originalChannelId =
+            entry.originalChannelId ||
+            member.voice.channelId;
+
+        voiceAfkStore.entries[
+            userId
+        ] = {
+            guildId:
+                guild.id,
+
+            originalChannelId,
+
+            mutedSince:
+                entry.mutedSince ||
+                Date.now(),
+
+            moved:
+                true,
+
+            movedAt:
+                Date.now()
+        };
+
+        saveVoiceAfkStore();
+
+        await member.voice.setChannel(
+            afkChannel,
+            "Automatisch AFK: seit 5 Minuten gemutet / vollgemutet"
+        );
+
+        clearVoiceAfkTimer(
+            userId
+        );
+
+    } catch (error) {
+        console.error(
+            "❌ Voice-AFK verschieben Fehler:",
+            error
+        );
+    }
+}
+
+function scheduleVoiceAfk(
+    state,
+    mutedSince = Date.now()
+) {
+    if (
+        !state ||
+        !state.member ||
+        !state.channelId ||
+        state.channelId ===
+            AFK_TALK_ID ||
+        !isVoiceAfkMuted(
+            state
+        )
+    ) {
+        return;
+    }
+
+    const userId =
+        state.member.id;
+
+    clearVoiceAfkTimer(
+        userId
+    );
+
+    const existing =
+        voiceAfkStore.entries[
+            userId
+        ] ||
+        {};
+
+    voiceAfkStore.entries[
+        userId
+    ] = {
+        guildId:
+            state.guild.id,
+
+        originalChannelId:
+            state.channelId,
+
+        mutedSince:
+            Number.isFinite(
+                existing.mutedSince
+            )
+                ? existing.mutedSince
+                : mutedSince,
+
+        moved:
+            false,
+
+        movedAt:
+            null
+    };
+
+    saveVoiceAfkStore();
+
+    const remaining =
+        Math.max(
+            0,
+
+            VOICE_AFK_DELAY_MS -
+            (
+                Date.now() -
+                voiceAfkStore.entries[
+                    userId
+                ].mutedSince
+            )
+        );
+
+    const timer =
+        setTimeout(
+            () => {
+                moveMemberToAfk(
+                    state.guild,
+                    userId
+                )
+                    .catch(
+                        error => {
+                            console.error(
+                                "❌ Voice-AFK Timer Fehler:",
+                                error
+                            );
+                        }
+                    );
+            },
+
+            remaining
+        );
+
+    voiceAfkTimers.set(
+        userId,
+        timer
+    );
+}
+
+async function returnMemberFromAfk(
+    state
+) {
+    const member =
+        state &&
+        state.member;
+
+    if (
+        !member
+    ) {
+        return;
+    }
+
+    const userId =
+        member.id;
+
+    clearVoiceAfkTimer(
+        userId
+    );
+
+    const entry =
+        voiceAfkStore.entries[
+            userId
+        ];
+
+    if (
+        !entry
+    ) {
+        return;
+    }
+
+    try {
+        if (
+            entry.moved &&
+            state.channelId ===
+                AFK_TALK_ID &&
+            entry.originalChannelId
+        ) {
+            const originalChannel =
+                state.guild.channels.cache.get(
+                    entry.originalChannelId
+                ) ||
+
+                await state.guild.channels.fetch(
+                    entry.originalChannelId
+                )
+                    .catch(
+                        () => null
+                    );
+
+            if (
+                originalChannel &&
+                (
+                    originalChannel.type ===
+                        ChannelType.GuildVoice ||
+
+                    originalChannel.type ===
+                        ChannelType.GuildStageVoice
+                )
+            ) {
+                await member.voice.setChannel(
+                    originalChannel,
+                    "Automatisch zurück: Nutzer hat sich entmutet"
+                );
+            }
+        }
+
+    } catch (error) {
+        console.error(
+            "❌ Voice-AFK zurück verschieben Fehler:",
+            error
+        );
+
+    } finally {
+        delete voiceAfkStore.entries[
+            userId
+        ];
+
+        saveVoiceAfkStore();
+    }
+}
+
+async function restoreVoiceAfkState(
+    guild
+) {
+    if (
+        !guild ||
+        !hasValidAfkTalkId()
+    ) {
+        return;
+    }
+
+    for (
+        const [userId, entry]
+        of Object.entries(
+            voiceAfkStore.entries
+        )
+    ) {
+        const member =
+            await guild.members.fetch(
+                userId
+            )
+                .catch(
+                    () => null
+                );
+
+        if (
+            !member ||
+            !member.voice ||
+            !member.voice.channelId
+        ) {
+            delete voiceAfkStore.entries[
+                userId
+            ];
+
+            continue;
+        }
+
+        if (
+            !isVoiceAfkMuted(
+                member.voice
+            )
+        ) {
+            if (
+                entry.moved &&
+                member.voice.channelId ===
+                    AFK_TALK_ID
+            ) {
+                await returnMemberFromAfk(
+                    member.voice
+                );
+
+            } else {
+                delete voiceAfkStore.entries[
+                    userId
+                ];
+            }
+
+            continue;
+        }
+
+        if (
+            member.voice.channelId ===
+                AFK_TALK_ID &&
+            entry.moved
+        ) {
+            continue;
+        }
+
+        scheduleVoiceAfk(
+            member.voice,
+
+            entry.mutedSince ||
+                Date.now()
+        );
+    }
+
+    for (
+        const voiceState
+        of guild.voiceStates.cache.values()
+    ) {
+        if (
+            !voiceState.member ||
+            !voiceState.channelId ||
+            voiceState.channelId ===
+                AFK_TALK_ID ||
+            !isVoiceAfkMuted(
+                voiceState
+            ) ||
+            voiceAfkStore.entries[
+                voiceState.member.id
+            ]
+        ) {
+            continue;
+        }
+
+        scheduleVoiceAfk(
+            voiceState,
+            Date.now()
+        );
+    }
+
+    saveVoiceAfkStore();
+}
+
+client.on(
+    Events.VoiceStateUpdate,
+
+    async (
+        oldState,
+        newState
+    ) => {
+        try {
+            const member =
+                newState.member ||
+                oldState.member;
+
+            if (
+                !member ||
+                member.user.bot ||
+                !hasValidAfkTalkId()
+            ) {
+                return;
+            }
+
+            const userId =
+                member.id;
+
+            if (
+                !newState.channelId
+            ) {
+                clearVoiceAfkTimer(
+                    userId
+                );
+
+                delete voiceAfkStore.entries[
+                    userId
+                ];
+
+                saveVoiceAfkStore();
+
+                return;
+            }
+
+            const mutedNow =
+                isVoiceAfkMuted(
+                    newState
+                );
+
+            const wasMuted =
+                isVoiceAfkMuted(
+                    oldState
+                );
+
+            if (
+                !mutedNow
+            ) {
+                await returnMemberFromAfk(
+                    newState
+                );
+
+                return;
+            }
+
+            if (
+                newState.channelId !==
+                    AFK_TALK_ID &&
+
+                oldState.channelId !==
+                    newState.channelId
+            ) {
+                clearVoiceAfkTimer(
+                    userId
+                );
+
+                voiceAfkStore.entries[
+                    userId
+                ] = {
+                    guildId:
+                        newState.guild.id,
+
+                    originalChannelId:
+                        newState.channelId,
+
+                    mutedSince:
+                        Date.now(),
+
+                    moved:
+                        false,
+
+                    movedAt:
+                        null
+                };
+
+                saveVoiceAfkStore();
+
+                scheduleVoiceAfk(
+                    newState,
+                    Date.now()
+                );
+
+                return;
+            }
+
+            if (
+                newState.channelId ===
+                    AFK_TALK_ID
+            ) {
+                return;
+            }
+
+            if (
+                !wasMuted ||
+                !voiceAfkTimers.has(
+                    userId
+                )
+            ) {
+                scheduleVoiceAfk(
+                    newState,
+                    Date.now()
+                );
+            }
+
+        } catch (error) {
+            console.error(
+                "❌ Automatischer Voice-AFK Fehler:",
+                error
+            );
+        }
+    }
+);
 
 // ==========================================
 // SUPPORT WARTE RAUM
@@ -8701,16 +8252,13 @@ client.on(
         oldState,
         newState
     ) => {
-
         try {
-
             if (
                 newState.channelId !==
                 SUPPORT_WARTE_RAUM_ID
             ) {
                 return;
             }
-
 
             if (
                 oldState.channelId ===
@@ -8719,17 +8267,14 @@ client.on(
                 return;
             }
 
-
             const member =
                 newState.member;
-
 
             if (
                 !member
             ) {
                 return;
             }
-
 
             const logChannel =
                 await newState.guild.channels.fetch(
@@ -8739,14 +8284,12 @@ client.on(
                         () => null
                     );
 
-
             if (
                 !logChannel ||
                 !logChannel.isTextBased()
             ) {
                 return;
             }
-
 
             const embed =
                 baseEmbed(
@@ -8755,9 +8298,7 @@ client.on(
                     "Ein Spieler wartet im Support-Warteraum."
                 );
 
-
             embed.addFields(
-
                 {
                     name:
                         "👤 Spieler",
@@ -8775,12 +8316,9 @@ client.on(
                             ? newState.channel.toString()
                             : "Unbekannt"
                 }
-
             );
 
-
             await logChannel.send({
-
                 content:
                     `<@&${SUPPORT_ROLE_ID}>`,
 
@@ -8793,28 +8331,21 @@ client.on(
                 embeds: [
                     embed
                 ]
-
             });
-
 
             await sendLog(
                 newState.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Voice Support Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // AUTO ROLE
@@ -8824,15 +8355,12 @@ client.on(
     Events.GuildMemberAdd,
 
     async member => {
-
         try {
-
             if (
                 member.user.bot
             ) {
                 return;
             }
-
 
             const role =
                 member.guild.roles.cache.get(
@@ -8846,19 +8374,15 @@ client.on(
                         () => null
                     );
 
-
             if (
                 !role
             ) {
-
                 console.log(
                     `⚠️ Auto-Rolle nicht gefunden: ${AUTO_ROLE_ID}`
                 );
 
-
                 return;
             }
-
 
             if (
                 member.roles.cache.has(
@@ -8868,30 +8392,23 @@ client.on(
                 return;
             }
 
-
             await member.roles.add(
                 role,
                 "Automatische Rolle beim Server-Beitritt"
             );
 
-
             console.log(
                 `✅ Auto-Rolle ${role.name} an ${member.user.tag} vergeben.`
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Auto-Rolle Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // WELCOME
@@ -8901,14 +8418,11 @@ client.on(
     Events.GuildMemberAdd,
 
     async member => {
-
         try {
-
             const channel =
                 member.guild.channels.cache.get(
                     WELCOME_CHANNEL_ID
                 );
-
 
             if (
                 !channel ||
@@ -8917,18 +8431,14 @@ client.on(
                 return;
             }
 
-
             const embed =
                 new EmbedBuilder()
-
                     .setColor(
                         "#FEE75C"
                     )
-
                     .setTitle(
                         "⚡ Willkommen ⚡"
                     )
-
                     .setDescription(
 `${member} ist dem Server beigetreten!
 
@@ -8941,41 +8451,30 @@ ${member.id}
 👥 **Mitglieder:**
 ${member.guild.memberCount}`
                     )
-
                     .setThumbnail(
                         member.user
                             .displayAvatarURL()
                     )
-
                     .setTimestamp()
-
                     .setFooter({
                         text:
                             "VIBE Community"
                     });
 
-
             await channel.send({
-
                 embeds: [
                     embed
                 ]
-
             });
 
-
         } catch (error) {
-
             console.error(
                 "❌ Welcome Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // JOIN LOG
@@ -8985,20 +8484,16 @@ client.on(
     Events.GuildMemberAdd,
 
     async member => {
-
         try {
-
             const accountAge =
                 Date.now() -
                 member.user.createdTimestamp;
-
 
             const days =
                 Math.floor(
                     accountAge /
                     86400000
                 );
-
 
             const embed =
                 baseEmbed(
@@ -9007,14 +8502,11 @@ client.on(
                     "Ein neues Mitglied ist dem Server beigetreten."
                 );
 
-
             embed.setThumbnail(
                 member.displayAvatarURL()
             );
 
-
             embed.addFields(
-
                 {
                     name:
                         "👤 Nutzer",
@@ -9044,34 +8536,26 @@ client.on(
                     inline:
                         true
                 }
-
             );
-
 
             embed.setFooter({
                 text:
                     `ID: ${member.id}`
             });
 
-
             await sendLog(
                 member.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Join Log Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // LEAVE / KICK
@@ -9081,9 +8565,7 @@ client.on(
     Events.GuildMemberRemove,
 
     async member => {
-
         try {
-
             await new Promise(
                 resolve =>
                     setTimeout(
@@ -9092,7 +8574,6 @@ client.on(
                     )
             );
 
-
             const entry =
                 await getAuditExecutor(
                     member.guild,
@@ -9100,11 +8581,9 @@ client.on(
                     member.id
                 );
 
-
             if (
                 entry
             ) {
-
                 const embed =
                     baseEmbed(
                         "🥾 Mitglied gekickt",
@@ -9112,9 +8591,7 @@ client.on(
                         "Ein Mitglied wurde vom Server gekickt."
                     );
 
-
                 embed.addFields(
-
                     {
                         name:
                             "👤 Nutzer",
@@ -9143,19 +8620,15 @@ client.on(
                                 "Kein Grund angegeben"
                             )
                     }
-
                 );
-
 
                 await sendLog(
                     member.guild,
                     embed
                 );
 
-
                 return;
             }
-
 
             const embed =
                 baseEmbed(
@@ -9164,44 +8637,32 @@ client.on(
                     "Ein Mitglied hat den Server verlassen."
                 );
 
-
             embed.addFields({
-
                 name:
                     "👤 Nutzer",
 
                 value:
                     `${member.user.tag} (${member.id})`
-
             });
-
 
             embed.setFooter({
-
                 text:
                     `Aktuelle Memberanzahl: ${member.guild.memberCount}`
-
             });
-
 
             await sendLog(
                 member.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Leave/Kick Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // BAN LOG
@@ -9211,9 +8672,7 @@ client.on(
     Events.GuildBanAdd,
 
     async ban => {
-
         try {
-
             await new Promise(
                 resolve =>
                     setTimeout(
@@ -9222,14 +8681,12 @@ client.on(
                     )
             );
 
-
             const entry =
                 await getAuditExecutor(
                     ban.guild,
                     AuditLogEvent.MemberBanAdd,
                     ban.user.id
                 );
-
 
             const embed =
                 baseEmbed(
@@ -9238,24 +8695,18 @@ client.on(
                     "Ein Mitglied wurde gebannt."
                 );
 
-
             embed.addFields({
-
                 name:
                     "👤 Nutzer",
 
                 value:
                     `${ban.user.tag} (${ban.user.id})`
-
             });
-
 
             if (
                 entry
             ) {
-
                 embed.addFields(
-
                     {
                         name:
                             "🛡️ Verantwortlicher Moderator",
@@ -9276,30 +8727,22 @@ client.on(
                                 "Kein Grund angegeben"
                             )
                     }
-
                 );
-
             }
-
 
             await sendLog(
                 ban.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Ban Log Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // UNBAN LOG
@@ -9309,9 +8752,7 @@ client.on(
     Events.GuildBanRemove,
 
     async ban => {
-
         try {
-
             await new Promise(
                 resolve =>
                     setTimeout(
@@ -9320,14 +8761,12 @@ client.on(
                     )
             );
 
-
             const entry =
                 await getAuditExecutor(
                     ban.guild,
                     AuditLogEvent.MemberBanRemove,
                     ban.user.id
                 );
-
 
             const embed =
                 baseEmbed(
@@ -9336,24 +8775,18 @@ client.on(
                     "Ein Mitglied wurde entbannt."
                 );
 
-
             embed.addFields({
-
                 name:
                     "👤 Nutzer",
 
                 value:
                     `${ban.user.tag} (${ban.user.id})`
-
             });
-
 
             if (
                 entry
             ) {
-
                 embed.addFields({
-
                     name:
                         "🛡️ Verantwortlicher",
 
@@ -9361,30 +8794,22 @@ client.on(
                         entry.executor
                             ? `${entry.executor} (${entry.executor.id})`
                             : "Unbekannt"
-
                 });
-
             }
-
 
             await sendLog(
                 ban.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Unban Log Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // TIMEOUT LOG
@@ -9397,18 +8822,14 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             const beforeTimeout =
                 before.communicationDisabledUntilTimestamp ||
                 null;
 
-
             const afterTimeout =
                 after.communicationDisabledUntilTimestamp ||
                 null;
-
 
             if (
                 beforeTimeout ===
@@ -9416,7 +8837,6 @@ client.on(
             ) {
                 return;
             }
-
 
             await new Promise(
                 resolve =>
@@ -9426,45 +8846,35 @@ client.on(
                     )
             );
 
-
             const entry =
                 await getTimeoutAuditEntry(
                     after.guild,
                     after.id
                 );
 
-
             const executor =
                 entry &&
                 entry.executor
-
                     ? `${entry.executor} (${entry.executor.id})`
-
                     : "Unbekannt / automatisch abgelaufen";
-
 
             const reason =
                 entry &&
                 entry.reason
-
                     ? safeText(
                         entry.reason,
                         "Kein Grund angegeben"
                     )
-
                     : "Kein Grund angegeben";
-
 
             if (
                 afterTimeout &&
                 afterTimeout >
                     Date.now()
             ) {
-
                 const durationMs =
                     afterTimeout -
                     Date.now();
-
 
                 const endUnix =
                     Math.floor(
@@ -9472,16 +8882,13 @@ client.on(
                         1000
                     );
 
-
                 const wasAlreadyTimedOut =
                     beforeTimeout &&
                     beforeTimeout >
                         Date.now();
 
-
                 const embed =
                     baseEmbed(
-
                         wasAlreadyTimedOut
                             ? "⏳ Timeout geändert"
                             : "⏳ Timeout vergeben",
@@ -9491,12 +8898,9 @@ client.on(
                         wasAlreadyTimedOut
                             ? "Der Timeout eines Mitglieds wurde geändert."
                             : "Ein Mitglied hat einen Timeout erhalten."
-
                     );
 
-
                 embed.addFields(
-
                     {
                         name:
                             "👤 Nutzer",
@@ -9547,19 +8951,15 @@ client.on(
                                 1024
                             )
                     }
-
                 );
-
 
                 await sendLog(
                     after.guild,
                     embed
                 );
 
-
                 return;
             }
-
 
             if (
                 beforeTimeout &&
@@ -9569,7 +8969,6 @@ client.on(
                         Date.now()
                 )
             ) {
-
                 const embed =
                     baseEmbed(
                         "✅ Timeout aufgehoben",
@@ -9577,9 +8976,7 @@ client.on(
                         "Der Timeout eines Mitglieds wurde aufgehoben."
                     );
 
-
                 embed.addFields(
-
                     {
                         name:
                             "👤 Nutzer",
@@ -9595,17 +8992,13 @@ client.on(
                         value:
                             executor
                     }
-
                 );
-
 
                 if (
                     entry &&
                     entry.reason
                 ) {
-
                     embed.addFields({
-
                         name:
                             "📄 Grund",
 
@@ -9618,11 +9011,8 @@ client.on(
                                     0,
                                     1024
                                 )
-
                     });
-
                 }
-
 
                 await sendLog(
                     after.guild,
@@ -9630,59 +9020,45 @@ client.on(
                 );
             }
 
-
         } catch (error) {
-
             console.error(
                 "❌ Timeout Logging Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // TEAM ROLLEN
 // ==========================================
 
 function getTrackedTeamRoleIds(member) {
-
     const roleIds =
         new Set();
-
 
     for (
         const roleConfig
         of TEAM_ROLE_CONFIG
     ) {
-
         if (
             member.roles.cache.has(
                 roleConfig.id
             )
         ) {
-
             roleIds.add(
                 roleConfig.id
             );
-
         }
-
     }
-
 
     return roleIds;
 }
-
 
 function setsEqual(
     first,
     second
 ) {
-
     if (
         first.size !==
         second.size
@@ -9690,32 +9066,25 @@ function setsEqual(
         return false;
     }
 
-
     for (
         const value
         of first
     ) {
-
         if (
             !second.has(
                 value
             )
         ) {
-
             return false;
         }
-
     }
-
 
     return true;
 }
 
-
 function getPrimaryTeamRole(
     roleIds
 ) {
-
     return (
         TEAM_ROLE_CONFIG.find(
             role =>
@@ -9727,16 +9096,13 @@ function getPrimaryTeamRole(
     );
 }
 
-
 async function sendTeamRoleMessage(
     guild,
     memberId,
     type,
     roleConfig = null
 ) {
-
     try {
-
         const channel =
             guild.channels.cache.get(
                 TEAM_ROLE_MESSAGE_CHANNEL_ID
@@ -9749,7 +9115,6 @@ async function sendTeamRoleMessage(
                     () => null
                 );
 
-
         if (
             !channel ||
             !channel.isTextBased()
@@ -9757,57 +9122,46 @@ async function sendTeamRoleMessage(
             return;
         }
 
-
         let content =
             "";
-
 
         if (
             type ===
                 "welcome" &&
             roleConfig
         ) {
-
             content =
 `🎉 **Willkommen im Team!**
 
 <@${memberId}> ist ab sofort <@&${roleConfig.id}> ${roleConfig.placeText}.
 
 Wir freuen uns, dich im Team zu haben und wünschen dir viel Erfolg und vor allem viel Spaß bei deinen neuen Aufgaben! 🤝`;
-
         }
-
 
         else if (
             type ===
                 "position" &&
             roleConfig
         ) {
-
             content =
 `🔄 **Neue Position!**
 
 <@${memberId}> übernimmt ab sofort die Position <@&${roleConfig.id}> ${roleConfig.placeText}.
 
 Wir wünschen dir viel Erfolg und vor allem viel Spaß bei deinen neuen Aufgaben! 🤝`;
-
         }
-
 
         else if (
             type ===
             "leave"
         ) {
-
             content =
 `👋 **Danke für deine Zeit!**
 
 <@${memberId}> verlässt ab sofort das Team des **VIBE Clans**.
 
 Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren Weg alles Gute und viel Erfolg! 🤝`;
-
         }
-
 
         if (
             !content
@@ -9815,44 +9169,32 @@ Wir bedanken uns für die gemeinsame Zeit und wünschen dir für deinen weiteren
             return;
         }
 
-
         await channel.send({
-
             content,
 
-
             allowedMentions: {
-
                 users: [
                     memberId
                 ],
 
                 roles:
                     []
-
             }
-
         });
 
-
     } catch (error) {
-
         console.error(
             "❌ Team-Rollen-Nachricht Fehler:",
             error
         );
-
     }
 }
 
-
 async function processTeamRoleUpdate(key) {
-
     const update =
         pendingTeamRoleUpdates.get(
             key
         );
-
 
     if (
         !update
@@ -9860,19 +9202,15 @@ async function processTeamRoleUpdate(key) {
         return;
     }
 
-
     pendingTeamRoleUpdates.delete(
         key
     );
 
-
     const beforeRoleIds =
         update.beforeRoleIds;
 
-
     const afterRoleIds =
         update.afterRoleIds;
-
 
     if (
         setsEqual(
@@ -9882,7 +9220,6 @@ async function processTeamRoleUpdate(key) {
     ) {
         return;
     }
-
 
     const addedRoleIds =
         new Set(
@@ -9897,12 +9234,10 @@ async function processTeamRoleUpdate(key) {
                 )
         );
 
-
     if (
         beforeRoleIds.size === 0 &&
         afterRoleIds.size > 0
     ) {
-
         const roleConfig =
             getPrimaryTeamRole(
                 addedRoleIds.size > 0
@@ -9910,67 +9245,53 @@ async function processTeamRoleUpdate(key) {
                     : afterRoleIds
             );
 
-
         if (
             roleConfig
         ) {
-
             await sendTeamRoleMessage(
                 update.guild,
                 update.memberId,
                 "welcome",
                 roleConfig
             );
-
         }
-
 
         return;
     }
-
 
     if (
         beforeRoleIds.size > 0 &&
         afterRoleIds.size === 0
     ) {
-
         await sendTeamRoleMessage(
             update.guild,
             update.memberId,
             "leave"
         );
 
-
         return;
     }
-
 
     if (
         addedRoleIds.size > 0
     ) {
-
         const roleConfig =
             getPrimaryTeamRole(
                 addedRoleIds
             );
 
-
         if (
             roleConfig
         ) {
-
             await sendTeamRoleMessage(
                 update.guild,
                 update.memberId,
                 "position",
                 roleConfig
             );
-
         }
-
     }
 }
-
 
 client.on(
     Events.GuildMemberUpdate,
@@ -9979,18 +9300,15 @@ client.on(
         before,
         after
     ) => {
-
         const beforeRoleIds =
             getTrackedTeamRoleIds(
                 before
             );
 
-
         const afterRoleIds =
             getTrackedTeamRoleIds(
                 after
             );
-
 
         if (
             setsEqual(
@@ -10001,50 +9319,39 @@ client.on(
             return;
         }
 
-
         const key =
             `${after.guild.id}:${after.id}`;
-
 
         const existing =
             pendingTeamRoleUpdates.get(
                 key
             );
 
-
         if (
             existing
         ) {
-
             clearTimeout(
                 existing.timer
             );
 
-
             existing.afterRoleIds =
                 afterRoleIds;
-
 
             existing.timer =
                 setTimeout(
                     () => {
-
                         processTeamRoleUpdate(
                             key
                         );
-
                     },
 
                     1500
                 );
 
-
             return;
         }
 
-
         const update = {
-
             guild:
                 after.guild,
 
@@ -10052,37 +9359,29 @@ client.on(
                 after.id,
 
             beforeRoleIds,
-
             afterRoleIds,
 
             timer:
                 null
-
         };
-
 
         update.timer =
             setTimeout(
                 () => {
-
                     processTeamRoleUpdate(
                         key
                     );
-
                 },
 
                 1500
             );
 
-
         pendingTeamRoleUpdates.set(
             key,
             update
         );
-
     }
 );
-
 
 // ==========================================
 // MEMBER UPDATE LOG
@@ -10095,15 +9394,11 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
-            // Nickname
             if (
                 before.nickname !==
                 after.nickname
             ) {
-
                 await new Promise(
                     resolve =>
                         setTimeout(
@@ -10112,14 +9407,12 @@ client.on(
                         )
                 );
 
-
                 const entry =
                     await getAuditExecutor(
                         after.guild,
                         AuditLogEvent.MemberUpdate,
                         after.id
                     );
-
 
                 const embed =
                     baseEmbed(
@@ -10128,9 +9421,7 @@ client.on(
                         "Der Nickname eines Mitglieds wurde geändert."
                     );
 
-
                 embed.addFields(
-
                     {
                         name:
                             "👤 Nutzer",
@@ -10160,34 +9451,26 @@ client.on(
                                 after.user.username
                             )
                     }
-
                 );
-
 
                 if (
                     entry &&
                     entry.executor
                 ) {
-
                     embed.addFields({
-
                         name:
                             "🛡️ Verantwortlicher",
 
                         value:
                             `${entry.executor} (${entry.executor.id})`
-
                     });
-
                 }
-
 
                 await sendLog(
                     after.guild,
                     embed
                 );
             }
-
 
             const beforeRoles =
                 new Set(
@@ -10197,7 +9480,6 @@ client.on(
                     )
                 );
 
-
             const afterRoles =
                 new Set(
                     after.roles.cache.map(
@@ -10205,7 +9487,6 @@ client.on(
                             role.id
                     )
                 );
-
 
             const addedRoles =
                 after.roles.cache.filter(
@@ -10215,7 +9496,6 @@ client.on(
                         )
                 );
 
-
             const removedRoles =
                 before.roles.cache.filter(
                     role =>
@@ -10224,14 +9504,12 @@ client.on(
                         )
                 );
 
-
             if (
                 addedRoles.size === 0 &&
                 removedRoles.size === 0
             ) {
                 return;
             }
-
 
             await new Promise(
                 resolve =>
@@ -10241,14 +9519,12 @@ client.on(
                     )
             );
 
-
             const entry =
                 await getAuditExecutor(
                     after.guild,
                     AuditLogEvent.MemberRoleUpdate,
                     after.id
                 );
-
 
             const embed =
                 baseEmbed(
@@ -10257,24 +9533,18 @@ client.on(
                     "Die Rollen eines Mitglieds wurden geändert."
                 );
 
-
             embed.addFields({
-
                 name:
                     "👤 Nutzer",
 
                 value:
                     `${after} (${after.id})`
-
             });
-
 
             if (
                 addedRoles.size > 0
             ) {
-
                 embed.addFields({
-
                     name:
                         "✅ Hinzugefügt",
 
@@ -10291,18 +9561,13 @@ client.on(
                                 0,
                                 1024
                             )
-
                 });
-
             }
-
 
             if (
                 removedRoles.size > 0
             ) {
-
                 embed.addFields({
-
                     name:
                         "❌ Entfernt",
 
@@ -10319,48 +9584,35 @@ client.on(
                                 0,
                                 1024
                             )
-
                 });
-
             }
-
 
             if (
                 entry &&
                 entry.executor
             ) {
-
                 embed.addFields({
-
                     name:
                         "🛡️ Verantwortlicher",
 
                     value:
                         `${entry.executor} (${entry.executor.id})`
-
                 });
-
             }
-
 
             await sendLog(
                 after.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Member Update Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // VOICE LOG
@@ -10373,13 +9625,10 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             const member =
                 after.member ||
                 before.member;
-
 
             if (
                 !member
@@ -10387,12 +9636,10 @@ client.on(
                 return;
             }
 
-
             if (
                 !before.channel &&
                 after.channel
             ) {
-
                 const embed =
                     baseEmbed(
                         "🔊 Sprachkanal beigetreten",
@@ -10400,9 +9647,7 @@ client.on(
                         "Ein Mitglied ist einem Sprachkanal beigetreten."
                     );
 
-
                 embed.addFields(
-
                     {
                         name:
                             "👤 Nutzer",
@@ -10418,23 +9663,18 @@ client.on(
                         value:
                             after.channel.toString()
                     }
-
                 );
-
 
                 await sendLog(
                     member.guild,
                     embed
                 );
-
             }
-
 
             else if (
                 before.channel &&
                 !after.channel
             ) {
-
                 const embed =
                     baseEmbed(
                         "🔇 Sprachkanal verlassen",
@@ -10442,9 +9682,7 @@ client.on(
                         "Ein Mitglied hat einen Sprachkanal verlassen."
                     );
 
-
                 embed.addFields(
-
                     {
                         name:
                             "👤 Nutzer",
@@ -10460,26 +9698,20 @@ client.on(
                         value:
                             before.channel.toString()
                     }
-
                 );
-
 
                 await sendLog(
                     member.guild,
                     embed
                 );
-
             }
-
 
             else if (
                 before.channel &&
                 after.channel &&
-
                 before.channel.id !==
                     after.channel.id
             ) {
-
                 const embed =
                     baseEmbed(
                         "🔁 Sprachkanal gewechselt",
@@ -10487,9 +9719,7 @@ client.on(
                         "Ein Mitglied hat den Sprachkanal gewechselt."
                     );
 
-
                 embed.addFields(
-
                     {
                         name:
                             "👤 Nutzer",
@@ -10513,30 +9743,22 @@ client.on(
                         value:
                             after.channel.toString()
                     }
-
                 );
-
 
                 await sendLog(
                     member.guild,
                     embed
                 );
-
             }
 
-
         } catch (error) {
-
             console.error(
                 "❌ Voice Logging Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // CHANNEL CREATE
@@ -10546,15 +9768,12 @@ client.on(
     Events.ChannelCreate,
 
     async channel => {
-
         try {
-
             if (
                 !channel.guild
             ) {
                 return;
             }
-
 
             await new Promise(
                 resolve =>
@@ -10564,14 +9783,12 @@ client.on(
                     )
             );
 
-
             const entry =
                 await getAuditExecutor(
                     channel.guild,
                     AuditLogEvent.ChannelCreate,
                     channel.id
                 );
-
 
             const embed =
                 baseEmbed(
@@ -10580,9 +9797,7 @@ client.on(
                     "Ein neuer Kanal wurde erstellt."
                 );
 
-
             embed.addFields(
-
                 {
                     name:
                         "📁 Kanal",
@@ -10598,46 +9813,34 @@ client.on(
                     value:
                         channel.id
                 }
-
             );
-
 
             if (
                 entry &&
                 entry.executor
             ) {
-
                 embed.addFields({
-
                     name:
                         "🛡️ Verantwortlicher",
 
                     value:
                         `${entry.executor} (${entry.executor.id})`
-
                 });
-
             }
-
 
             await sendLog(
                 channel.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Channel Create Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // CHANNEL DELETE
@@ -10647,15 +9850,12 @@ client.on(
     Events.ChannelDelete,
 
     async channel => {
-
         try {
-
             if (
                 !channel.guild
             ) {
                 return;
             }
-
 
             await new Promise(
                 resolve =>
@@ -10665,14 +9865,12 @@ client.on(
                     )
             );
 
-
             const entry =
                 await getAuditExecutor(
                     channel.guild,
                     AuditLogEvent.ChannelDelete,
                     channel.id
                 );
-
 
             const embed =
                 baseEmbed(
@@ -10681,9 +9879,7 @@ client.on(
                     "Ein Kanal wurde gelöscht."
                 );
 
-
             embed.addFields(
-
                 {
                     name:
                         "📁 Kanal",
@@ -10699,46 +9895,34 @@ client.on(
                     value:
                         channel.id
                 }
-
             );
-
 
             if (
                 entry &&
                 entry.executor
             ) {
-
                 embed.addFields({
-
                     name:
                         "🛡️ Verantwortlicher",
 
                     value:
                         `${entry.executor} (${entry.executor.id})`
-
                 });
-
             }
-
 
             await sendLog(
                 channel.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Channel Delete Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // ROLE UPDATE
@@ -10751,78 +9935,59 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             const permissionChanges =
                 getPermissionChanges(
                     before,
                     after
                 );
 
-
             const otherChanges =
                 [];
-
 
             if (
                 before.name !==
                 after.name
             ) {
-
                 otherChanges.push(
                     `**Name:** ${before.name} → ${after.name}`
                 );
-
             }
-
 
             if (
                 before.hexColor !==
                 after.hexColor
             ) {
-
                 otherChanges.push(
                     `**Farbe:** ${before.hexColor} → ${after.hexColor}`
                 );
-
             }
-
 
             if (
                 before.hoist !==
                 after.hoist
             ) {
-
                 otherChanges.push(
                     `**Separat anzeigen:** ${before.hoist ? "Ja" : "Nein"} → ${after.hoist ? "Ja" : "Nein"}`
                 );
-
             }
-
 
             if (
                 before.mentionable !==
                 after.mentionable
             ) {
-
                 otherChanges.push(
                     `**Erwähnbar:** ${before.mentionable ? "Ja" : "Nein"} → ${after.mentionable ? "Ja" : "Nein"}`
                 );
-
             }
-
 
             if (
                 permissionChanges.added.length === 0 &&
-
                 permissionChanges.removed.length === 0 &&
-
                 otherChanges.length === 0
             ) {
                 return;
             }
-
 
             await new Promise(
                 resolve =>
@@ -10832,14 +9997,12 @@ client.on(
                     )
             );
 
-
             const entry =
                 await getAuditExecutor(
                     after.guild,
                     AuditLogEvent.RoleUpdate,
                     after.id
                 );
-
 
             const embed =
                 baseEmbed(
@@ -10848,9 +10011,7 @@ client.on(
                     "Die Einstellungen oder Berechtigungen einer Rolle wurden geändert."
                 );
 
-
             embed.addFields({
-
                 name:
                     "🎭 Rolle",
 
@@ -10858,17 +10019,13 @@ client.on(
 `${after}
 **Name:** ${after.name}
 **ID:** \`${after.id}\``
-
             });
-
 
             if (
                 permissionChanges.added.length >
                 0
             ) {
-
                 embed.addFields({
-
                     name:
                         "✅ Berechtigungen hinzugefügt",
 
@@ -10885,19 +10042,14 @@ client.on(
                                 0,
                                 1024
                             )
-
                 });
-
             }
-
 
             if (
                 permissionChanges.removed.length >
                 0
             ) {
-
                 embed.addFields({
-
                     name:
                         "❌ Berechtigungen entfernt",
 
@@ -10914,19 +10066,14 @@ client.on(
                                 0,
                                 1024
                             )
-
                 });
-
             }
-
 
             if (
                 otherChanges.length >
                 0
             ) {
-
                 embed.addFields({
-
                     name:
                         "⚙️ Weitere Änderungen",
 
@@ -10939,14 +10086,10 @@ client.on(
                                 0,
                                 1024
                             )
-
                 });
-
             }
 
-
             embed.addFields({
-
                 name:
                     "👮 Geändert von",
 
@@ -10955,28 +10098,21 @@ client.on(
                     entry.executor
                         ? `${entry.executor} (${entry.executor.id})`
                         : "Unbekannt / Audit-Log nicht verfügbar"
-
             });
-
 
             await sendLog(
                 after.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Rollen-Einstellungs-Log Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // CHANNEL UPDATE
@@ -10989,14 +10125,11 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             if (
                 before.name !==
                 after.name
             ) {
-
                 const embed =
                     baseEmbed(
                         "✏️ Kanalname geändert",
@@ -11004,9 +10137,7 @@ client.on(
                         "Ein Kanal wurde umbenannt."
                     );
 
-
                 embed.addFields(
-
                     {
                         name:
                             "📁 Kanal",
@@ -11034,27 +10165,21 @@ client.on(
                                 after.name
                             )
                     }
-
                 );
-
 
                 await sendLog(
                     after.guild,
                     embed
                 );
-
             }
-
 
             if (
                 before.permissionOverwrites &&
                 after.permissionOverwrites &&
-
                 !before.permissionOverwrites.cache.equals(
                     after.permissionOverwrites.cache
                 )
             ) {
-
                 await new Promise(
                     resolve =>
                         setTimeout(
@@ -11063,14 +10188,12 @@ client.on(
                         )
                 );
 
-
                 const entry =
                     await getAuditExecutor(
                         after.guild,
                         AuditLogEvent.ChannelOverwriteUpdate,
                         after.id
                     );
-
 
                 const embed =
                     baseEmbed(
@@ -11079,56 +10202,41 @@ client.on(
                         "Die Berechtigungen eines Kanals wurden geändert."
                     );
 
-
                 embed.addFields({
-
                     name:
                         "📁 Kanal",
 
                     value:
                         after.toString()
-
                 });
-
 
                 if (
                     entry &&
                     entry.executor
                 ) {
-
                     embed.addFields({
-
                         name:
                             "🛡️ Verantwortlicher",
 
                         value:
                             `${entry.executor} (${entry.executor.id})`
-
                     });
-
                 }
-
 
                 await sendLog(
                     after.guild,
                     embed
                 );
-
             }
 
-
         } catch (error) {
-
             console.error(
                 "❌ Channel Update Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // MESSAGE DELETE
@@ -11138,15 +10246,12 @@ client.on(
     Events.MessageDelete,
 
     async message => {
-
         try {
-
             if (
                 !message.guild
             ) {
                 return;
             }
-
 
             if (
                 message.author &&
@@ -11154,7 +10259,6 @@ client.on(
             ) {
                 return;
             }
-
 
             const content =
                 message.content
@@ -11164,7 +10268,6 @@ client.on(
                     )
                     : "*(Kein Textinhalt / Embed / Anhang)*";
 
-
             const embed =
                 baseEmbed(
                     "🗑️ Nachricht gelöscht",
@@ -11172,9 +10275,7 @@ client.on(
                     "Eine Nachricht wurde gelöscht."
                 );
 
-
             embed.addFields(
-
                 {
                     name:
                         "👤 Autor",
@@ -11209,28 +10310,21 @@ client.on(
                                 1024
                             )
                 }
-
             );
-
 
             await sendLog(
                 message.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Message Delete Logging Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // MESSAGE UPDATE
@@ -11243,15 +10337,12 @@ client.on(
         before,
         after
     ) => {
-
         try {
-
             if (
                 !before.guild
             ) {
                 return;
             }
-
 
             if (
                 before.author &&
@@ -11260,14 +10351,12 @@ client.on(
                 return;
             }
 
-
             if (
                 before.content ===
                 after.content
             ) {
                 return;
             }
-
 
             const embed =
                 baseEmbed(
@@ -11276,9 +10365,7 @@ client.on(
                     "Eine Nachricht wurde bearbeitet."
                 );
 
-
             embed.addFields(
-
                 {
                     name:
                         "👤 Autor",
@@ -11328,45 +10415,33 @@ client.on(
                                 1024
                             )
                 }
-
             );
-
 
             if (
                 after.url
             ) {
-
                 embed.addFields({
-
                     name:
                         "🔗 Nachricht",
 
                     value:
                         `[Zur Nachricht](${after.url})`
-
                 });
-
             }
-
 
             await sendLog(
                 before.guild,
                 embed
             );
 
-
         } catch (error) {
-
             console.error(
                 "❌ Message Edit Logging Fehler:",
                 error
             );
-
         }
-
     }
 );
-
 
 // ==========================================
 // ERROR HANDLING
@@ -11376,57 +10451,45 @@ client.on(
     Events.Error,
 
     error => {
-
         console.error(
             "❌ Discord Client Fehler:",
             error
         );
-
     }
 );
-
 
 client.on(
     Events.Warn,
 
     warning => {
-
         console.warn(
             "⚠️ Discord Warnung:",
             warning
         );
-
     }
 );
-
 
 process.on(
     "unhandledRejection",
 
     error => {
-
         console.error(
             "❌ Unhandled Promise Rejection:",
             error
         );
-
     }
 );
-
 
 process.on(
     "uncaughtException",
 
     error => {
-
         console.error(
             "❌ Uncaught Exception:",
             error
         );
-
     }
 );
-
 
 // ==========================================
 // START MELDUNGEN
