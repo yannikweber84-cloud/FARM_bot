@@ -6174,7 +6174,7 @@ Select the area below that best matches your request.`
                             .addTextDisplayComponents(
                                 new TextDisplayBuilder()
                                     .setContent(
-                                        "-# FIRE CORE • Support Infrastructure"
+                                        "-# VIBE CORE • Support Infrastructure"
                                     )
                             );
 
