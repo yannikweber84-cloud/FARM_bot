@@ -45,7 +45,7 @@ function isFeatureEnabled() {
 app.get("/", (req, res) => {
     res
         .status(200)
-        .send("VIBE Bot is online.");
+        .send("FIRE Bot is online.");
 });
 
 app.get("/health", (req, res) => {
@@ -53,7 +53,7 @@ app.get("/health", (req, res) => {
         .status(200)
         .json({
             status: "online",
-            service: "VIBE Bot"
+            service: "FIRE Bot"
         });
 });
 
@@ -846,7 +846,7 @@ function createAbsenceEmbed(
             .setDescription(
                 ended
                     ? `<@${data.userId}> is available again.`
-                    : `<@${data.userId}> is currently absent from the **VIBE Clan**.`
+                    : `<@${data.userId}> is currently absent from the **FIRE Clan**.`
             )
 
             .addFields(
@@ -940,8 +940,8 @@ function createAbsenceEmbed(
             .setFooter({
                 text:
                     ended
-                        ? "VIBE Clan • Absence ended automatically"
-                        : "VIBE Clan • Staff Absence"
+                        ? "FIRE Clan • Absence ended automatically"
+                        : "FIRE Clan • Staff Absence"
             })
 
             .setTimestamp();
@@ -2377,7 +2377,7 @@ function baseEmbed(
     embed.setTitle(
         safeText(
             title,
-            "VIBE Server Log"
+            "FIRE Server Log"
         )
     );
 
@@ -2978,7 +2978,7 @@ async function createTicketTranscript(
 
         "======================================================",
 
-        "VIBE TICKET TRANSCRIPT",
+        "FIRE TICKET TRANSCRIPT",
 
         "======================================================",
 
@@ -3335,7 +3335,7 @@ async function sendTicketTranscriptLog({
 
                 .setFooter({
                     text:
-                        "VIBE Ticket System • Transcript attached as a file"
+                        "FIRE Ticket System • Transcript attached as a file"
                 })
 
                 .setTimestamp();
@@ -3539,7 +3539,7 @@ function buildTicketDashboard(
             .addTextDisplayComponents(
                 new TextDisplayBuilder()
                     .setContent(
-`# 🎫 VIBE Support Center
+`# 🎫 FIRE Support Center
 -# Ticket Node • ${ticketId}
 
 <@${data.ownerId}> welcome to your private support area.`
@@ -3616,7 +3616,7 @@ ${answersText}`
             .addTextDisplayComponents(
                 new TextDisplayBuilder()
                     .setContent(
-                        "-# VIBE CORE • Private Support Session"
+                        "-# FIRE CORE • Private Support Session"
                     )
             );
 
@@ -5069,7 +5069,7 @@ Your birthday will then automatically appear in the birthday list.`
 
                                 .setFooter({
                                     text:
-                                        "VIBE Birthday system"
+                                        "FIRE Birthday system"
                                 })
 
                                 .setTimestamp();
@@ -6044,7 +6044,7 @@ Your birthday will then automatically appear in the birthday list.`
                                         "Staff Application",
 
                                     description:
-                                        "Apply for the VIBE staff team",
+                                        "Apply for the FIRE staff team",
 
                                     emoji:
                                         "👥",
@@ -6108,10 +6108,10 @@ Your birthday will then automatically appear in the birthday list.`
                             .addTextDisplayComponents(
                                 new TextDisplayBuilder()
                                     .setContent(
-`# 🎫 VIBE Support Center
+`# 🎫 FIRE Support Center
 -# Private Support • Fast • Clear • Direct
 
-Welcome im **VIBE Support Center**.
+Welcome im **FIRE Support Center**.
 Select the area below that best matches your request.`
                                     )
                             )
@@ -6130,7 +6130,7 @@ Select the area below that best matches your request.`
                                 new TextDisplayBuilder()
                                     .setContent(
 `> 💠 **GENERAL SUPPORT**
-> Questions, problems, or other requests related to VIBE.
+> Questions, problems, or other requests related to FIRE.
 
 > 👥 **STAFF APPLICATION**
 > Want to join the staff team? Start your application here.
@@ -6174,7 +6174,7 @@ Select the area below that best matches your request.`
                             .addTextDisplayComponents(
                                 new TextDisplayBuilder()
                                     .setContent(
-                                        "-# VIBE CORE • Support Infrastructure"
+                                        "-# FIRE CORE • Support Infrastructure"
                                     )
                             );
 
@@ -8048,7 +8048,7 @@ Only the ticket creator can select **Yes** or **No**.`
                                     }
                                 )
                                 .setFooter({
-                                    text: "VIBE • Ticket System"
+                                    text: "FIRE • Ticket System"
                                 })
                                 .setTimestamp()
                         ]
@@ -8078,7 +8078,7 @@ Only the ticket creator can select **Yes** or **No**.`
                                     `You rated your support experience **${stars}/5 stars**.\n\n${starsText}`
                                 )
                                 .setFooter({
-                                    text: "VIBE • Ticket Rating"
+                                    text: "FIRE• Ticket Rating"
                                 })
                                 .setTimestamp()
                         ],
@@ -8786,7 +8786,7 @@ Only the ticket creator can select **Yes** or **No**.`
                                         }
                                     )
                                     .setFooter({
-                                        text: "VIBE • Ticket Rating"
+                                        text: "FIRE • Ticket Rating"
                                     })
                                     .setTimestamp()
                             ],
@@ -9527,7 +9527,7 @@ ${member.guild.memberCount}`
 
                     .setFooter({
                         text:
-                            "VIBE Community"
+                            "FIRE Community"
                     });
 
 
