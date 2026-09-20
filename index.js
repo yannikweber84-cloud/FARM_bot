@@ -3616,7 +3616,7 @@ ${answersText}`
             .addTextDisplayComponents(
                 new TextDisplayBuilder()
                     .setContent(
-                        "-# FIRE CORE • Private Support Session"
+                        "-# VIBE CORE • Private Support Session"
                     )
             );
 
